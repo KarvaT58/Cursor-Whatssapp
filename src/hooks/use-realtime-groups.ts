@@ -2,184 +2,117 @@
 
 import { useEffect, useState } from 'react'
 import { useRealtime } from '@/providers/realtime-provider'
-import { createClient } from '@/lib/supabase/client'
-import { Database } from '@/types/database'
+import { Group } from '@/types/groups'
+import { toast } from 'sonner'
+import { RealtimeChannel } from '@supabase/supabase-js'
 
-type Group = Database['public']['Tables']['whatsapp_groups']['Row']
+interface UseRealtimeGroupsProps {
+  onGroupAdded?: (group: Record<string, unknown>) => void
+  onGroupUpdated?: (group: Record<string, unknown>) => void
+  onGroupDeleted?: (groupId: string) => void
+  onGroupSynced?: (groupId: string, participantCount: number) => void
+}
 
-export function useRealtimeGroups() {
-  const [groups, setGroups] = useState<Group[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export function useRealtimeGroups({
+  onGroupAdded,
+  onGroupUpdated,
+  onGroupDeleted,
+  onGroupSynced,
+}: UseRealtimeGroupsProps = {}) {
   const { subscribe, unsubscribe, isConnected } = useRealtime()
-  const supabase = createClient()
+  const [channels, setChannels] = useState<RealtimeChannel[]>([])
 
-  useEffect(() => {
-    const fetchGroups = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!user) {
-          throw new Error('Usuário não autenticado')
-        }
-
-        const { data, error: fetchError } = await supabase
-          .from('whatsapp_groups')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false })
-
-        if (fetchError) {
-          throw fetchError
-        }
-
-        setGroups(data || [])
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar grupos')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchGroups()
-  }, [supabase])
-
+  // Subscribe to groups table
   useEffect(() => {
     if (!isConnected) return
 
-    const channel = subscribe('whatsapp_groups', (payload) => {
-      console.log('Mudança em grupos:', payload)
+    const groupsChannel = subscribe('whatsapp_groups', (payload) => {
+      console.log('Group update received:', payload)
 
-      if (payload.eventType === 'INSERT') {
-        const newGroup = payload.new as Group
-        setGroups((prev) => [newGroup, ...prev])
-      } else if (payload.eventType === 'UPDATE') {
-        const updatedGroup = payload.new as Group
-        setGroups((prev) =>
-          prev.map((group) =>
-            group.id === updatedGroup.id ? updatedGroup : group
+      if (payload.eventType === 'INSERT' && payload.new) {
+        const group = payload.new as Group
+        onGroupAdded?.(group)
+        toast.success(`Novo grupo adicionado: ${group.name}`)
+      } else if (payload.eventType === 'UPDATE' && payload.new) {
+        const group = payload.new as Group
+        onGroupUpdated?.(group)
+
+        // Show toast for participant count changes
+        const oldGroup = payload.old as Group
+        if (oldGroup?.participants?.length !== group.participants?.length) {
+          toast.success(
+            `Grupo ${group.name} atualizado: ${group.participants?.length || 0} participantes`
           )
-        )
+        }
       } else if (payload.eventType === 'DELETE') {
-        const deletedGroup = payload.old as Group
-        setGroups((prev) =>
-          prev.filter((group) => group.id !== deletedGroup.id)
-        )
+        const groupId = (payload.old as Group)?.id
+        if (groupId) {
+          onGroupDeleted?.(groupId)
+          toast.success('Grupo removido')
+        }
       }
     })
 
+    setChannels((prev) => [...prev, groupsChannel])
+
     return () => {
-      unsubscribe(channel)
+      unsubscribe(groupsChannel)
+      setChannels((prev) => prev.filter((c) => c !== groupsChannel))
     }
-  }, [isConnected, subscribe, unsubscribe])
+  }, [
+    isConnected,
+    onGroupAdded,
+    onGroupUpdated,
+    onGroupDeleted,
+    subscribe,
+    unsubscribe,
+  ])
 
-  const addGroup = async (
-    groupData: Omit<
-      Group,
-      'id' | 'created_at' | 'updated_at' | 'user_id' | 'participants'
-    >
-  ) => {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+  // Subscribe to group sync jobs
+  useEffect(() => {
+    if (!isConnected) return
 
-      if (!user) {
-        throw new Error('Usuário não autenticado')
+    const syncChannel = subscribe('group_sync_jobs', (payload) => {
+      console.log('Group sync update:', payload)
+
+      if (payload.eventType === 'UPDATE' && payload.new) {
+        const job = payload.new as {
+          status?: string
+          group_id?: string
+          participant_count?: number
+        }
+        if (
+          job.status === 'completed' &&
+          job.group_id &&
+          job.participant_count
+        ) {
+          onGroupSynced?.(job.group_id, job.participant_count)
+          toast.success(
+            `Grupo sincronizado: ${job.participant_count} participantes`
+          )
+        } else if (job.status === 'failed') {
+          toast.error('Falha ao sincronizar grupo')
+        }
       }
+    })
 
-      const { data, error } = await supabase
-        .from('whatsapp_groups')
-        .insert({
-          ...groupData,
-          user_id: user.id,
-          participants: [],
-        })
-        .select()
-        .single()
+    setChannels((prev) => [...prev, syncChannel])
 
-      if (error) {
-        throw error
-      }
-
-      return data
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar grupo')
-      throw err
+    return () => {
+      unsubscribe(syncChannel)
+      setChannels((prev) => prev.filter((c) => c !== syncChannel))
     }
-  }
+  }, [isConnected, onGroupSynced, subscribe, unsubscribe])
 
-  const updateGroup = async (id: string, updates: Partial<Group>) => {
-    try {
-      const { data, error } = await supabase
-        .from('whatsapp_groups')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id)
-        .select()
-        .single()
-
-      if (error) {
-        throw error
-      }
-
-      return data
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar grupo')
-      throw err
+  // Cleanup all channels on unmount
+  useEffect(() => {
+    return () => {
+      channels.forEach((channel) => unsubscribe(channel))
     }
-  }
-
-  const deleteGroup = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('whatsapp_groups')
-        .delete()
-        .eq('id', id)
-
-      if (error) {
-        throw error
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao deletar grupo')
-      throw err
-    }
-  }
-
-  const syncGroupFromWhatsApp = async (whatsappId: string) => {
-    try {
-      // TODO: Implementar integração com Z-API para sincronizar grupo
-      // Por enquanto, apenas retorna um placeholder
-      console.log('Sincronizando grupo do WhatsApp:', whatsappId)
-
-      // Aqui seria feita a chamada para a Z-API para obter dados do grupo
-      // const groupData = await zApiClient.getGroupInfo(whatsappId)
-
-      return {
-        success: true,
-        message: 'Grupo sincronizado com sucesso',
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao sincronizar grupo')
-      throw err
-    }
-  }
+  }, [channels, unsubscribe])
 
   return {
-    groups,
-    loading,
-    error,
     isConnected,
-    addGroup,
-    updateGroup,
-    deleteGroup,
-    syncGroupFromWhatsApp,
+    channelsCount: channels.length,
   }
 }

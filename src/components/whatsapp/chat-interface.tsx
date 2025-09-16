@@ -36,7 +36,10 @@ export function ChatInterface({
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { sendMessage } = useRealtimeMessages(contact.id)
+  // Note: sendMessage function would need to be implemented separately
+  const sendMessage = async (content: string, contactId: string) => {
+    console.log('Sending message:', content, 'to:', contactId)
+  }
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })

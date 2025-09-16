@@ -2,167 +2,99 @@
 
 import { useEffect, useState } from 'react'
 import { useRealtime } from '@/providers/realtime-provider'
-import { createClient } from '@/lib/supabase/client'
-import { Database } from '@/types/database'
+import { Contact } from '@/types/contacts'
+import { toast } from 'sonner'
+import { RealtimeChannel } from '@supabase/supabase-js'
 
-type Contact = Database['public']['Tables']['contacts']['Row']
+interface UseRealtimeContactsProps {
+  onContactAdded?: (contact: Contact) => void
+  onContactUpdated?: (contact: Contact) => void
+  onContactDeleted?: (contactId: string) => void
+  onContactImported?: (count: number) => void
+}
 
-export function useRealtimeContacts() {
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export function useRealtimeContacts({
+  onContactAdded,
+  onContactUpdated,
+  onContactDeleted,
+  onContactImported,
+}: UseRealtimeContactsProps = {}) {
   const { subscribe, unsubscribe, isConnected } = useRealtime()
-  const supabase = createClient()
+  const [channels, setChannels] = useState<RealtimeChannel[]>([])
 
-  useEffect(() => {
-    const fetchContacts = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!user) {
-          throw new Error('Usuário não autenticado')
-        }
-
-        const { data, error: fetchError } = await supabase
-          .from('contacts')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('name', { ascending: true })
-
-        if (fetchError) {
-          throw fetchError
-        }
-
-        setContacts(data || [])
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Erro ao carregar contatos'
-        )
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchContacts()
-  }, [supabase])
-
+  // Subscribe to contacts table
   useEffect(() => {
     if (!isConnected) return
 
-    const channel = subscribe('contacts', (payload) => {
-      console.log('Mudança em contatos:', payload)
+    const contactsChannel = subscribe('contacts', (payload) => {
+      console.log('Contact update received:', payload)
 
-      if (payload.eventType === 'INSERT') {
-        const newContact = payload.new as Contact
-        setContacts((prev) =>
-          [...prev, newContact].sort((a, b) => a.name.localeCompare(b.name))
-        )
-      } else if (payload.eventType === 'UPDATE') {
-        const updatedContact = payload.new as Contact
-        setContacts((prev) =>
-          prev
-            .map((contact) =>
-              contact.id === updatedContact.id ? updatedContact : contact
-            )
-            .sort((a, b) => a.name.localeCompare(b.name))
-        )
+      if (payload.eventType === 'INSERT' && payload.new) {
+        const contact = payload.new as Contact
+        onContactAdded?.(contact)
+        toast.success(`Novo contato adicionado: ${contact.name}`)
+      } else if (payload.eventType === 'UPDATE' && payload.new) {
+        const contact = payload.new as Contact
+        onContactUpdated?.(contact)
       } else if (payload.eventType === 'DELETE') {
-        const deletedContact = payload.old as Contact
-        setContacts((prev) =>
-          prev.filter((contact) => contact.id !== deletedContact.id)
-        )
+        const contactId = (payload.old as Contact)?.id
+        if (contactId) {
+          onContactDeleted?.(contactId)
+          toast.success('Contato removido')
+        }
       }
     })
 
+    setChannels((prev) => [...prev, contactsChannel])
+
     return () => {
-      unsubscribe(channel)
+      unsubscribe(contactsChannel)
+      setChannels((prev) => prev.filter((c) => c !== contactsChannel))
     }
-  }, [isConnected, subscribe, unsubscribe])
+  }, [
+    isConnected,
+    onContactAdded,
+    onContactUpdated,
+    onContactDeleted,
+    subscribe,
+    unsubscribe,
+  ])
 
-  const addContact = async (
-    contactData: Omit<
-      Contact,
-      | 'id'
-      | 'created_at'
-      | 'updated_at'
-      | 'user_id'
-      | 'last_interaction'
-      | 'whatsapp_id'
-    >
-  ) => {
-    try {
-      const response = await fetch('/api/contacts', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(contactData),
-      })
+  // Subscribe to contact import jobs
+  useEffect(() => {
+    if (!isConnected) return
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erro ao criar contato')
+    const importChannel = subscribe('contact_import_jobs', (payload) => {
+      console.log('Contact import update:', payload)
+
+      if (payload.eventType === 'UPDATE' && payload.new) {
+        const job = payload.new as { status?: string; imported_count?: number }
+        if (job.status === 'completed' && job.imported_count) {
+          onContactImported?.(job.imported_count)
+          toast.success(`${job.imported_count} contatos importados com sucesso`)
+        } else if (job.status === 'failed') {
+          toast.error('Falha ao importar contatos')
+        }
       }
+    })
 
-      const { contact } = await response.json()
-      return contact
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao adicionar contato')
-      throw err
+    setChannels((prev) => [...prev, importChannel])
+
+    return () => {
+      unsubscribe(importChannel)
+      setChannels((prev) => prev.filter((c) => c !== importChannel))
     }
-  }
+  }, [isConnected, onContactImported, subscribe, unsubscribe])
 
-  const updateContact = async (id: string, updates: Partial<Contact>) => {
-    try {
-      const response = await fetch(`/api/contacts/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erro ao atualizar contato')
-      }
-
-      const { contact } = await response.json()
-      return contact
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar contato')
-      throw err
+  // Cleanup all channels on unmount
+  useEffect(() => {
+    return () => {
+      channels.forEach((channel) => unsubscribe(channel))
     }
-  }
-
-  const deleteContact = async (id: string) => {
-    try {
-      const response = await fetch(`/api/contacts/${id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Erro ao deletar contato')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao deletar contato')
-      throw err
-    }
-  }
+  }, [channels, unsubscribe])
 
   return {
-    contacts,
-    loading,
-    error,
     isConnected,
-    addContact,
-    updateContact,
-    deleteContact,
+    channelsCount: channels.length,
   }
 }

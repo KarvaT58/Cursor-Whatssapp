@@ -5,6 +5,8 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
+  useCallback,
   type ReactNode,
 } from 'react'
 import { createClient } from '@/lib/supabase/client'
@@ -12,6 +14,9 @@ import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface RealtimeContextType {
   isConnected: boolean
+  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'reconnecting'
+  lastConnectedAt: Date | null
+  reconnectAttempts: number
   subscribe: (
     table: string,
     callback: (payload: Record<string, unknown>) => void,
@@ -30,6 +35,7 @@ interface RealtimeContextType {
     teamId: string,
     callback: (payload: Record<string, unknown>) => void
   ) => RealtimeChannel
+  reconnect: () => void
 }
 
 const RealtimeContext = createContext<RealtimeContextType | undefined>(
@@ -38,27 +44,61 @@ const RealtimeContext = createContext<RealtimeContextType | undefined>(
 
 export function RealtimeProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false)
+  const [connectionStatus, setConnectionStatus] = useState<
+    'connecting' | 'connected' | 'disconnected' | 'reconnecting'
+  >('connecting')
+  const [lastConnectedAt, setLastConnectedAt] = useState<Date | null>(null)
+  const [reconnectAttempts, setReconnectAttempts] = useState(0)
   const [channels, setChannels] = useState<RealtimeChannel[]>([])
   const supabase = createClient()
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
+  const maxReconnectAttempts = 5
+  const reconnectDelay = 1000 // 1 second base delay
 
-  useEffect(() => {
-    // Verificar conexão inicial
-    const checkConnection = async () => {
-      try {
-        const { error } = await supabase
-          .from('whatsapp_messages')
-          .select('id')
-          .limit(1)
-
-        if (!error) {
-          setIsConnected(true)
-        }
-      } catch (error) {
-        console.error('Erro ao verificar conexão Realtime:', error)
-        setIsConnected(false)
-      }
+  const reconnect = useCallback(() => {
+    if (reconnectAttempts >= maxReconnectAttempts) {
+      console.warn('Máximo de tentativas de reconexão atingido')
+      setConnectionStatus('disconnected')
+      return
     }
 
+    setConnectionStatus('reconnecting')
+    setReconnectAttempts((prev) => prev + 1)
+
+    // Exponential backoff
+    const delay = reconnectDelay * Math.pow(2, reconnectAttempts)
+
+    reconnectTimeoutRef.current = setTimeout(() => {
+      checkConnection()
+    }, delay)
+  }, [reconnectAttempts])
+
+  const checkConnection = useCallback(async () => {
+    try {
+      setConnectionStatus('connecting')
+      const { error } = await supabase
+        .from('whatsapp_messages')
+        .select('id')
+        .limit(1)
+
+      if (!error) {
+        setIsConnected(true)
+        setConnectionStatus('connected')
+        setLastConnectedAt(new Date())
+        setReconnectAttempts(0)
+        console.log('Realtime conectado com sucesso')
+      } else {
+        throw new Error(error.message)
+      }
+    } catch (error) {
+      console.error('Erro ao verificar conexão Realtime:', error)
+      setIsConnected(false)
+      setConnectionStatus('disconnected')
+      reconnect()
+    }
+  }, [reconnect])
+
+  useEffect(() => {
     checkConnection()
 
     // Configurar listener para mudanças de conexão
@@ -66,21 +106,46 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_IN') {
-        setIsConnected(true)
+        checkConnection()
       } else if (event === 'SIGNED_OUT') {
         setIsConnected(false)
+        setConnectionStatus('disconnected')
+        setLastConnectedAt(null)
+        setReconnectAttempts(0)
         // Desconectar todos os canais
         channels.forEach((channel) => channel.unsubscribe())
         setChannels([])
       }
     })
 
+    // Configurar listener para mudanças de conectividade
+    const handleOnline = () => {
+      console.log('Conexão de rede restaurada')
+      if (!isConnected) {
+        checkConnection()
+      }
+    }
+
+    const handleOffline = () => {
+      console.log('Conexão de rede perdida')
+      setIsConnected(false)
+      setConnectionStatus('disconnected')
+    }
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
     return () => {
       subscription.unsubscribe()
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+      }
       // Limpar todos os canais ao desmontar
       channels.forEach((channel) => channel.unsubscribe())
     }
-  }, [supabase, channels])
+  }, [supabase, channels, checkConnection, isConnected])
 
   const subscribe = (
     table: string,
@@ -183,10 +248,14 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     <RealtimeContext.Provider
       value={{
         isConnected,
+        connectionStatus,
+        lastConnectedAt,
+        reconnectAttempts,
         subscribe,
         unsubscribe,
         subscribeToTeamMessages,
         subscribeToTeamPresence,
+        reconnect,
       }}
     >
       {children}
