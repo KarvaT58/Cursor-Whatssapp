@@ -85,7 +85,15 @@ export function useRealtimeContacts() {
   }, [isConnected, subscribe, unsubscribe])
 
   const addContact = async (
-    contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'user_id'>
+    contactData: Omit<
+      Contact,
+      | 'id'
+      | 'created_at'
+      | 'updated_at'
+      | 'user_id'
+      | 'last_interaction'
+      | 'whatsapp_id'
+    >
   ) => {
     try {
       const {
