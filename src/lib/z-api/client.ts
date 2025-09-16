@@ -83,12 +83,43 @@ export class ZApiClient {
     return this.makeRequest('/status')
   }
 
+  // Verificar status (alias para getInstanceStatus)
+  async getStatus(): Promise<ZApiResponse> {
+    return this.getInstanceStatus()
+  }
+
   // Enviar mensagem de texto
   async sendTextMessage(phone: string, message: string): Promise<ZApiResponse> {
     return this.makeRequest('/send-text', 'POST', {
       phone,
       message,
     })
+  }
+
+  // Enviar mensagem (método genérico)
+  async sendMessage(messageData: {
+    phone: string
+    message: string
+    type?: 'text' | 'image' | 'document' | 'audio'
+    mediaUrl?: string
+    fileName?: string
+  }): Promise<ZApiResponse> {
+    const { phone, message, type = 'text', mediaUrl, fileName } = messageData
+
+    if (type === 'text') {
+      return this.sendTextMessage(phone, message)
+    } else if (type === 'image' && mediaUrl) {
+      return this.sendImageMessage(phone, message, mediaUrl)
+    } else if (type === 'document' && mediaUrl && fileName) {
+      return this.sendDocumentMessage(phone, message, mediaUrl, fileName)
+    } else if (type === 'audio' && mediaUrl) {
+      return this.sendAudioMessage(phone, mediaUrl)
+    } else {
+      return {
+        success: false,
+        error: 'Tipo de mensagem não suportado ou parâmetros inválidos',
+      }
+    }
   }
 
   // Enviar mensagem com mídia
@@ -106,6 +137,45 @@ export class ZApiClient {
     })
   }
 
+  // Enviar mensagem de imagem
+  async sendImageMessage(
+    phone: string,
+    message: string,
+    imageUrl: string
+  ): Promise<ZApiResponse> {
+    return this.makeRequest('/send-image', 'POST', {
+      phone,
+      image: imageUrl,
+      caption: message,
+    })
+  }
+
+  // Enviar mensagem de documento
+  async sendDocumentMessage(
+    phone: string,
+    message: string,
+    documentUrl: string,
+    fileName: string
+  ): Promise<ZApiResponse> {
+    return this.makeRequest('/send-document', 'POST', {
+      phone,
+      document: documentUrl,
+      fileName,
+      caption: message,
+    })
+  }
+
+  // Enviar mensagem de áudio
+  async sendAudioMessage(
+    phone: string,
+    audioUrl: string
+  ): Promise<ZApiResponse> {
+    return this.makeRequest('/send-audio', 'POST', {
+      phone,
+      audio: audioUrl,
+    })
+  }
+
   // Enviar mensagem para grupo
   async sendGroupMessage(
     groupId: string,
@@ -115,6 +185,31 @@ export class ZApiClient {
       groupId,
       message,
     })
+  }
+
+  // Obter mensagens
+  async getMessages(params?: {
+    phone?: string
+    limit?: number
+    offset?: number
+  }): Promise<ZApiResponse> {
+    const queryParams = new URLSearchParams()
+
+    if (params?.phone) {
+      queryParams.append('phone', params.phone)
+    }
+    if (params?.limit) {
+      queryParams.append('limit', params.limit.toString())
+    }
+    if (params?.offset) {
+      queryParams.append('offset', params.offset.toString())
+    }
+
+    const endpoint = queryParams.toString()
+      ? `/messages?${queryParams.toString()}`
+      : '/messages'
+
+    return this.makeRequest(endpoint, 'GET')
   }
 
   // Obter QR Code
