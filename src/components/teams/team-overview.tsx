@@ -2,8 +2,10 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { useTeams, useTeamMembers } from '@/hooks/use-teams'
 import { Users, MessageSquare, Calendar, Activity } from 'lucide-react'
+import Link from 'next/link'
 
 interface TeamOverviewProps {
   className?: string
@@ -57,7 +59,15 @@ export function TeamOverview({ className }: TeamOverviewProps) {
                 </p>
               )}
             </div>
-            <Badge variant="default">Ativa</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="default">Ativa</Badge>
+              <Link href={`/dashboard/teams/${team.team.id}/chat`}>
+                <Button size="sm" className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Chat da Equipe
+                </Button>
+              </Link>
+            </div>
           </div>
         </CardHeader>
       </Card>

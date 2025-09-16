@@ -13,6 +13,18 @@ interface UseTeamsOptions {
   enabled?: boolean
 }
 
+interface UseTeamOptions {
+  teamId: string
+  refreshInterval?: number
+  enabled?: boolean
+}
+
+interface UseTeamMembersOptions {
+  teamId: string
+  refreshInterval?: number
+  enabled?: boolean
+}
+
 export function useTeams(options: UseTeamsOptions = {}) {
   const { refreshInterval = 30000, enabled = true } = options
   const [team, setTeam] = useState<TeamResponse | null>(null)
@@ -306,6 +318,130 @@ export function useTeamMembers(options: UseTeamsOptions = {}) {
     inviteUser,
     updateUserRole,
     removeUser,
+    refresh,
+  }
+}
+
+// Hook for fetching a specific team by ID
+export function useTeam(options: UseTeamOptions) {
+  const { teamId, refreshInterval = 30000, enabled = true } = options
+  const [team, setTeam] = useState<TeamResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchTeam = useCallback(async () => {
+    if (!enabled || !teamId) return
+
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const response = await fetch(`/api/teams/${teamId}`)
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          setTeam(null)
+          return
+        }
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setTeam(data)
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch team'
+      setError(errorMessage)
+      console.error('Error fetching team:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [enabled, teamId])
+
+  useEffect(() => {
+    fetchTeam()
+  }, [fetchTeam])
+
+  useEffect(() => {
+    if (!enabled || !refreshInterval) return
+
+    const interval = setInterval(() => {
+      fetchTeam()
+    }, refreshInterval)
+
+    return () => clearInterval(interval)
+  }, [fetchTeam, refreshInterval, enabled])
+
+  const refresh = useCallback(() => {
+    fetchTeam()
+  }, [fetchTeam])
+
+  return {
+    team,
+    isLoading,
+    error,
+    refresh,
+  }
+}
+
+// Hook for fetching team members by team ID
+export function useTeamMembersById(options: UseTeamMembersOptions) {
+  const { teamId, refreshInterval = 30000, enabled = true } = options
+  const [members, setMembers] = useState<TeamMembersResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchMembers = useCallback(async () => {
+    if (!enabled || !teamId) return
+
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const response = await fetch(`/api/teams/${teamId}/members`)
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          setMembers(null)
+          return
+        }
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      setMembers(data)
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch team members'
+      setError(errorMessage)
+      console.error('Error fetching team members:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [enabled, teamId])
+
+  useEffect(() => {
+    fetchMembers()
+  }, [fetchMembers])
+
+  useEffect(() => {
+    if (!enabled || !refreshInterval) return
+
+    const interval = setInterval(() => {
+      fetchMembers()
+    }, refreshInterval)
+
+    return () => clearInterval(interval)
+  }, [fetchMembers, refreshInterval, enabled])
+
+  const refresh = useCallback(() => {
+    fetchMembers()
+  }, [fetchMembers])
+
+  return {
+    members,
+    isLoading,
+    error,
     refresh,
   }
 }
