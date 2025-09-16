@@ -297,10 +297,9 @@ export function usePerformanceOptimization(options: OptimizationOptions = {}) {
   )
 
   const optimizeQuery = useCallback((query: unknown) => {
+    // This is a utility function for query optimization
+    // The actual implementation would depend on the query builder being used
     return query
-      .select('*')
-      .limit(1000)
-      .order('created_at', { ascending: false })
   }, [])
 
   const optimizeCache = useCallback(
