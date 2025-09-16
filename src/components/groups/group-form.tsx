@@ -1,158 +1,205 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRealtimeGroups } from '@/hooks/use-realtime-groups'
+import { Database } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { X, Save, ArrowLeft, MessageSquare, Info } from 'lucide-react'
+import {
+  X,
+  Plus,
+  Users,
+  MessageCircle,
+  AlertCircle,
+  CheckCircle,
+} from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+
+type Group = Database['public']['Tables']['whatsapp_groups']['Row']
+type GroupInsert = Database['public']['Tables']['whatsapp_groups']['Insert']
+type GroupUpdate = Database['public']['Tables']['whatsapp_groups']['Update']
 
 interface GroupFormProps {
-  groupId?: string | null
-  onClose: () => void
-  onSuccess: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  group?: Group | null
+  onSubmit: (data: Partial<GroupInsert> | Partial<GroupUpdate>) => Promise<void>
+  loading?: boolean
+  error?: string | null
 }
 
-export function GroupForm({ groupId, onClose, onSuccess }: GroupFormProps) {
-  const [formData, setFormData] = useState({
+interface FormData {
+  name: string
+  description: string
+  participants: string[]
+  whatsapp_id: string
+}
+
+export function GroupForm({
+  open,
+  onOpenChange,
+  group,
+  onSubmit,
+  loading = false,
+  error = null,
+}: GroupFormProps) {
+  const [formData, setFormData] = useState<FormData>({
     name: '',
-    whatsapp_id: '',
     description: '',
+    participants: [],
+    whatsapp_id: '',
   })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [newParticipant, setNewParticipant] = useState('')
+  const [participantError, setParticipantError] = useState<string | null>(null)
 
-  const { groups, addGroup, updateGroup } = useRealtimeGroups()
-
-  const isEditing = !!groupId
-  const currentGroup = isEditing ? groups.find((g) => g.id === groupId) : null
-
+  // Reset form when dialog opens/closes or group changes
   useEffect(() => {
-    if (currentGroup) {
-      setFormData({
-        name: currentGroup.name,
-        whatsapp_id: currentGroup.whatsapp_id,
-        description: currentGroup.description || '',
-      })
+    if (open) {
+      if (group) {
+        setFormData({
+          name: group.name || '',
+          description: group.description || '',
+          participants: group.participants || [],
+          whatsapp_id: group.whatsapp_id || '',
+        })
+      } else {
+        setFormData({
+          name: '',
+          description: '',
+          participants: [],
+          whatsapp_id: '',
+        })
+      }
+      setNewParticipant('')
+      setParticipantError(null)
     }
-  }, [currentGroup])
+  }, [open, group])
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-    setError(null)
+  const validatePhoneNumber = (phone: string): boolean => {
+    // Remove all non-digit characters
+    const cleanPhone = phone.replace(/\D/g, '')
+    // Check if it's a valid Brazilian phone number (10-11 digits)
+    return cleanPhone.length >= 10 && cleanPhone.length <= 11
   }
 
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      setError('Nome do grupo é obrigatório')
-      return false
+  const formatPhoneNumber = (phone: string): string => {
+    const cleanPhone = phone.replace(/\D/g, '')
+    if (cleanPhone.length === 11) {
+      return `+55${cleanPhone}`
+    } else if (cleanPhone.length === 10) {
+      return `+55${cleanPhone}`
     }
-    if (!formData.whatsapp_id.trim()) {
-      setError('ID do WhatsApp é obrigatório')
-      return false
+    return phone
+  }
+
+  const handleAddParticipant = () => {
+    if (!newParticipant.trim()) {
+      setParticipantError('Telefone é obrigatório')
+      return
     }
-    // Validar formato do ID do WhatsApp (exemplo: 120363123456789012@g.us)
-    if (!formData.whatsapp_id.includes('@g.us')) {
-      setError('ID do WhatsApp deve terminar com @g.us')
-      return false
+
+    const formattedPhone = formatPhoneNumber(newParticipant)
+
+    if (!validatePhoneNumber(newParticipant)) {
+      setParticipantError('Telefone inválido. Use o formato: (11) 99999-9999')
+      return
     }
-    return true
+
+    if (formData.participants.includes(formattedPhone)) {
+      setParticipantError('Participante já está na lista')
+      return
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      participants: [...prev.participants, formattedPhone],
+    }))
+    setNewParticipant('')
+    setParticipantError(null)
+  }
+
+  const handleRemoveParticipant = (participant: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      participants: prev.participants.filter((p) => p !== participant),
+    }))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!validateForm()) return
+    if (!formData.name.trim()) {
+      return
+    }
 
-    setLoading(true)
-    setError(null)
+    const submitData = {
+      name: formData.name.trim(),
+      description: formData.description.trim() || undefined,
+      participants: formData.participants,
+      whatsapp_id: formData.whatsapp_id.trim() || undefined,
+    }
 
     try {
-      const groupData = {
-        name: formData.name.trim(),
-        whatsapp_id: formData.whatsapp_id.trim(),
-        description: formData.description.trim() || null,
-      }
-
-      if (isEditing && groupId) {
-        await updateGroup(groupId, groupData)
-      } else {
-        await addGroup(groupData)
-      }
-
-      onSuccess()
+      await onSubmit(submitData)
+      onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao salvar grupo')
-    } finally {
-      setLoading(false)
+      console.error('Erro ao salvar grupo:', err)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleAddParticipant()
     }
   }
 
   return (
-    <div className="flex h-full items-center justify-center p-4">
-      <Card className="w-full max-w-2xl">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <ArrowLeft className="size-4" />
-              <MessageSquare className="size-4" />
-              {isEditing ? 'Editar Grupo' : 'Novo Grupo'}
-            </CardTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="size-4" />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-                {error}
-              </div>
-            )}
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {group ? 'Editar Grupo' : 'Criar Novo Grupo'}
+          </DialogTitle>
+          <DialogDescription>
+            {group
+              ? 'Atualize as informações do grupo WhatsApp'
+              : 'Crie um novo grupo para gerenciar conversas no WhatsApp'}
+          </DialogDescription>
+        </DialogHeader>
 
-            <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
-              <div className="flex items-start gap-2">
-                <Info className="size-4 mt-0.5" />
-                <div>
-                  <p className="font-medium">Como obter o ID do grupo:</p>
-                  <ol className="mt-1 list-decimal list-inside space-y-1">
-                    <li>Abra o WhatsApp Web</li>
-                    <li>Vá para o grupo desejado</li>
-                    <li>Clique no nome do grupo</li>
-                    <li>Copie o ID que termina com @g.us</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
+          {/* Informações básicas */}
+          <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome do Grupo *</Label>
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => handleInputChange('name', e.target.value)}
-                placeholder="Nome do grupo no WhatsApp"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="whatsapp_id">ID do WhatsApp *</Label>
-              <Input
-                id="whatsapp_id"
-                value={formData.whatsapp_id}
                 onChange={(e) =>
-                  handleInputChange('whatsapp_id', e.target.value)
+                  setFormData((prev) => ({ ...prev, name: e.target.value }))
                 }
-                placeholder="120363123456789012@g.us"
+                placeholder="Ex: Grupo de Trabalho"
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                O ID do grupo deve terminar com @g.us
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -161,25 +208,143 @@ export function GroupForm({ groupId, onClose, onSuccess }: GroupFormProps) {
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
-                  handleInputChange('description', e.target.value)
+                  setFormData((prev) => ({
+                    ...prev,
+                    description: e.target.value,
+                  }))
                 }
                 placeholder="Descrição opcional do grupo"
                 rows={3}
               />
             </div>
 
-            <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={loading}>
-                <Save className="size-4 mr-2" />
-                {loading ? 'Salvando...' : isEditing ? 'Atualizar' : 'Criar'}
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp_id">ID do WhatsApp (opcional)</Label>
+              <Input
+                id="whatsapp_id"
+                value={formData.whatsapp_id}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    whatsapp_id: e.target.value,
+                  }))
+                }
+                placeholder="Ex: 120363123456789012@g.us"
+              />
+              <p className="text-xs text-muted-foreground">
+                ID único do grupo no WhatsApp (será preenchido automaticamente
+                na sincronização)
+              </p>
+            </div>
+          </div>
+
+          {/* Participantes */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              <Label className="text-base font-semibold">Participantes</Label>
+              <Badge variant="secondary">{formData.participants.length}</Badge>
+            </div>
+
+            {/* Adicionar participante */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input
+                  value={newParticipant}
+                  onChange={(e) => {
+                    setNewParticipant(e.target.value)
+                    setParticipantError(null)
+                  }}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Digite o telefone (11) 99999-9999"
+                  className={participantError ? 'border-destructive' : ''}
+                />
+                {participantError && (
+                  <p className="text-xs text-destructive mt-1">
+                    {participantError}
+                  </p>
+                )}
+              </div>
+              <Button
+                type="button"
+                onClick={handleAddParticipant}
+                disabled={!newParticipant.trim()}
+              >
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+
+            {/* Lista de participantes */}
+            {formData.participants.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">
+                    Participantes Adicionados
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-2">
+                    {formData.participants.map((participant, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-muted rounded-lg p-3"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                          <span className="font-mono text-sm">
+                            {participant}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveParticipant(participant)}
+                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {formData.participants.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>Nenhum participante adicionado</p>
+                <p className="text-xs">Adicione telefones para criar o grupo</p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading || !formData.name.trim()}>
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  {group ? 'Atualizar' : 'Criar'} Grupo
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

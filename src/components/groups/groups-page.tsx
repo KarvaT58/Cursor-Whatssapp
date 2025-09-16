@@ -48,9 +48,14 @@ export function GroupsPage() {
       <div className="flex-1 overflow-hidden">
         {showForm ? (
           <GroupForm
-            groupId={editingGroup}
-            onClose={handleCloseForm}
-            onSuccess={handleCloseForm}
+            open={showForm}
+            onOpenChange={setShowForm}
+            group={
+              editingGroup ? groups.find((g) => g.id === editingGroup) : null
+            }
+            onSubmit={async () => {
+              handleCloseForm()
+            }}
           />
         ) : (
           <GroupsList
