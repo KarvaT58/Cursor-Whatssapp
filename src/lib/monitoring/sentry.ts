@@ -153,22 +153,16 @@ export function withSentryErrorHandler<T extends any[], R>(
 // React component error boundary
 export function withSentryErrorBoundary(Component: React.ComponentType<Record<string, unknown>>) {
   return Sentry.withErrorBoundary(Component, {
-    fallback: ({ error, resetError }: { error: Error; resetError: () => void }) => (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">
-          Algo deu errado!
-        </h2>
-        <p className="text-gray-600 mb-4 text-center">
-          Ocorreu um erro inesperado. Nossa equipe foi notificada.
-        </p>
-        <button
-          onClick={resetError}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Tentar novamente
-        </button>
-      </div>
-    ),
+    fallback: ({ error, resetError }: { error: Error; resetError: () => void }) => {
+      return React.createElement('div', { className: 'flex flex-col items-center justify-center min-h-screen p-4' },
+        React.createElement('h2', { className: 'text-2xl font-bold text-red-600 mb-4' }, 'Algo deu errado!'),
+        React.createElement('p', { className: 'text-gray-600 mb-4 text-center' }, 'Ocorreu um erro inesperado. Nossa equipe foi notificada.'),
+        React.createElement('button', { 
+          onClick: resetError,
+          className: 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700'
+        }, 'Tentar novamente')
+      )
+    },
     beforeCapture: (scope, error, errorInfo) => {
       scope.setTag('errorBoundary', true)
       scope.setContext('errorInfo', errorInfo)

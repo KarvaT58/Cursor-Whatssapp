@@ -86,13 +86,13 @@ export class AuditLogger {
 // Convenience functions for common audit events
 export const auditLog = {
   user: {
-    login: (userId: string, details?: Record<string, any>) =>
+    login: (userId: string, details?: Record<string, unknown>) =>
       AuditLogger.logUserAction(userId, 'login', 'user', details),
     
-    logout: (userId: string, details?: Record<string, any>) =>
+    logout: (userId: string, details?: Record<string, unknown>) =>
       AuditLogger.logUserAction(userId, 'logout', 'user', details),
     
-    profileUpdate: (userId: string, details?: Record<string, any>) =>
+    profileUpdate: (userId: string, details?: Record<string, unknown>) =>
       AuditLogger.logUserAction(userId, 'update', 'profile', details),
   },
 
