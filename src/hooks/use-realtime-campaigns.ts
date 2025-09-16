@@ -83,7 +83,14 @@ export function useRealtimeCampaigns() {
   const createCampaign = async (
     campaignData: Omit<
       Campaign,
-      'id' | 'created_at' | 'updated_at' | 'user_id' | 'status'
+      | 'id'
+      | 'created_at'
+      | 'updated_at'
+      | 'user_id'
+      | 'status'
+      | 'started_at'
+      | 'completed_at'
+      | 'stats'
     >
   ) => {
     try {
