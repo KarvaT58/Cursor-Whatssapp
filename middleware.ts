@@ -1,8 +1,26 @@
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
+import { createRequestLogger } from '@/lib/logging/request-logger'
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request)
+  const requestLogger = createRequestLogger(request)
+  
+  try {
+    // Log the incoming request
+    requestLogger.logRequest()
+    
+    // Execute the session update
+    const response = await updateSession(request)
+    
+    // Log the response
+    requestLogger.logResponse(response)
+    
+    return response
+  } catch (error) {
+    // Log any errors
+    requestLogger.logError(error as Error)
+    throw error
+  }
 }
 
 export const config = {
