@@ -162,14 +162,14 @@
   - Configurar monitoramento de filas
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 21. Criar estrutura para campanhas
+- [x] 21. Criar estrutura para campanhas
   - Criar tabela campaigns no Supabase
   - Implementar RLS para campanhas
   - Criar tipos TypeScript para campanhas
   - Configurar relacionamentos com contatos
   - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
 
-- [ ] 22. Implementar interface de campanhas
+- [x] 22. Implementar interface de campanhas
   - Criar componente CampaignBuilder
   - Implementar CampaignList com filtros
   - Criar CampaignStats para métricas
