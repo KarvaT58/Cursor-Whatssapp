@@ -28,12 +28,13 @@ export interface TeamMember extends User {
 }
 
 export interface TeamMessageWithUser extends TeamMessage {
-  user: {
+  sender: {
     id: string
     name: string
     email: string
     role: 'admin' | 'user'
   }
+  replyTo?: TeamMessageWithUser
 }
 
 // API Response types
@@ -79,7 +80,15 @@ export interface UpdateUserRoleData {
 
 export interface SendMessageData {
   content: string
+  messageType?: 'text' | 'image' | 'file' | 'system'
   channel?: string
+  replyToId?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface EditMessageData {
+  content: string
+  metadata?: Record<string, unknown>
 }
 
 // Hook types
@@ -177,4 +186,43 @@ export interface TeamNotificationSettings {
     start: string
     end: string
   }
+}
+
+// Real-time message types
+export interface TeamMessageEvent {
+  type: 'message_created' | 'message_updated' | 'message_deleted'
+  message: TeamMessageWithUser
+  teamId: string
+  channel: string
+}
+
+export interface TeamMemberPresence {
+  userId: string
+  isOnline: boolean
+  lastSeen: string
+  status?: 'available' | 'busy' | 'away'
+}
+
+export interface TeamTypingIndicator {
+  userId: string
+  userName: string
+  channel: string
+  isTyping: boolean
+}
+
+// Message search and filtering
+export interface MessageSearchFilters {
+  query?: string
+  senderId?: string
+  messageType?: 'text' | 'image' | 'file' | 'system'
+  dateFrom?: string
+  dateTo?: string
+  hasAttachments?: boolean
+}
+
+export interface MessageSearchResult {
+  messages: TeamMessageWithUser[]
+  total: number
+  query: string
+  filters: MessageSearchFilters
 }

@@ -14,9 +14,22 @@ interface RealtimeContextType {
   isConnected: boolean
   subscribe: (
     table: string,
-    callback: (payload: Record<string, unknown>) => void
+    callback: (payload: Record<string, unknown>) => void,
+    options?: {
+      schema?: string
+      table?: string
+      filter?: string
+    }
   ) => RealtimeChannel
   unsubscribe: (channel: RealtimeChannel) => void
+  subscribeToTeamMessages: (
+    teamId: string,
+    callback: (payload: Record<string, unknown>) => void
+  ) => RealtimeChannel
+  subscribeToTeamPresence: (
+    teamId: string,
+    callback: (payload: Record<string, unknown>) => void
+  ) => RealtimeChannel
 }
 
 const RealtimeContext = createContext<RealtimeContextType | undefined>(
@@ -71,7 +84,12 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
 
   const subscribe = (
     table: string,
-    callback: (payload: Record<string, unknown>) => void
+    callback: (payload: Record<string, unknown>) => void,
+    options?: {
+      schema?: string
+      table?: string
+      filter?: string
+    }
   ) => {
     const channel = supabase
       .channel(`${table}_changes`)
@@ -79,8 +97,9 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
         'postgres_changes',
         {
           event: '*',
-          schema: 'public',
-          table: table,
+          schema: options?.schema || 'public',
+          table: options?.table || table,
+          filter: options?.filter,
         },
         callback
       )
@@ -97,13 +116,79 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     return channel
   }
 
+  const subscribeToTeamMessages = (
+    teamId: string,
+    callback: (payload: Record<string, unknown>) => void
+  ) => {
+    const channel = supabase
+      .channel(`team_messages_${teamId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'team_messages',
+          filter: `team_id=eq.${teamId}`,
+        },
+        callback
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true)
+          setChannels((prev) => [...prev, channel])
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`Erro no canal team_messages_${teamId}:`, status)
+          setIsConnected(false)
+        }
+      })
+
+    return channel
+  }
+
+  const subscribeToTeamPresence = (
+    teamId: string,
+    callback: (payload: Record<string, unknown>) => void
+  ) => {
+    const channel = supabase
+      .channel(`team_presence_${teamId}`)
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState()
+        callback({ type: 'presence_sync', state })
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        callback({ type: 'presence_join', key, newPresences })
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        callback({ type: 'presence_leave', key, leftPresences })
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true)
+          setChannels((prev) => [...prev, channel])
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error(`Erro no canal team_presence_${teamId}:`, status)
+          setIsConnected(false)
+        }
+      })
+
+    return channel
+  }
+
   const unsubscribe = (channel: RealtimeChannel) => {
     channel.unsubscribe()
     setChannels((prev) => prev.filter((c) => c !== channel))
   }
 
   return (
-    <RealtimeContext.Provider value={{ isConnected, subscribe, unsubscribe }}>
+    <RealtimeContext.Provider
+      value={{
+        isConnected,
+        subscribe,
+        unsubscribe,
+        subscribeToTeamMessages,
+        subscribeToTeamPresence,
+      }}
+    >
       {children}
     </RealtimeContext.Provider>
   )
