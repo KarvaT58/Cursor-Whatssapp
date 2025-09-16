@@ -155,7 +155,7 @@
 
 ## Fase 7: Sistema de Campanhas
 
-- [ ] 20. Configurar Redis e BullMQ
+- [x] 20. Configurar Redis e BullMQ
   - Configurar Redis no Vercel
   - Implementar BullMQ para filas
   - Criar workers para processamento

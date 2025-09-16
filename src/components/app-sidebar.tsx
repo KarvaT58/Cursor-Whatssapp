@@ -68,6 +68,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: IconSettings,
       },
       {
+        title: 'Monitor de Filas',
+        url: '/dashboard/queues',
+        icon: IconSettings,
+      },
+      {
         title: 'Teste Z-API',
         url: '/dashboard/z-api-test',
         icon: IconSettings,
