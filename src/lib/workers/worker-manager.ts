@@ -4,6 +4,7 @@ import {
   stopNotificationWorker,
 } from './notification-worker'
 import { startRetryWorker, stopRetryWorker } from './retry-worker'
+import { startSchedulerWorker, stopSchedulerWorker } from './scheduler-worker'
 
 let workersStarted = false
 
@@ -17,6 +18,7 @@ export function startAllWorkers(): void {
     startCampaignWorker()
     startNotificationWorker()
     startRetryWorker()
+    startSchedulerWorker()
 
     workersStarted = true
     console.log('All workers started successfully')
@@ -37,6 +39,7 @@ export function stopAllWorkers(): void {
     stopCampaignWorker()
     stopNotificationWorker()
     stopRetryWorker()
+    stopSchedulerWorker()
 
     workersStarted = false
     console.log('All workers stopped successfully')

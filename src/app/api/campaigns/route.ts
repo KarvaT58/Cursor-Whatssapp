@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { CreateCampaignData, CampaignFilters } from '@/types/campaigns'
+import { getCampaignSchedulerQueue } from '@/lib/queues/queue-manager'
 import { z } from 'zod'
 
 const CreateCampaignSchema = z.object({
@@ -161,6 +162,42 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to create campaign' },
         { status: 500 }
       )
+    }
+
+    // If campaign is scheduled, add it to the scheduler queue
+    if (campaign.status === 'scheduled' && campaign.scheduled_at) {
+      try {
+        const schedulerQueue = getCampaignSchedulerQueue()
+        const scheduledTime = new Date(campaign.scheduled_at)
+        const delay = scheduledTime.getTime() - Date.now()
+
+        if (delay > 0) {
+          await schedulerQueue.add(
+            'schedule-campaign',
+            {
+              campaignId: campaign.id,
+              scheduledAt: campaign.scheduled_at,
+              userId: user.id,
+            },
+            {
+              delay: delay,
+            }
+          )
+
+          console.log(
+            `Campaign ${campaign.id} scheduled for ${campaign.scheduled_at}`
+          )
+        } else {
+          // If scheduled time is in the past, update status to draft
+          await supabase
+            .from('campaigns')
+            .update({ status: 'draft' })
+            .eq('id', campaign.id)
+        }
+      } catch (schedulerError) {
+        console.error('Error scheduling campaign:', schedulerError)
+        // Don't fail the campaign creation if scheduling fails
+      }
     }
 
     return NextResponse.json(campaign, { status: 201 })
