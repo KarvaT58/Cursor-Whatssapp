@@ -11,7 +11,10 @@ import {
   XCircle,
   AlertCircle,
 } from 'lucide-react'
-import { useCampaignProgress } from '@/hooks/use-campaign-progress'
+import {
+  useCampaignProgress,
+  useMultipleCampaignProgress,
+} from '@/hooks/use-campaign-progress'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
