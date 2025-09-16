@@ -93,7 +93,9 @@ export function useRealtimeMessages(contactId?: string, groupId?: string) {
   const sendMessage = async (
     content: string,
     contactId?: string,
-    groupId?: string
+    groupId?: string,
+    type: 'text' | 'image' | 'document' | 'audio' = 'text',
+    mediaUrl?: string
   ) => {
     try {
       const {
@@ -109,11 +111,12 @@ export function useRealtimeMessages(contactId?: string, groupId?: string) {
         .insert({
           content,
           direction: 'outbound',
-          type: 'text',
+          type,
           status: 'sent',
           user_id: user.id,
           contact_id: contactId || null,
           group_id: groupId || null,
+          ...(mediaUrl && { content: mediaUrl }), // Para mídia, usar URL como conteúdo
         })
         .select()
         .single()

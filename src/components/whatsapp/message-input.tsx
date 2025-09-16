@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
@@ -30,12 +30,16 @@ interface MessageInputProps {
     type?: 'text' | 'image' | 'document' | 'audio',
     mediaUrl?: string
   ) => void
+  onTypingStart?: () => void
+  onTypingStop?: () => void
   disabled?: boolean
   placeholder?: string
 }
 
 export function MessageInput({
   onSendMessage,
+  onTypingStart,
+  onTypingStop,
   disabled = false,
   placeholder = 'Digite sua mensagem...',
 }: MessageInputProps) {
@@ -47,6 +51,8 @@ export function MessageInput({
   )
   const [mediaUrl, setMediaUrl] = useState('')
   const [mediaFile, setMediaFile] = useState<File | null>(null)
+  const [isTyping, setIsTyping] = useState(false)
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -63,7 +69,13 @@ export function MessageInput({
     setMediaUrl('')
     setMediaFile(null)
     setShowMediaDialog(false)
-  }, [message, mediaUrl, mediaType, onSendMessage])
+
+    // Parar indicador de digitação
+    if (isTyping) {
+      setIsTyping(false)
+      onTypingStop?.()
+    }
+  }, [message, mediaUrl, mediaType, onSendMessage, isTyping, onTypingStop])
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -71,6 +83,39 @@ export function MessageInput({
       handleSend()
     }
   }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    setMessage(value)
+
+    // Gerenciar indicador de digitação
+    if (value.trim() && !isTyping) {
+      setIsTyping(true)
+      onTypingStart?.()
+    }
+
+    // Limpar timeout anterior
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current)
+    }
+
+    // Definir timeout para parar de digitar
+    typingTimeoutRef.current = setTimeout(() => {
+      if (isTyping) {
+        setIsTyping(false)
+        onTypingStop?.()
+      }
+    }, 2000)
+  }
+
+  // Limpar timeout ao desmontar
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -330,7 +375,7 @@ export function MessageInput({
           <Textarea
             ref={textareaRef}
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleInputChange}
             onKeyPress={handleKeyPress}
             placeholder={placeholder}
             disabled={disabled}

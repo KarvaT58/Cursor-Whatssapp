@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useRealtimeMessages } from '@/hooks/use-realtime-messages'
 import { useRealtimeContacts } from '@/hooks/use-realtime-contacts'
 import { useZApi } from '@/hooks/use-z-api'
+import { useTypingIndicator } from '@/hooks/use-typing-indicator'
+import { useMessageStatus } from '@/hooks/use-message-status'
+import { useConversationHistory } from '@/hooks/use-conversation-history'
 import { MessageList } from './message-list'
 import { MessageInput } from './message-input'
 import { ContactSelector } from './contact-selector'
@@ -22,8 +25,7 @@ interface WhatsAppChatProps {
 export function WhatsAppChat({ className }: WhatsAppChatProps) {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
-  const [isTyping, setIsTyping] = useState(false)
-  const [typingContact, setTypingContact] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | undefined>()
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const { contacts, loading: contactsLoading } = useRealtimeContacts()
@@ -37,22 +39,60 @@ export function WhatsAppChat({ className }: WhatsAppChatProps) {
   )
   const { sendMessage: sendMessageViaZApi, loading: sendingMessage } = useZApi()
 
+  // Hooks para funcionalidades avançadas
+  const { typingText, startTyping, stopTyping } = useTypingIndicator({
+    contactId: selectedContact?.id,
+    groupId: selectedGroup || undefined,
+    currentUserId,
+  })
+
+  const { markConversationAsRead } = useConversationHistory({
+    userId: currentUserId,
+  })
+
+  const { markAsRead, markAsDelivered } = useMessageStatus({
+    contactId: selectedContact?.id,
+    groupId: selectedGroup || undefined,
+    currentUserId,
+  })
+
+  // Obter ID do usuário atual
+  useEffect(() => {
+    const getUser = async () => {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      setCurrentUserId(user?.id)
+    }
+    getUser()
+  }, [])
+
   // Auto-scroll para a última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Simular indicador de digitação
+  // Marcar conversa como lida quando selecionada
   useEffect(() => {
-    if (selectedContact) {
-      const typingTimeout = setTimeout(() => {
-        setIsTyping(false)
-        setTypingContact(null)
-      }, 3000)
-
-      return () => clearTimeout(typingTimeout)
+    if (selectedContact || selectedGroup) {
+      markConversationAsRead(selectedContact?.id, selectedGroup || undefined)
     }
-  }, [selectedContact])
+  }, [selectedContact, selectedGroup, markConversationAsRead])
+
+  // Marcar mensagens como entregues quando visualizadas
+  useEffect(() => {
+    if (messages.length > 0) {
+      const outboundMessages = messages
+        .filter((msg) => msg.direction === 'outbound' && msg.status === 'sent')
+        .map((msg) => msg.id)
+
+      if (outboundMessages.length > 0) {
+        markAsDelivered(outboundMessages)
+      }
+    }
+  }, [messages, markAsDelivered])
 
   const handleSendMessage = async (
     content: string,
@@ -76,14 +116,15 @@ export function WhatsAppChat({ className }: WhatsAppChatProps) {
       await sendMessageToDB(
         content,
         selectedContact?.id,
-        selectedGroup || undefined
+        selectedGroup || undefined,
+        type,
+        mediaUrl
       )
 
       // Simular resposta automática (opcional)
       if (selectedContact && Math.random() > 0.7) {
         setTimeout(() => {
-          setIsTyping(true)
-          setTypingContact(selectedContact.name)
+          startTyping(selectedContact.name)
         }, 1000)
       }
     } catch (error) {
@@ -94,15 +135,13 @@ export function WhatsAppChat({ className }: WhatsAppChatProps) {
   const handleContactSelect = (contact: Contact) => {
     setSelectedContact(contact)
     setSelectedGroup(null)
-    setIsTyping(false)
-    setTypingContact(null)
+    stopTyping()
   }
 
   const handleGroupSelect = (groupId: string) => {
     setSelectedGroup(groupId)
     setSelectedContact(null)
-    setIsTyping(false)
-    setTypingContact(null)
+    stopTyping()
   }
 
   return (
@@ -140,9 +179,7 @@ export function WhatsAppChat({ className }: WhatsAppChatProps) {
               />
 
               {/* Indicador de digitação */}
-              {isTyping && typingContact && (
-                <TypingIndicator contactName={typingContact} />
-              )}
+              {typingText && <TypingIndicator contactName={typingText} />}
 
               {/* Scroll anchor */}
               <div ref={messagesEndRef} />
@@ -151,6 +188,8 @@ export function WhatsAppChat({ className }: WhatsAppChatProps) {
             {/* Input de mensagem */}
             <MessageInput
               onSendMessage={handleSendMessage}
+              onTypingStart={() => startTyping('Você')}
+              onTypingStop={stopTyping}
               disabled={sendingMessage}
               placeholder={
                 selectedContact
