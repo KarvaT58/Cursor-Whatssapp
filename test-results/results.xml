@@ -1,0 +1,1392 @@
+<testsuites id="" name="" tests="335" failures="0" skipped="335" errors="0" time="0.9237449999999999">
+<testsuite name="auth.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="chromium" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Authentication Flow › should display login page when accessing protected route without authentication" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show login form with required fields" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should display error message for invalid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should successfully login with valid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should logout successfully" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should maintain session across page refreshes" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should redirect to dashboard after successful login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should handle empty form submission" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should validate email format" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show loading state during login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="campaigns.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="chromium" tests="15" failures="0" skipped="15" time="0" errors="0">
+<testcase name="Campaign Management › should display campaigns interface" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should create new campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign list" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should edit existing campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should schedule campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should execute campaign immediately" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign statistics" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign progress" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign deletion" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should filter campaigns by status" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should search campaigns" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should validate campaign form" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign errors gracefully" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign templates" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle rate limiting" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="full-flow.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="chromium" tests="5" failures="0" skipped="5" time="0" errors="0">
+<testcase name="Full Application Flow › should complete full user journey from login to campaign execution" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle multiple user sessions" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle network interruptions gracefully" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should maintain state across page refreshes" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle concurrent operations" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="team-management.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="chromium" tests="21" failures="0" skipped="21" time="0" errors="0">
+<testcase name="Team Management › should display team management interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team chat interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should send team message" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show online status of team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team message history" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message timestamps" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show typing indicators in team chat" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message search" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team activity log" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team permissions" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should add new team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should remove team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should update member role (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team notifications" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team statistics" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team chat errors gracefully" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should support team channels" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle real-time updates" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should validate team message input" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show member presence indicators" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="whatsapp-chat.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="chromium" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="WhatsApp Chat › should display WhatsApp chat interface" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should load and display contact list" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should select contact and display chat history" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should send text message" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display message status indicators" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle typing indicator" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display received messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message input validation" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle contact search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display contact information" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message timestamps" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message reactions" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle media messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should show online status" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle chat errors gracefully" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="firefox" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Authentication Flow › should display login page when accessing protected route without authentication" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show login form with required fields" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should display error message for invalid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should successfully login with valid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should logout successfully" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should maintain session across page refreshes" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should redirect to dashboard after successful login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should handle empty form submission" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should validate email format" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show loading state during login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="campaigns.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="firefox" tests="15" failures="0" skipped="15" time="0" errors="0">
+<testcase name="Campaign Management › should display campaigns interface" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should create new campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign list" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should edit existing campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should schedule campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should execute campaign immediately" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign statistics" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign progress" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign deletion" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should filter campaigns by status" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should search campaigns" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should validate campaign form" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign errors gracefully" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign templates" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle rate limiting" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="full-flow.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="firefox" tests="5" failures="0" skipped="5" time="0" errors="0">
+<testcase name="Full Application Flow › should complete full user journey from login to campaign execution" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle multiple user sessions" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle network interruptions gracefully" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should maintain state across page refreshes" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle concurrent operations" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="team-management.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="firefox" tests="21" failures="0" skipped="21" time="0" errors="0">
+<testcase name="Team Management › should display team management interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team chat interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should send team message" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show online status of team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team message history" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message timestamps" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show typing indicators in team chat" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message search" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team activity log" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team permissions" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should add new team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should remove team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should update member role (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team notifications" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team statistics" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team chat errors gracefully" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should support team channels" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle real-time updates" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should validate team message input" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show member presence indicators" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="whatsapp-chat.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="firefox" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="WhatsApp Chat › should display WhatsApp chat interface" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should load and display contact list" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should select contact and display chat history" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should send text message" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display message status indicators" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle typing indicator" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display received messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message input validation" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle contact search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display contact information" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message timestamps" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message reactions" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle media messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should show online status" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle chat errors gracefully" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="webkit" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Authentication Flow › should display login page when accessing protected route without authentication" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show login form with required fields" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should display error message for invalid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should successfully login with valid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should logout successfully" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should maintain session across page refreshes" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should redirect to dashboard after successful login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should handle empty form submission" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should validate email format" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show loading state during login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="campaigns.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="webkit" tests="15" failures="0" skipped="15" time="0" errors="0">
+<testcase name="Campaign Management › should display campaigns interface" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should create new campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign list" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should edit existing campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should schedule campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should execute campaign immediately" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign statistics" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign progress" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign deletion" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should filter campaigns by status" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should search campaigns" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should validate campaign form" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign errors gracefully" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign templates" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle rate limiting" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="full-flow.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="webkit" tests="5" failures="0" skipped="5" time="0" errors="0">
+<testcase name="Full Application Flow › should complete full user journey from login to campaign execution" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle multiple user sessions" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle network interruptions gracefully" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should maintain state across page refreshes" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle concurrent operations" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="team-management.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="webkit" tests="21" failures="0" skipped="21" time="0" errors="0">
+<testcase name="Team Management › should display team management interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team chat interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should send team message" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show online status of team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team message history" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message timestamps" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show typing indicators in team chat" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message search" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team activity log" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team permissions" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should add new team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should remove team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should update member role (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team notifications" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team statistics" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team chat errors gracefully" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should support team channels" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle real-time updates" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should validate team message input" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show member presence indicators" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="whatsapp-chat.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="webkit" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="WhatsApp Chat › should display WhatsApp chat interface" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should load and display contact list" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should select contact and display chat history" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should send text message" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display message status indicators" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle typing indicator" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display received messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message input validation" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle contact search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display contact information" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message timestamps" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message reactions" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle media messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should show online status" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle chat errors gracefully" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Chrome" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Authentication Flow › should display login page when accessing protected route without authentication" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show login form with required fields" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should display error message for invalid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should successfully login with valid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should logout successfully" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should maintain session across page refreshes" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should redirect to dashboard after successful login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should handle empty form submission" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should validate email format" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show loading state during login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="campaigns.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Chrome" tests="15" failures="0" skipped="15" time="0" errors="0">
+<testcase name="Campaign Management › should display campaigns interface" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should create new campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign list" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should edit existing campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should schedule campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should execute campaign immediately" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign statistics" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign progress" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign deletion" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should filter campaigns by status" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should search campaigns" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should validate campaign form" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign errors gracefully" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign templates" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle rate limiting" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="full-flow.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Chrome" tests="5" failures="0" skipped="5" time="0" errors="0">
+<testcase name="Full Application Flow › should complete full user journey from login to campaign execution" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle multiple user sessions" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle network interruptions gracefully" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should maintain state across page refreshes" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle concurrent operations" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="team-management.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Chrome" tests="21" failures="0" skipped="21" time="0" errors="0">
+<testcase name="Team Management › should display team management interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team chat interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should send team message" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show online status of team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team message history" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message timestamps" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show typing indicators in team chat" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message search" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team activity log" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team permissions" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should add new team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should remove team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should update member role (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team notifications" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team statistics" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team chat errors gracefully" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should support team channels" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle real-time updates" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should validate team message input" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show member presence indicators" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="whatsapp-chat.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Chrome" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="WhatsApp Chat › should display WhatsApp chat interface" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should load and display contact list" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should select contact and display chat history" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should send text message" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display message status indicators" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle typing indicator" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display received messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message input validation" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle contact search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display contact information" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message timestamps" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message reactions" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle media messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should show online status" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle chat errors gracefully" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="auth.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Safari" tests="10" failures="0" skipped="10" time="0" errors="0">
+<testcase name="Authentication Flow › should display login page when accessing protected route without authentication" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show login form with required fields" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should display error message for invalid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should successfully login with valid credentials" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should logout successfully" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should maintain session across page refreshes" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should redirect to dashboard after successful login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should handle empty form submission" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should validate email format" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Authentication Flow › should show loading state during login" classname="auth.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="campaigns.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Safari" tests="15" failures="0" skipped="15" time="0" errors="0">
+<testcase name="Campaign Management › should display campaigns interface" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should create new campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign list" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should edit existing campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should schedule campaign" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should execute campaign immediately" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should display campaign statistics" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign progress" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign deletion" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should filter campaigns by status" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should search campaigns" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should validate campaign form" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle campaign errors gracefully" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should show campaign templates" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Campaign Management › should handle rate limiting" classname="campaigns.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="full-flow.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Safari" tests="5" failures="0" skipped="5" time="0" errors="0">
+<testcase name="Full Application Flow › should complete full user journey from login to campaign execution" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle multiple user sessions" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle network interruptions gracefully" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should maintain state across page refreshes" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Full Application Flow › should handle concurrent operations" classname="full-flow.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="team-management.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Safari" tests="21" failures="0" skipped="21" time="0" errors="0">
+<testcase name="Team Management › should display team management interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team chat interface" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should send team message" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show online status of team members" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team message history" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message timestamps" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show typing indicators in team chat" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team message search" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team activity log" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team permissions" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should add new team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should remove team member (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should update member role (admin only)" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team notifications" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should display team statistics" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle team chat errors gracefully" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should support team channels" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should handle real-time updates" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should validate team message input" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="Team Management › should show member presence indicators" classname="team-management.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+<testsuite name="whatsapp-chat.spec.ts" timestamp="2025-09-16T22:37:42.372Z" hostname="Mobile Safari" tests="16" failures="0" skipped="16" time="0" errors="0">
+<testcase name="WhatsApp Chat › should display WhatsApp chat interface" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should load and display contact list" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should select contact and display chat history" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should send text message" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display message status indicators" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle typing indicator" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display received messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message input validation" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle contact search" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should display contact information" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle message timestamps" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should support message reactions" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle media messages" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should show online status" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+<testcase name="WhatsApp Chat › should handle chat errors gracefully" classname="whatsapp-chat.spec.ts" time="0">
+<skipped>
+</skipped>
+</testcase>
+</testsuite>
+</testsuites>

@@ -1,0 +1,11 @@
+node_modules/
+.next/
+.turbo/
+dist/
+build/
+coverage/
+test-results/
+playwright-report/
+tests/e2e/
+*.config.js
+*.config.ts
