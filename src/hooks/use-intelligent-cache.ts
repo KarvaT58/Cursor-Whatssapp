@@ -26,7 +26,9 @@ interface CacheStats {
   hitRate: number
 }
 
-export function useIntelligentCache<T = unknown>(options: CacheOptions) {
+export function useIntelligentCache<T = unknown>(
+  options: Partial<CacheOptions> = {}
+) {
   const {
     maxSize = 100,
     defaultTtl = 5 * 60 * 1000, // 5 minutes
@@ -114,14 +116,14 @@ export function useIntelligentCache<T = unknown>(options: CacheOptions) {
 
   // Get value from cache
   const get = useCallback(
-    (key: string): T | null => {
+    (key: string): T | undefined => {
       const cache = cacheRef.current
       const entry = cache.get(key)
 
       if (!entry) {
         statsRef.current.misses++
         updateStats()
-        return null
+        return undefined
       }
 
       const now = Date.now()
@@ -131,7 +133,7 @@ export function useIntelligentCache<T = unknown>(options: CacheOptions) {
         cache.delete(key)
         statsRef.current.misses++
         updateStats()
-        return null
+        return undefined
       }
 
       // Update access statistics
