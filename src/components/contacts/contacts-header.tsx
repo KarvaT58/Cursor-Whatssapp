@@ -10,6 +10,7 @@ interface ContactsHeaderProps {
   onAddContact: () => void
   totalContacts: number
   filteredCount: number
+  importComponent?: React.ReactNode
 }
 
 export function ContactsHeader({
@@ -18,6 +19,7 @@ export function ContactsHeader({
   onAddContact,
   totalContacts,
   filteredCount,
+  importComponent,
 }: ContactsHeaderProps) {
   return (
     <div className="border-b bg-background p-4">
@@ -48,6 +50,7 @@ export function ContactsHeader({
             <Plus className="size-4" />
             Adicionar Contato
           </Button>
+          {importComponent}
         </div>
       </div>
     </div>

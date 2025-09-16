@@ -96,28 +96,21 @@ export function useRealtimeContacts() {
     >
   ) => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+      const response = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(contactData),
+      })
 
-      if (!user) {
-        throw new Error('Usuário não autenticado')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao criar contato')
       }
 
-      const { data, error } = await supabase
-        .from('contacts')
-        .insert({
-          ...contactData,
-          user_id: user.id,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        throw error
-      }
-
-      return data
+      const { contact } = await response.json()
+      return contact
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao adicionar contato')
       throw err
@@ -126,18 +119,21 @@ export function useRealtimeContacts() {
 
   const updateContact = async (id: string, updates: Partial<Contact>) => {
     try {
-      const { data, error } = await supabase
-        .from('contacts')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single()
+      const response = await fetch(`/api/contacts/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      })
 
-      if (error) {
-        throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao atualizar contato')
       }
 
-      return data
+      const { contact } = await response.json()
+      return contact
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar contato')
       throw err
@@ -146,10 +142,13 @@ export function useRealtimeContacts() {
 
   const deleteContact = async (id: string) => {
     try {
-      const { error } = await supabase.from('contacts').delete().eq('id', id)
+      const response = await fetch(`/api/contacts/${id}`, {
+        method: 'DELETE',
+      })
 
-      if (error) {
-        throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao deletar contato')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao deletar contato')

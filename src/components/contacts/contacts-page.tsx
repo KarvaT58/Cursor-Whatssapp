@@ -5,6 +5,7 @@ import { useRealtimeContacts } from '@/hooks/use-realtime-contacts'
 import { ContactsList } from './contacts-list'
 import { ContactForm } from './contact-form'
 import { ContactsHeader } from './contacts-header'
+import { ContactsImport } from './contacts-import'
 
 export function ContactsPage() {
   const [showForm, setShowForm] = useState(false)
@@ -43,6 +44,7 @@ export function ContactsPage() {
         onAddContact={handleAddContact}
         totalContacts={contacts.length}
         filteredCount={filteredContacts.length}
+        importComponent={<ContactsImport />}
       />
 
       <div className="flex-1 overflow-hidden">
