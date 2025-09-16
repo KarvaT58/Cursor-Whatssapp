@@ -14,10 +14,11 @@ import { Save, Edit, Trash2, AlertCircle, CheckCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 interface TeamSettingsProps {
+  teamId: string
   className?: string
 }
 
-export function TeamSettings({ className }: TeamSettingsProps) {
+export function TeamSettings({ teamId, className }: TeamSettingsProps) {
   const { team, isLoading, error, updateTeam, deleteTeam } = useTeams()
   const [isEditing, setIsEditing] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)

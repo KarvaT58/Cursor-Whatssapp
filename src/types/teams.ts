@@ -113,22 +113,6 @@ export interface TeamStats {
   activeChannels: string[]
 }
 
-// Team activity
-export interface TeamActivity {
-  id: string
-  type:
-    | 'message'
-    | 'member_joined'
-    | 'member_left'
-    | 'role_changed'
-    | 'team_updated'
-  description: string
-  userId: string
-  userName: string
-  timestamp: string
-  metadata?: Record<string, unknown>
-}
-
 // Team channels
 export interface TeamChannel {
   name: string
@@ -225,4 +209,83 @@ export interface MessageSearchResult {
   total: number
   query: string
   filters: MessageSearchFilters
+}
+
+// Team invites
+export interface TeamInvite {
+  id: string
+  teamId: string
+  email: string
+  role: 'admin' | 'user'
+  invitedBy: string
+  invitedByName: string
+  expiresAt: string
+  createdAt: string
+  updatedAt?: string
+  status: 'pending' | 'accepted' | 'expired' | 'cancelled'
+}
+
+export interface CreateInviteData {
+  email: string
+  role: 'admin' | 'user'
+}
+
+export interface TeamInvitesResponse {
+  invites: TeamInvite[]
+  total: number
+}
+
+// Team activities
+export interface TeamActivity {
+  id: string
+  teamId: string
+  type:
+    | 'message'
+    | 'member_joined'
+    | 'member_left'
+    | 'role_changed'
+    | 'team_updated'
+    | 'invite_sent'
+    | 'invite_accepted'
+    | 'invite_cancelled'
+  description: string
+  userId: string
+  userName: string
+  userEmail: string
+  timestamp: string
+  metadata?: Record<string, unknown>
+}
+
+export interface TeamActivitiesResponse {
+  activities: TeamActivity[]
+  total: number
+  limit: number
+  offset: number
+  hasMore: boolean
+}
+
+// Team permissions
+export interface TeamPermissions {
+  canInviteMembers: boolean
+  canRemoveMembers: boolean
+  canUpdateTeam: boolean
+  canDeleteTeam: boolean
+  canManageRoles: boolean
+  canCreateChannels: boolean
+  canDeleteMessages: boolean
+  canViewActivities: boolean
+  canManageInvites: boolean
+}
+
+// Team member management
+export interface TeamMemberWithStatus extends TeamMember {
+  isOnline: boolean
+  lastSeen?: string
+  status?: 'available' | 'busy' | 'away'
+}
+
+export interface TeamMemberManagementResponse {
+  members: TeamMemberWithStatus[]
+  total: number
+  onlineCount: number
 }
