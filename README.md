@@ -1,129 +1,341 @@
-# WhatsApp Professional SaaS
+# 📱 WhatsApp Professional SaaS
 
-Um SaaS completo para gerenciamento profissional de WhatsApp com funcionalidades avançadas de comunicação, campanhas em massa e gerenciamento de equipes.
+Uma plataforma SaaS completa para gerenciamento profissional de WhatsApp, oferecendo recursos avançados para campanhas em massa, gerenciamento de equipes e automação de mensagens.
 
 ## 🚀 Funcionalidades
 
-- **Dashboard em tempo real** com métricas e estatísticas
-- **Chat do WhatsApp em tempo real** integrado com Z-API
-- **Sistema de grupos** do WhatsApp
-- **Sistema de contatos** integrado ao Supabase
-- **Campanhas e disparo em massa** com filas Redis/BullMQ
-- **Chat interno** entre membros da equipe
-- **Sistema de equipe** com chat em tempo real
-- **Configurações Z-API** via frontend (múltiplas instâncias)
-- **Autenticação** via e-mail/senha (Supabase Auth)
+### 📢 Campanhas em Massa
 
-## 🛠️ Stack Tecnológica
+- Criação e gerenciamento de campanhas
+- Agendamento de envios
+- Templates de mensagem personalizáveis
+- Rate limiting inteligente
+- Relatórios detalhados de performance
 
-- **Frontend**: Next.js 14 (App Router), TypeScript, shadcn/ui
-- **Backend**: NestJS (serverless no Vercel)
-- **Banco de Dados**: Supabase (PostgreSQL)
-- **Autenticação**: Supabase Auth
-- **Tempo Real**: Supabase Realtime + Redis (BullMQ)
-- **Integração**: Z-API para WhatsApp
-- **Deploy**: Vercel
+### 👥 Gerenciamento de Contatos
 
-## 📋 Pré-requisitos
+- Importação em lote (CSV/Excel)
+- Organização por tags e grupos
+- Histórico de conversas
+- Sincronização com grupos WhatsApp
+
+### 💬 Chat WhatsApp
+
+- Interface de chat em tempo real
+- Envio de mídia e documentos
+- Status de mensagens (enviada, entregue, lida)
+- Integração com Z-API
+
+### 👥 Gerenciamento de Equipes
+
+- Criação e gerenciamento de equipes
+- Sistema de permissões
+- Chat interno
+- Logs de atividades
+
+### 📊 Monitoramento e Analytics
+
+- Dashboard de métricas em tempo real
+- Health checks de serviços
+- Logs estruturados
+- Alertas automáticos
+
+## 🛠️ Tecnologias
+
+### Frontend
+
+- **Next.js 15** - Framework React com App Router
+- **TypeScript** - Tipagem estática
+- **Tailwind CSS** - Estilização
+- **Shadcn/ui** - Componentes de UI
+- **Lucide React** - Ícones
+
+### Backend
+
+- **Next.js API Routes** - API RESTful
+- **Supabase** - Database e autenticação
+- **Redis** - Cache e filas
+- **BullMQ** - Processamento de jobs
+- **Z-API** - Integração WhatsApp
+
+### Monitoramento
+
+- **Sentry** - Error tracking
+- **Winston** - Logging estruturado
+- **Health Checks** - Monitoramento de serviços
+- **Métricas** - Performance e business metrics
+
+### Testes
+
+- **Vitest** - Testes unitários
+- **Playwright** - Testes E2E
+- **Testing Library** - Testes de componentes
+
+## 🚀 Deploy
+
+### Pré-requisitos
 
 - Node.js 18+
-- Conta no Supabase
-- Conta no Z-API
 - Conta no Vercel
+- Projeto Supabase
+- Instância Redis
+- Conta Z-API
 
-## 🚀 Configuração
-
-1. **Clone o repositório**
-
-```bash
-git clone <repository-url>
-cd whatsapp-professional
-```
-
-2. **Instale as dependências**
+### Deploy no Vercel
 
 ```bash
-npm install
+# Instalar Vercel CLI
+npm install -g vercel
+
+# Fazer login
+vercel login
+
+# Configurar projeto
+vercel link
+
+# Configurar variáveis de ambiente
+vercel env add NEXT_PUBLIC_SUPABASE_URL
+vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
+vercel env add SUPABASE_SERVICE_ROLE_KEY
+vercel env add REDIS_URL
+vercel env add Z_API_URL
+vercel env add Z_API_TOKEN
+vercel env add NEXT_PUBLIC_SENTRY_DSN
+
+# Deploy
+vercel --prod
 ```
 
-3. **Configure as variáveis de ambiente**
-
-```bash
-cp .env.local.example .env.local
-```
-
-Edite o arquivo `.env.local` com suas credenciais:
+### Variáveis de Ambiente
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
-SUPABASE_SERVICE_ROLE_KEY=sua_chave_de_servico_do_supabase
-Z_API_URL=https://api.z-api.io
+# Database
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Z-API
+Z_API_URL=your_z_api_url
+Z_API_TOKEN=your_z_api_token
+
+# Redis
+REDIS_URL=your_redis_url
+
+# Sentry
+NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
+SENTRY_ORG=your_sentry_org
+SENTRY_PROJECT=your_sentry_project
+SENTRY_AUTH_TOKEN=your_sentry_auth_token
+
+# App
+NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_APP_ENV=production
 ```
 
-4. **Configure o banco de dados**
-   Execute o SQL do arquivo `supabase-migration.sql` no seu projeto Supabase.
+## 📚 Documentação
 
-5. **Execute o projeto**
+### Guias de Usuário
+
+- [Guia do Usuário](docs/USER_GUIDE.md) - Manual completo para usuários
+- [Documentação da API](docs/API_DOCUMENTATION.md) - Referência da API
+- [Guia de Deploy](docs/DEPLOYMENT_GUIDE.md) - Instruções de deploy
+
+### Monitoramento
+
+- [Sistema de Monitoramento](src/lib/monitoring/README.md) - Documentação técnica
+
+## 🧪 Testes
+
+### Executar Testes
 
 ```bash
+# Testes unitários
+npm run test
+
+# Testes de integração
+npm run test:integration
+
+# Testes E2E
+npm run test:e2e
+
+# Todos os testes
+npm run test:all
+```
+
+### Cobertura de Testes
+
+- **335 testes E2E** com Playwright
+- **Testes unitários** para componentes
+- **Testes de integração** para APIs
+- **Testes de performance** e monitoramento
+
+## 🔧 Desenvolvimento
+
+### Instalação
+
+```bash
+# Clonar repositório
+git clone https://github.com/your-org/whatsapp-professional.git
+
+# Instalar dependências
+npm install
+
+# Configurar variáveis de ambiente
+cp .env.example .env.local
+
+# Executar em desenvolvimento
 npm run dev
 ```
 
-## 📁 Estrutura do Projeto
+### Scripts Disponíveis
+
+```bash
+npm run dev          # Servidor de desenvolvimento
+npm run build        # Build de produção
+npm run start        # Servidor de produção
+npm run lint         # Linting
+npm run type-check   # Verificação de tipos
+npm run test         # Testes unitários
+npm run test:e2e     # Testes E2E
+```
+
+## 📊 Monitoramento
+
+### Health Checks
+
+- **URL**: `/api/health`
+- **Serviços monitorados**: Database, Redis, Z-API, External services
+- **Métricas**: Response time, uptime, status
+
+### Métricas
+
+- **URL**: `/api/metrics`
+- **Tipos**: Performance, Business, User, Campaign
+- **Dashboard**: `/dashboard/monitoring`
+
+### Logs
+
+- **URL**: `/api/logs`
+- **Tipos**: Audit, Error, Performance
+- **Filtros**: Por usuário, equipe, período
+
+## 🔄 Backup e Recovery
+
+### Backup Automático
+
+```bash
+# Executar backup
+./scripts/backup.sh
+
+# Backup inclui:
+# - Database (PostgreSQL)
+# - Arquivos estáticos
+# - Supabase Storage
+# - Redis data
+# - Configurações
+```
+
+### Restore
+
+```bash
+# Restaurar backup
+./scripts/restore.sh backup_file.tar.gz
+
+# Restore inclui:
+# - Database restoration
+# - File restoration
+# - Storage restoration
+# - Redis restoration
+```
+
+## 🏗️ Arquitetura
+
+### Estrutura do Projeto
 
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── (auth)/            # Rotas de autenticação
-│   ├── dashboard/         # Dashboard principal
-│   └── api/               # API Routes
-├── components/            # Componentes React
-│   ├── ui/               # Componentes shadcn/ui
-│   └── forms/            # Formulários
-├── lib/                  # Utilitários e configurações
-│   ├── supabase/         # Cliente Supabase
-│   └── z-api/            # Integração Z-API
-├── providers/            # Context providers
-└── types/                # Definições TypeScript
+├── app/                 # Next.js App Router
+│   ├── api/            # API Routes
+│   ├── dashboard/      # Páginas do dashboard
+│   └── login/          # Páginas de autenticação
+├── components/         # Componentes React
+│   ├── ui/            # Componentes base
+│   ├── campaigns/     # Componentes de campanhas
+│   ├── contacts/      # Componentes de contatos
+│   ├── teams/         # Componentes de equipes
+│   └── monitoring/    # Componentes de monitoramento
+├── hooks/             # Custom hooks
+├── lib/               # Utilitários e configurações
+│   ├── logging/       # Sistema de logging
+│   ├── metrics/       # Sistema de métricas
+│   ├── monitoring/    # Sistema de monitoramento
+│   └── supabase/      # Configuração Supabase
+├── providers/         # Context providers
+├── types/             # Definições TypeScript
+└── test/              # Testes
 ```
 
-## 🔧 Scripts Disponíveis
+### Fluxo de Dados
 
-- `npm run dev` - Inicia o servidor de desenvolvimento
-- `npm run build` - Gera build de produção
-- `npm run start` - Inicia o servidor de produção
-- `npm run lint` - Executa o linter
-- `npm run format` - Formata o código com Prettier
+```
+Frontend (Next.js) → API Routes → Supabase → Redis → Z-API → WhatsApp
+```
 
-## 🚀 Deploy no Vercel
+## 🔒 Segurança
 
-1. **Conecte o repositório ao Vercel**
-2. **Configure as variáveis de ambiente** no painel do Vercel
-3. **Deploy automático** será executado a cada push
+### Autenticação
 
-## 📊 Sistema de Múltiplas Instâncias Z-API
+- **Supabase Auth** - Autenticação segura
+- **JWT Tokens** - Tokens de acesso
+- **Row Level Security** - Segurança a nível de linha
 
-O sistema permite configurar múltiplas instâncias do Z-API através da interface web:
+### Autorização
 
-- **ID da Instância**: Identificador único da instância
-- **Token da Instância**: Token de autenticação da instância
-- **Token do Cliente**: Token do cliente Z-API
-- **Nome**: Nome personalizado para a instância
-- **Status**: Ativo/Inativo
+- **Sistema de permissões** por equipe
+- **Roles**: Admin, Manager, User
+- **Audit logs** para todas as ações
 
-## 🔐 Autenticação e Segurança
+### Proteção
 
-- **Row Level Security (RLS)** configurado no Supabase
-- **Middleware de autenticação** para rotas protegidas
-- **Validação de dados** com TypeScript
-- **Tratamento de erros** robusto
+- **Rate limiting** em APIs
+- **CORS** configurado
+- **HTTPS** obrigatório
+- **Input validation** com Zod
 
-## 📈 Monitoramento
+## 📈 Performance
 
-- **Vercel Analytics** para performance
-- **Supabase Dashboard** para banco de dados
-- **Logs estruturados** para debugging
+### Otimizações
+
+- **Next.js Image** - Otimização de imagens
+- **Redis Cache** - Cache de dados
+- **CDN** - Entrega de conteúdo
+- **Lazy Loading** - Carregamento sob demanda
+
+### Métricas
+
+- **Web Vitals** - CLS, FID, FCP, LCP, TTFB
+- **API Response Time** - Tempo de resposta
+- **Database Queries** - Performance de queries
+- **Real-time Updates** - Latência de atualizações
+
+## 🆘 Suporte
+
+### Contato
+
+- **Email**: suporte@whatsapp-professional.com
+- **Documentação**: https://docs.whatsapp-professional.com
+- **GitHub Issues**: https://github.com/your-org/whatsapp-professional/issues
+
+### Recursos
+
+- **FAQ**: Perguntas frequentes
+- **Tutoriais**: Guias passo a passo
+- **API Docs**: Documentação da API
+- **Community**: Fórum da comunidade
+
+## 📄 Licença
+
+Este projeto está licenciado sob a Licença MIT - veja o arquivo [LICENSE](LICENSE) para detalhes.
 
 ## 🤝 Contribuição
 
@@ -133,13 +345,29 @@ O sistema permite configurar múltiplas instâncias do Z-API através da interfa
 4. Push para a branch (`git push origin feature/AmazingFeature`)
 5. Abra um Pull Request
 
-## 📄 Licença
+## 📊 Status do Projeto
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+### ✅ Funcionalidades Implementadas
 
-## 📞 Suporte
+- [x] Sistema de autenticação
+- [x] Gerenciamento de contatos
+- [x] Campanhas em massa
+- [x] Chat WhatsApp
+- [x] Gerenciamento de equipes
+- [x] Sistema de monitoramento
+- [x] Logs estruturados
+- [x] Testes E2E
+- [x] Deploy automatizado
+- [x] Backup e recovery
 
-Para suporte, entre em contato através de:
+### 🚀 Próximas Funcionalidades
 
-- Email: suporte@whatsapp-professional.com
-- Issues: [GitHub Issues](https://github.com/seu-usuario/whatsapp-professional/issues)
+- [ ] Integração com mais provedores WhatsApp
+- [ ] Analytics avançados
+- [ ] Automação de workflows
+- [ ] API webhooks
+- [ ] Aplicativo mobile
+
+---
+
+**Desenvolvido com ❤️ para profissionais que precisam de uma solução robusta de WhatsApp Business**
