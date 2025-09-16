@@ -235,8 +235,8 @@ export default function GroupsPage() {
   }
 
   const handleViewMessages = (groupId: string) => {
-    // TODO: Navigate to group chat
-    console.log('View messages for group:', groupId)
+    // Navigate to group chat
+    window.location.href = `/dashboard/groups/${groupId}/chat`
   }
 
   const getTotalParticipants = () => {

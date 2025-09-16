@@ -20,6 +20,8 @@ const SendMessageSchema = z.object({
     .default('text'),
   mediaUrl: z.string().url('URL de mídia inválida').optional(),
   fileName: z.string().optional(),
+  isGroup: z.boolean().optional().default(false),
+  groupId: z.string().optional(),
 })
 
 // POST /api/z-api/send-message - Enviar mensagem via Z-API
@@ -65,13 +67,21 @@ export async function POST(request: NextRequest) {
     )
 
     // Enviar mensagem
-    const result = await zApiClient.sendMessage({
-      phone: validatedData.phone,
-      message: validatedData.message,
-      type: validatedData.type,
-      mediaUrl: validatedData.mediaUrl,
-      fileName: validatedData.fileName,
-    })
+    let result
+    if (validatedData.isGroup) {
+      result = await zApiClient.sendGroupMessage(
+        validatedData.phone,
+        validatedData.message
+      )
+    } else {
+      result = await zApiClient.sendMessage({
+        phone: validatedData.phone,
+        message: validatedData.message,
+        type: validatedData.type,
+        mediaUrl: validatedData.mediaUrl,
+        fileName: validatedData.fileName,
+      })
+    }
 
     if (!result.success) {
       return NextResponse.json(
@@ -81,18 +91,37 @@ export async function POST(request: NextRequest) {
     }
 
     // Salvar mensagem no banco de dados
-    const { data: contact } = await supabase
-      .from('contacts')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('phone', validatedData.phone)
-      .single()
+    let contactId = null
+    let groupId = null
+
+    if (validatedData.isGroup && validatedData.groupId) {
+      // Buscar o grupo
+      const { data: group } = await supabase
+        .from('whatsapp_groups')
+        .select('id')
+        .eq('id', validatedData.groupId)
+        .eq('user_id', user.id)
+        .single()
+
+      groupId = group?.id || null
+    } else {
+      // Buscar o contato
+      const { data: contact } = await supabase
+        .from('contacts')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('phone', validatedData.phone)
+        .single()
+
+      contactId = contact?.id || null
+    }
 
     const { error: messageError } = await supabase
       .from('whatsapp_messages')
       .insert({
         user_id: user.id,
-        contact_id: contact?.id || null,
+        contact_id: contactId,
+        group_id: groupId,
         content: validatedData.message,
         direction: 'outbound',
         type: validatedData.type,

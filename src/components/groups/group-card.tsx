@@ -129,7 +129,7 @@ export function GroupCard({
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onViewMessages?.(group.id)}>
                   <MessageCircle className="h-4 w-4 mr-2" />
-                  Ver Mensagens
+                  Abrir Chat
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onEdit?.(group)}>
                   <Edit className="h-4 w-4 mr-2" />

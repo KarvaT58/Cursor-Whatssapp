@@ -228,6 +228,18 @@ export function useZApi() {
     })
   }
 
+  const sendGroupMessage = async (
+    instanceId: string,
+    groupId: string,
+    message: string
+  ) => {
+    return sendMessage(instanceId, {
+      phone: groupId,
+      message,
+      type: 'text',
+    })
+  }
+
   return {
     loading,
     error,
@@ -239,5 +251,6 @@ export function useZApi() {
     sendImageMessage,
     sendDocumentMessage,
     sendAudioMessage,
+    sendGroupMessage,
   }
 }
