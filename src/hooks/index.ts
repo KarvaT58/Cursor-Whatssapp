@@ -16,3 +16,6 @@ export { useNotificationSystem } from './use-notification-system'
 
 // Notification hooks index
 export * from './notifications'
+
+// Performance hooks
+export * from './performance'
