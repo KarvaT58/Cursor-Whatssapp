@@ -32,7 +32,7 @@ export function useRealtimeGroups({
       if (payload.eventType === 'INSERT' && payload.new) {
         const group = payload.new as Group
         onGroupAdded?.(group)
-        toast.success(`Novo grupo adicionado: ${group.name}`)
+        toast.success(`Novo grupo adicionado: ${group?.name || 'Grupo'}`)
       } else if (payload.eventType === 'UPDATE' && payload.new) {
         const group = payload.new as Group
         onGroupUpdated?.(group)
@@ -41,7 +41,7 @@ export function useRealtimeGroups({
         const oldGroup = payload.old as Group
         if (oldGroup?.participants?.length !== group.participants?.length) {
           toast.success(
-            `Grupo ${group.name} atualizado: ${group.participants?.length || 0} participantes`
+            `Grupo ${group?.name || 'Grupo'} atualizado: ${group.participants?.length || 0} participantes`
           )
         }
       } else if (payload.eventType === 'DELETE') {

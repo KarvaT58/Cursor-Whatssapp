@@ -105,14 +105,14 @@ export function GroupCard({
               <Avatar className="w-12 h-12">
                 <AvatarImage
                   src={`https://api.whatsapp.com/img/${group.whatsapp_id}`}
-                  alt={group.name}
+                  alt={group?.name || 'Grupo'}
                 />
                 <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                  {getGroupInitials(group.name)}
+                  {getGroupInitials(group?.name || 'Grupo')}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg truncate">{group.name}</CardTitle>
+                <CardTitle className="text-lg truncate">{group?.name || 'Grupo'}</CardTitle>
                 {group.description && (
                   <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                     {group.description}

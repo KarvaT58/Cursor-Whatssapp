@@ -91,7 +91,7 @@ export function GroupParticipants({
             Participantes do Grupo
           </DialogTitle>
           <DialogDescription>
-            Gerencie os participantes do grupo &quot;{group.name}&quot;
+            Gerencie os participantes do grupo &quot;{group?.name || 'Grupo'}&quot;
           </DialogDescription>
         </DialogHeader>
 

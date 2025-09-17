@@ -266,9 +266,9 @@ export function CampaignBuilder({
                       onCheckedChange={() => handleContactToggle(contact.id)}
                     />
                     <Label htmlFor={contact.id} className="flex-1 text-sm">
-                      <div>{contact.name}</div>
+                      <div>{contact?.name || 'Contato'}</div>
                       <div className="text-muted-foreground">
-                        {contact.phone}
+                        {contact?.phone || 'Telefone não disponível'}
                       </div>
                     </Label>
                   </div>

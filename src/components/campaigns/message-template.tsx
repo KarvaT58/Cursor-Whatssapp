@@ -369,7 +369,7 @@ export function MessageTemplate({
                     {template.isFavorite && (
                       <Star className="w-4 h-4 text-yellow-500 fill-current" />
                     )}
-                    {template.name}
+                    {template?.name || 'Template'}
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge className={getCategoryColor(template.category)}>

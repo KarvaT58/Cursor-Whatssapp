@@ -137,14 +137,14 @@ export function GroupChat({ group, onClose }: GroupChatProps) {
             <Avatar className="w-10 h-10">
               <AvatarImage
                 src={`https://api.whatsapp.com/img/${group.whatsapp_id}`}
-                alt={group.name}
+                alt={group?.name || 'Grupo'}
               />
               <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                {getGroupInitials(group.name)}
+                {getGroupInitials(group?.name || 'Grupo')}
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg">{group.name}</CardTitle>
+              <CardTitle className="text-lg">{group?.name || 'Grupo'}</CardTitle>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Users className="h-3 w-3" />
                 <span>{getParticipantCount()} participantes</span>

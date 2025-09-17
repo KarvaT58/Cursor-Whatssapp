@@ -268,7 +268,7 @@ export function CampaignStats({ stats }: CampaignStatsProps) {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-sm">{campaign.name}</h4>
+                      <h4 className="font-medium text-sm">{campaign?.name || 'Campanha'}</h4>
                       <Badge
                         variant="secondary"
                         className={`${getStatusColor(campaign.status)} text-white`}

@@ -32,7 +32,7 @@ export function useRealtimeContacts({
       if (payload.eventType === 'INSERT' && payload.new) {
         const contact = payload.new as Contact
         onContactAdded?.(contact)
-        toast.success(`Novo contato adicionado: ${contact.name}`)
+        toast.success(`Novo contato adicionado: ${contact?.name || 'Contato'}`)
       } else if (payload.eventType === 'UPDATE' && payload.new) {
         const contact = payload.new as Contact
         onContactUpdated?.(contact)

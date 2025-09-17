@@ -130,7 +130,7 @@ export function CampaignList({
 
   const filteredCampaigns = campaigns.filter((campaign) => {
     const matchesSearch =
-      campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       campaign.message.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus =
       statusFilter === 'all' || campaign.status === statusFilter
@@ -211,7 +211,7 @@ export function CampaignList({
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
-                    <CardTitle className="text-lg">{campaign.name}</CardTitle>
+                    <CardTitle className="text-lg">{campaign?.name || 'Campanha'}</CardTitle>
                     <CardDescription className="flex items-center gap-4">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
@@ -303,7 +303,7 @@ export function CampaignList({
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
                                   Tem certeza que deseja excluir a campanha
-                                  &quot;{campaign.name}&quot;? Esta ação não
+                                  &quot;{campaign?.name || 'Campanha'}&quot;? Esta ação não
                                   pode ser desfeita.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
