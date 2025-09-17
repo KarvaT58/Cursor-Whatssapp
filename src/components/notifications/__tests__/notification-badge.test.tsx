@@ -9,7 +9,7 @@ describe('NotificationBadge', () => {
   })
 
   it('should render with zero count', () => {
-    render(<NotificationBadge count={0} />)
+    render(<NotificationBadge count={0} showIcon={false} />)
 
     expect(screen.getByText('0')).toBeInTheDocument()
   })
@@ -17,7 +17,7 @@ describe('NotificationBadge', () => {
   it('should render with large count', () => {
     render(<NotificationBadge count={999} />)
 
-    expect(screen.getByText('999')).toBeInTheDocument()
+    expect(screen.getByText('99+')).toBeInTheDocument()
   })
 
   it('should render with 99+ for large numbers', () => {
@@ -29,8 +29,8 @@ describe('NotificationBadge', () => {
   it('should apply custom className', () => {
     render(<NotificationBadge count={3} className="custom-class" />)
 
-    const badge = screen.getByText('3')
-    expect(badge).toHaveClass('custom-class')
+    const icon = document.querySelector('svg.custom-class')
+    expect(icon).toBeInTheDocument()
   })
 
   it('should be hidden when count is 0 and hideWhenZero is true', () => {
@@ -41,7 +41,7 @@ describe('NotificationBadge', () => {
   })
 
   it('should show when count is 0 and hideWhenZero is false', () => {
-    render(<NotificationBadge count={0} hideWhenZero={false} />)
+    render(<NotificationBadge count={0} hideWhenZero={false} showIcon={false} />)
 
     expect(screen.getByText('0')).toBeInTheDocument()
   })

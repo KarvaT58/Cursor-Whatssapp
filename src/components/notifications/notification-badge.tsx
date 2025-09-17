@@ -9,6 +9,7 @@ interface NotificationBadgeProps {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary'
   size?: 'sm' | 'md' | 'lg'
   showIcon?: boolean
+  hideWhenZero?: boolean
   className?: string
 }
 
@@ -17,12 +18,29 @@ export function NotificationBadge({
   variant = 'destructive',
   size = 'md',
   showIcon = true,
+  hideWhenZero = false,
   className,
 }: NotificationBadgeProps) {
   if (count === 0) {
+    if (hideWhenZero) {
+      return null
+    }
     return showIcon ? (
       <Bell className={cn('h-5 w-5 text-muted-foreground', className)} />
-    ) : null
+    ) : (
+      <Badge
+        variant={variant}
+        className={cn(
+          'rounded-full',
+          'h-5 min-w-5 px-1.5 text-xs',
+          'flex items-center justify-center',
+          className
+        )}
+        aria-label="0 unread notifications"
+      >
+        0
+      </Badge>
+    )
   }
 
   const sizeClasses = {
@@ -51,6 +69,7 @@ export function NotificationBadge({
           badgeSizeClasses[size],
           'flex items-center justify-center'
         )}
+        aria-label={`${count > 99 ? '99+' : count} unread notifications`}
       >
         {count > 99 ? '99+' : count}
       </Badge>
