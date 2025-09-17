@@ -36,6 +36,11 @@ export function useContacts() {
         throw error
       }
 
+      console.log(
+        'Contacts fetched successfully:',
+        data?.length || 0,
+        'contacts'
+      )
       setContacts(data)
     } catch (err) {
       console.error('Error fetching contacts:', err)
@@ -250,6 +255,46 @@ export function useContacts() {
     }
   }, [])
 
+  const syncContactsFromWhatsApp = async (instanceId: string) => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const response = await fetch('/api/contacts/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ instanceId }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao sincronizar contatos')
+      }
+
+      // Recarregar contatos após sincronização
+      await fetchContacts()
+
+      return {
+        success: true,
+        results: data.results,
+        message: data.message,
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Erro ao sincronizar contatos'
+      setError(errorMessage)
+      return {
+        success: false,
+        error: errorMessage,
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return {
     contacts,
     isLoading,
@@ -259,6 +304,8 @@ export function useContacts() {
     deleteContact,
     importContacts,
     exportContacts,
+    fetchContacts,
+    syncContactsFromWhatsApp,
     refetch: fetchContacts,
   }
 }

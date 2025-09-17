@@ -2,24 +2,28 @@
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Search, Users } from 'lucide-react'
+import { Plus, Search, Users, RefreshCw } from 'lucide-react'
 
 interface ContactsHeaderProps {
   searchTerm: string
   onSearchChange: (value: string) => void
   onAddContact: () => void
+  onSyncContacts?: () => void
   totalContacts: number
   filteredCount: number
   importComponent?: React.ReactNode
+  syncing?: boolean
 }
 
 export function ContactsHeader({
   searchTerm,
   onSearchChange,
   onAddContact,
+  onSyncContacts,
   totalContacts,
   filteredCount,
   importComponent,
+  syncing = false,
 }: ContactsHeaderProps) {
   return (
     <div className="border-b bg-background p-4">
@@ -46,6 +50,19 @@ export function ContactsHeader({
               className="w-64 pl-8"
             />
           </div>
+          {onSyncContacts && (
+            <Button
+              onClick={onSyncContacts}
+              variant="outline"
+              disabled={syncing}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw
+                className={`size-4 ${syncing ? 'animate-spin' : ''}`}
+              />
+              {syncing ? 'Sincronizando...' : 'Sincronizar WhatsApp'}
+            </Button>
+          )}
           <Button onClick={onAddContact} className="flex items-center gap-2">
             <Plus className="size-4" />
             Adicionar Contato
