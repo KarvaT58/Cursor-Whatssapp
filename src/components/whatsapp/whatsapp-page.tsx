@@ -20,7 +20,7 @@ export function WhatsAppPage() {
   const filteredContacts = contacts.filter((contact) => {
     const c = contact as { name: string; phone: string }
     return (
-      c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       c.phone.includes(searchTerm)
     )
   })

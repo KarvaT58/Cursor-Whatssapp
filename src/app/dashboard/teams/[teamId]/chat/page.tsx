@@ -83,7 +83,7 @@ export default function TeamChatPage() {
             </Link>
 
             <div>
-              <h1 className="text-xl font-semibold">{team?.team.name}</h1>
+              <h1 className="text-xl font-semibold">{team?.team?.name || 'Equipe'}</h1>
               <p className="text-sm text-muted-foreground">
                 Chat interno da equipe
               </p>
@@ -208,7 +208,7 @@ export default function TeamChatPage() {
                   <div>
                     <span className="text-sm font-medium">Nome:</span>
                     <p className="text-sm text-muted-foreground">
-                      {team?.team.name}
+                      {team?.team?.name || 'Equipe'}
                     </p>
                   </div>
 

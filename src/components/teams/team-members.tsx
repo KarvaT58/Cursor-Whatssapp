@@ -259,7 +259,7 @@ export function TeamMembers({ className }: TeamMembersProps) {
                       variant="ghost"
                       size="sm"
                       onClick={() =>
-                        handleRemoveUser(member.id, member.name || member.email)
+                        handleRemoveUser(member.id, member?.name || member?.email || 'Usuário')
                       }
                     >
                       <Trash2 className="h-4 w-4" />

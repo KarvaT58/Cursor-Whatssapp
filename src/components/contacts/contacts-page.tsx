@@ -19,7 +19,7 @@ export function ContactsPage() {
 
   const filteredContacts = contacts.filter(
     (contact) =>
-      contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      contact?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contact.phone.includes(searchTerm) ||
       (contact.email &&
         contact.email.toLowerCase().includes(searchTerm.toLowerCase()))

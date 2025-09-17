@@ -18,7 +18,7 @@ export function GroupsPage() {
 
   const filteredGroups = groups.filter(
     (group) =>
-      group.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      group?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (group.description &&
         group.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
       group.whatsapp_id.includes(searchTerm)

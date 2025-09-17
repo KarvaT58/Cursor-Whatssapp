@@ -58,10 +58,10 @@ export function TeamOverview({ className }: TeamOverviewProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl">{team.team.name}</CardTitle>
-              {team.team.description && (
+              <CardTitle className="text-2xl">{team?.team?.name || 'Equipe'}</CardTitle>
+              {team?.team?.description && (
                 <p className="text-muted-foreground mt-1">
-                  {team.team.description}
+                  {team?.team?.description || 'Sem descrição'}
                 </p>
               )}
             </div>

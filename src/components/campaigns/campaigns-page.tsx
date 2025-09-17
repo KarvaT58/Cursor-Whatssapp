@@ -19,7 +19,7 @@ export function CampaignsPage() {
 
   const filteredCampaigns = campaigns.filter((campaign) => {
     const matchesSearch =
-      campaign.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      campaign?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       campaign.message.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesStatus =

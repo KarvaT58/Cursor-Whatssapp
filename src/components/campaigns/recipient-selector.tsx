@@ -82,7 +82,7 @@ export function RecipientSelector({
       // Search filter
       const matchesSearch =
         searchTerm === '' ||
-        contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contact?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.phone.includes(searchTerm) ||
         contact.email?.toLowerCase().includes(searchTerm.toLowerCase())
 
@@ -114,7 +114,7 @@ export function RecipientSelector({
     const groups: { [key: string]: Contact[] } = {}
 
     filteredContacts.forEach((contact) => {
-      const firstLetter = contact.name[0].toUpperCase()
+      const firstLetter = contact?.name?.[0]?.toUpperCase() || 'A'
       if (!groups[firstLetter]) {
         groups[firstLetter] = []
       }
@@ -127,7 +127,7 @@ export function RecipientSelector({
       .sort()
       .forEach((key) => {
         sortedGroups[key] = groups[key].sort((a, b) =>
-          a.name.localeCompare(b.name)
+          (a?.name || '').localeCompare(b?.name || '')
         )
       })
 
@@ -320,7 +320,7 @@ export function RecipientSelector({
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <h4 className="font-medium text-sm">
-                                      {contact.name}
+                                      {contact?.name || 'Contato'}
                                     </h4>
                                     {contact.tags?.map((tag) => (
                                       <Badge
@@ -401,7 +401,7 @@ export function RecipientSelector({
                       >
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-sm">
-                            {contact.name}
+                            {contact?.name || 'Contato'}
                           </h4>
                           <p className="text-xs text-muted-foreground">
                             {contact.phone}

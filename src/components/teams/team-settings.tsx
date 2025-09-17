@@ -31,7 +31,7 @@ export function TeamSettings({ teamId, className }: TeamSettingsProps) {
   useState(() => {
     if (team) {
       setFormData({
-        name: team.team.name,
+        name: team?.team?.name || '',
         description: team.team.description || '',
       })
     }
@@ -70,7 +70,7 @@ export function TeamSettings({ teamId, className }: TeamSettingsProps) {
   const handleCancel = () => {
     if (team) {
       setFormData({
-        name: team.team.name,
+        name: team?.team?.name || '',
         description: team.team.description || '',
       })
     }
@@ -169,7 +169,7 @@ export function TeamSettings({ teamId, className }: TeamSettingsProps) {
               placeholder="Digite o nome da equipe"
             />
           ) : (
-            <div className="text-sm font-medium">{team.team.name}</div>
+            <div className="text-sm font-medium">{team?.team?.name || 'Equipe'}</div>
           )}
         </div>
 

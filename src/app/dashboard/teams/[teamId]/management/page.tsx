@@ -65,8 +65,8 @@ export default function TeamManagementPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold">{team.team.name}</h1>
-            <p className="text-muted-foreground">{team.team.description}</p>
+            <h1 className="text-2xl font-bold">{team?.team?.name || 'Equipe'}</h1>
+            <p className="text-muted-foreground">{team?.team?.description || 'Sem descrição'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
