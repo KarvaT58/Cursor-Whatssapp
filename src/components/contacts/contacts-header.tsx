@@ -13,6 +13,7 @@ interface ContactsHeaderProps {
   filteredCount: number
   importComponent?: React.ReactNode
   syncing?: boolean
+  canSync?: boolean
 }
 
 export function ContactsHeader({
@@ -24,6 +25,7 @@ export function ContactsHeader({
   filteredCount,
   importComponent,
   syncing = false,
+  canSync = true,
 }: ContactsHeaderProps) {
   return (
     <div className="border-b bg-background p-4">
@@ -54,8 +56,11 @@ export function ContactsHeader({
             <Button
               onClick={onSyncContacts}
               variant="outline"
-              disabled={syncing}
+              disabled={syncing || !canSync}
               className="flex items-center gap-2"
+              title={
+                !canSync ? 'Configure uma instância Z-API primeiro' : undefined
+              }
             >
               <RefreshCw
                 className={`size-4 ${syncing ? 'animate-spin' : ''}`}

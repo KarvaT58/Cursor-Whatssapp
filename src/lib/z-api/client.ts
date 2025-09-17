@@ -232,9 +232,25 @@ export class ZApiClient {
     return this.makeRequest('/info')
   }
 
-  // Obter contatos
-  async getContacts(): Promise<ZApiResponse> {
-    return this.makeRequest('/contacts')
+  // Obter contatos com paginação
+  async getContacts(params?: {
+    page?: number
+    pageSize?: number
+  }): Promise<ZApiResponse> {
+    const queryParams = new URLSearchParams()
+
+    if (params?.page) {
+      queryParams.append('page', params.page.toString())
+    }
+    if (params?.pageSize) {
+      queryParams.append('pageSize', params.pageSize.toString())
+    }
+
+    const endpoint = queryParams.toString()
+      ? `/contacts?${queryParams.toString()}`
+      : '/contacts'
+
+    return this.makeRequest(endpoint)
   }
 
   // Obter grupos

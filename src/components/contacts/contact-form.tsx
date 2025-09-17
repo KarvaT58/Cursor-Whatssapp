@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRealtimeContacts } from '@/hooks/use-realtime-contacts'
 import { Contact, CreateContactData } from '@/types/contacts'
+import {
+  processPhoneForStorage,
+  formatPhoneForDisplay,
+} from '@/lib/phone-utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -15,12 +18,18 @@ interface ContactFormProps {
   contactId?: string | null
   onClose: () => void
   onSuccess: () => void
+  contacts: Contact[]
+  addContact: (contact: CreateContactData) => Promise<Contact>
+  updateContact: (id: string, contact: Partial<Contact>) => Promise<Contact>
 }
 
 export function ContactForm({
   contactId,
   onClose,
   onSuccess,
+  contacts,
+  addContact,
+  updateContact,
 }: ContactFormProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -32,15 +41,7 @@ export function ContactForm({
   const [tagInput, setTagInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  // Note: contacts data and functions would need to be implemented separately
-  const contacts: Contact[] = []
-  const addContact = async (contact: CreateContactData) => {
-    console.log('Adding contact:', contact)
-  }
-  const updateContact = async (id: string, contact: Partial<Contact>) => {
-    console.log('Updating contact:', id, contact)
-  }
+  const [phoneError, setPhoneError] = useState<string | null>(null)
 
   const isEditing = !!contactId
   const currentContact = isEditing
@@ -51,7 +52,7 @@ export function ContactForm({
     if (currentContact) {
       setFormData({
         name: currentContact?.name || '',
-        phone: currentContact.phone,
+        phone: formatPhoneForDisplay(currentContact.phone),
         email: currentContact.email || '',
         notes: currentContact.notes || '',
         tags: currentContact.tags || [],
@@ -62,6 +63,20 @@ export function ContactForm({
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     setError(null)
+
+    // Validate phone number in real-time
+    if (field === 'phone') {
+      if (value.trim()) {
+        const phoneValidation = processPhoneForStorage(value)
+        if (!phoneValidation.isValid) {
+          setPhoneError(phoneValidation.error || 'Número inválido')
+        } else {
+          setPhoneError(null)
+        }
+      } else {
+        setPhoneError(null)
+      }
+    }
   }
 
   const handleAddTag = () => {
@@ -97,6 +112,14 @@ export function ContactForm({
       setError('Telefone é obrigatório')
       return false
     }
+
+    // Validate phone number
+    const phoneValidation = processPhoneForStorage(formData.phone)
+    if (!phoneValidation.isValid) {
+      setError(phoneValidation.error || 'Número de telefone inválido')
+      return false
+    }
+
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       setError('Email inválido')
       return false
@@ -113,9 +136,16 @@ export function ContactForm({
     setError(null)
 
     try {
+      // Validate and normalize phone number
+      const phoneValidation = processPhoneForStorage(formData.phone)
+      if (!phoneValidation.isValid) {
+        setError(phoneValidation.error || 'Número de telefone inválido')
+        return
+      }
+
       const contactData = {
         name: formData.name.trim(),
-        phone: formData.phone.trim(),
+        phone: phoneValidation.normalized!,
         email: formData.email.trim() || null,
         notes: formData.notes.trim() || null,
         tags: formData.tags.length > 0 ? formData.tags : [],
@@ -177,7 +207,11 @@ export function ContactForm({
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   placeholder="(11) 99999-9999"
                   required
+                  className={phoneError ? 'border-destructive' : ''}
                 />
+                {phoneError && (
+                  <p className="text-sm text-destructive">{phoneError}</p>
+                )}
               </div>
             </div>
 

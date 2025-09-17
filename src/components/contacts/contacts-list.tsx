@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRealtimeContacts } from '@/hooks/use-realtime-contacts'
 import { Database } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -40,6 +39,7 @@ interface ContactsListProps {
   loading: boolean
   error: string | null
   onEditContact: (contactId: string) => void
+  onDeleteContact: (contactId: string) => Promise<void>
 }
 
 export function ContactsList({
@@ -47,13 +47,10 @@ export function ContactsList({
   loading,
   error,
   onEditContact,
+  onDeleteContact,
 }: ContactsListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null)
-  // Note: deleteContact function would need to be implemented separately
-  const deleteContact = async (id: string) => {
-    console.log('Deleting contact:', id)
-  }
 
   const handleDeleteClick = (contact: Contact) => {
     setContactToDelete(contact)
@@ -63,7 +60,7 @@ export function ContactsList({
   const handleDeleteConfirm = async () => {
     if (contactToDelete) {
       try {
-        await deleteContact(contactToDelete.id)
+        await onDeleteContact(contactToDelete.id)
         setDeleteDialogOpen(false)
         setContactToDelete(null)
       } catch (error) {
@@ -144,7 +141,9 @@ export function ContactsList({
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{contact?.name || 'Contato'}</CardTitle>
+                    <CardTitle className="text-lg">
+                      {contact?.name || 'Contato'}
+                    </CardTitle>
                     <div className="flex items-center gap-2 mt-1">
                       <Phone className="size-3 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">

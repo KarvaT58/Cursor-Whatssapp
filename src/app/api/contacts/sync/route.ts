@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ZApiClient } from '@/lib/z-api/client'
+import { processPhoneForStorage, arePhoneNumbersEqual } from '@/lib/phone-utils'
 import { z } from 'zod'
 
 const SyncContactsSchema = z.object({
@@ -46,17 +47,74 @@ export async function POST(request: NextRequest) {
       instance.client_token
     )
 
-    // Obter contatos do WhatsApp
-    const contactsResult = await zApiClient.getContacts()
+    // Verificar se a instância está conectada
+    const statusResult = await zApiClient.getInstanceStatus()
 
-    if (!contactsResult.success) {
+    if (!statusResult.success) {
       return NextResponse.json(
-        { error: contactsResult.error || 'Erro ao obter contatos do WhatsApp' },
+        {
+          error: `Erro ao verificar status da instância: ${statusResult.error}`,
+        },
         { status: 400 }
       )
     }
 
-    const whatsappContacts = contactsResult.data?.contacts || []
+    // A Z-API retorna o status diretamente em data, não em data.status
+    const isConnected =
+      statusResult.data?.connected === true ||
+      statusResult.data?.status === 'connected' ||
+      statusResult.data?.connectionStatus === 'connected'
+
+    if (!isConnected) {
+      return NextResponse.json(
+        {
+          error:
+            'Instância Z-API não está conectada. Conecte o WhatsApp primeiro.',
+        },
+        { status: 400 }
+      )
+    }
+
+    // Obter contatos do WhatsApp com paginação
+    let allContacts: unknown[] = []
+    let page = 1
+    const pageSize = 100
+    let hasMore = true
+
+    while (hasMore) {
+      const contactsResult = await zApiClient.getContacts({
+        page,
+        pageSize,
+      })
+
+      if (!contactsResult.success) {
+        return NextResponse.json(
+          {
+            error: contactsResult.error || 'Erro ao obter contatos do WhatsApp',
+          },
+          { status: 400 }
+        )
+      }
+
+      // A Z-API retorna os contatos diretamente em data, não em data.contacts
+      const contacts = Array.isArray(contactsResult.data)
+        ? contactsResult.data
+        : contactsResult.data?.contacts || []
+
+      allContacts = allContacts.concat(contacts)
+
+      // Se retornou menos contatos que o pageSize, não há mais páginas
+      hasMore = contacts.length === pageSize
+      page++
+
+      // Limite de segurança para evitar loop infinito
+      if (page > 10) {
+        break
+      }
+    }
+
+    const whatsappContacts = allContacts
+
     const syncResults = {
       imported: 0,
       updated: 0,
@@ -70,32 +128,56 @@ export async function POST(request: NextRequest) {
     // Processar cada contato do WhatsApp
     for (const whatsappContact of whatsappContacts) {
       try {
-        const { phone, name, pushname } = whatsappContact
+        // Extrair dados do contato - estrutura da Z-API
+        const phone = whatsappContact.phone
+        const name =
+          whatsappContact.name || whatsappContact.vname || whatsappContact.short
+        const pushname = whatsappContact.vname || whatsappContact.name
 
-        if (!phone || !name) {
+        if (!phone) {
           syncResults.skipped++
           continue
         }
 
-        // Verificar se já existe contato com o mesmo telefone
-        const { data: existingContact } = await supabase
-          .from('contacts')
-          .select('id, name')
-          .eq('user_id', user.id)
-          .eq('phone', phone)
-          .single()
+        // Validar e normalizar número de telefone
+        const phoneValidation = processPhoneForStorage(phone)
+        if (!phoneValidation.isValid) {
+          syncResults.skipped++
+          syncResults.errors.push({
+            phone,
+            error: `Número inválido: ${phoneValidation.error}`,
+          })
+          continue
+        }
 
-        if (existingContact) {
+        const normalizedPhone = phoneValidation.normalized!
+
+        // Usar pushname se disponível, senão usar name
+        const contactName = pushname || name || 'Contato sem nome'
+
+        // Buscar todos os contatos existentes para verificar duplicatas
+        const { data: existingContacts } = await supabase
+          .from('contacts')
+          .select('id, name, phone')
+          .eq('user_id', user.id)
+
+        // Verificar se já existe contato com o mesmo telefone (usando comparação normalizada)
+        const duplicateContact = existingContacts?.find((contact) =>
+          arePhoneNumbersEqual(contact.phone, normalizedPhone)
+        )
+
+        if (duplicateContact) {
           // Atualizar contato existente se o nome for diferente
-          if (existingContact.name !== (pushname || name)) {
+          if (duplicateContact.name !== contactName) {
             const { error: updateError } = await supabase
               .from('contacts')
               .update({
-                name: pushname || name,
-                whatsapp_id: phone,
+                name: contactName,
+                phone: normalizedPhone,
+                whatsapp_id: whatsappContact.id || null,
                 updated_at: new Date().toISOString(),
               })
-              .eq('id', existingContact.id)
+              .eq('id', duplicateContact.id)
 
             if (updateError) {
               syncResults.errors.push({
@@ -113,9 +195,9 @@ export async function POST(request: NextRequest) {
           const { error: insertError } = await supabase
             .from('contacts')
             .insert({
-              name: pushname || name,
-              phone,
-              whatsapp_id: phone,
+              name: contactName,
+              phone: normalizedPhone,
+              whatsapp_id: whatsappContact.id || null,
               user_id: user.id,
               tags: ['whatsapp'],
               created_at: new Date().toISOString(),

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { processPhoneForStorage, arePhoneNumbersEqual } from '@/lib/phone-utils'
 import type { Database } from '@/types/database'
 
 type Contact = Database['public']['Tables']['contacts']['Row']
@@ -13,7 +14,7 @@ export function useContacts() {
 
   const supabase = createClient()
 
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     try {
       setIsLoading(true)
       setError(null)
@@ -49,7 +50,7 @@ export function useContacts() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [supabase])
 
   const addContact = async (
     contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'user_id'>
@@ -63,10 +64,33 @@ export function useContacts() {
         throw new Error('User not authenticated')
       }
 
+      // Validate and normalize phone number
+      const phoneValidation = processPhoneForStorage(contactData.phone)
+      if (!phoneValidation.isValid) {
+        throw new Error(phoneValidation.error || 'Número de telefone inválido')
+      }
+
+      // Check for duplicate phone numbers in database
+      const { data: existingContacts } = await supabase
+        .from('contacts')
+        .select('phone')
+        .eq('user_id', user.id)
+
+      if (existingContacts) {
+        const isDuplicate = existingContacts.some((contact) =>
+          arePhoneNumbersEqual(contact.phone, phoneValidation.normalized!)
+        )
+
+        if (isDuplicate) {
+          throw new Error('Já existe um contato com este número de telefone')
+        }
+      }
+
       const { data, error } = await supabase
         .from('contacts')
         .insert({
           ...contactData,
+          phone: phoneValidation.normalized!,
           user_id: user.id,
         })
         .select()
@@ -89,6 +113,45 @@ export function useContacts() {
     updates: Partial<Omit<Contact, 'id' | 'created_at' | 'user_id'>>
   ) => {
     try {
+      // Get user for validation
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
+      // If phone is being updated, validate and normalize it
+      if (updates.phone) {
+        const phoneValidation = processPhoneForStorage(updates.phone)
+        if (!phoneValidation.isValid) {
+          throw new Error(
+            phoneValidation.error || 'Número de telefone inválido'
+          )
+        }
+
+        // Check for duplicate phone numbers in database (excluding current contact)
+        const { data: existingContacts } = await supabase
+          .from('contacts')
+          .select('id, phone')
+          .eq('user_id', user.id)
+
+        if (existingContacts) {
+          const isDuplicate = existingContacts.some(
+            (contact) =>
+              contact.id !== id &&
+              arePhoneNumbersEqual(contact.phone, phoneValidation.normalized!)
+          )
+
+          if (isDuplicate) {
+            throw new Error('Já existe um contato com este número de telefone')
+          }
+        }
+
+        updates.phone = phoneValidation.normalized!
+      }
+
       const { data, error } = await supabase
         .from('contacts')
         .update({
@@ -146,14 +209,73 @@ export function useContacts() {
         throw new Error('User not authenticated')
       }
 
-      const contactsWithUserId = contactsData.map((contact) => ({
-        ...contact,
-        user_id: user.id,
-      }))
+      // Validate and normalize all phone numbers
+      const validatedContacts = []
+      const errors = []
+
+      for (let i = 0; i < contactsData.length; i++) {
+        const contact = contactsData[i]
+        const phoneValidation = processPhoneForStorage(contact.phone)
+
+        if (!phoneValidation.isValid) {
+          errors.push(`Linha ${i + 1}: ${phoneValidation.error}`)
+          continue
+        }
+
+        // Check for duplicates within the import data
+        const isDuplicateInImport = validatedContacts.some((validatedContact) =>
+          arePhoneNumbersEqual(
+            validatedContact.phone,
+            phoneValidation.normalized!
+          )
+        )
+
+        if (isDuplicateInImport) {
+          errors.push(
+            `Linha ${i + 1}: Número duplicado nos dados de importação`
+          )
+          continue
+        }
+
+        // Check for duplicates with existing contacts in database
+        const { data: existingContacts } = await supabase
+          .from('contacts')
+          .select('phone')
+          .eq('user_id', user.id)
+
+        if (existingContacts) {
+          const isDuplicateWithExisting = existingContacts.some(
+            (existingContact) =>
+              arePhoneNumbersEqual(
+                existingContact.phone,
+                phoneValidation.normalized!
+              )
+          )
+
+          if (isDuplicateWithExisting) {
+            errors.push(`Linha ${i + 1}: Número já existe nos contatos`)
+            continue
+          }
+        }
+
+        validatedContacts.push({
+          ...contact,
+          phone: phoneValidation.normalized!,
+          user_id: user.id,
+        })
+      }
+
+      if (errors.length > 0) {
+        throw new Error(`Erros na importação:\n${errors.join('\n')}`)
+      }
+
+      if (validatedContacts.length === 0) {
+        throw new Error('Nenhum contato válido para importar')
+      }
 
       const { data, error } = await supabase
         .from('contacts')
-        .insert(contactsWithUserId)
+        .insert(validatedContacts)
         .select()
 
       if (error) {
@@ -203,7 +325,7 @@ export function useContacts() {
 
   useEffect(() => {
     fetchContacts()
-  }, [])
+  }, [fetchContacts])
 
   // Set up real-time subscription
   useEffect(() => {
@@ -253,7 +375,7 @@ export function useContacts() {
     return () => {
       channel.unsubscribe()
     }
-  }, [])
+  }, [supabase])
 
   const syncContactsFromWhatsApp = async (instanceId: string) => {
     try {

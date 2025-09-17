@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useContacts } from '@/hooks/use-contacts'
 import { useRealtimeContacts } from '@/hooks/use-realtime-contacts'
-import { Contact } from '@/types/contacts'
+import { useSettings } from '@/hooks/use-settings'
 import { ContactsList } from './contacts-list'
 import { ContactForm } from './contact-form'
 import { ContactsHeader } from './contacts-header'
@@ -21,13 +21,19 @@ export function ContactsPage() {
     error,
     fetchContacts,
     syncContactsFromWhatsApp,
+    addContact,
+    updateContact,
+    deleteContact,
   } = useContacts()
   const [syncing, setSyncing] = useState(false)
+
+  // Get Z-API instances for sync functionality
+  const { zApiInstances } = useSettings()
 
   // Initialize contacts loading
   useEffect(() => {
     fetchContacts()
-  }, [])
+  }, [fetchContacts])
 
   // Use realtime updates
   useRealtimeContacts()
@@ -56,13 +62,23 @@ export function ContactsPage() {
   }
 
   const handleSyncContacts = async () => {
-    // TODO: Get active Z-API instance ID from settings
-    // For now, we'll show a message that Z-API needs to be configured
+    // Get the active Z-API instance
+    const activeInstance = zApiInstances?.find((instance) => instance.is_active)
+
+    if (!activeInstance) {
+      console.error(
+        'No active Z-API instance found. Please configure a Z-API instance first.'
+      )
+      return
+    }
+
     setSyncing(true)
     try {
-      const result = await syncContactsFromWhatsApp('default-instance')
+      const result = await syncContactsFromWhatsApp(activeInstance.id)
       if (result.success) {
         console.log('Contacts synced successfully:', result.results)
+        // Refresh contacts after successful sync
+        await fetchContacts()
       } else {
         console.error('Failed to sync contacts:', result.error)
       }
@@ -83,6 +99,7 @@ export function ContactsPage() {
         totalContacts={contacts?.length || 0}
         filteredCount={filteredContacts.length}
         syncing={syncing}
+        canSync={!!zApiInstances?.find((instance) => instance.is_active)}
         importComponent={<ContactsImport />}
       />
 
@@ -92,6 +109,9 @@ export function ContactsPage() {
             contactId={editingContact}
             onClose={handleCloseForm}
             onSuccess={handleCloseForm}
+            contacts={contacts || []}
+            addContact={addContact}
+            updateContact={updateContact}
           />
         ) : (
           <ContactsList
@@ -99,6 +119,7 @@ export function ContactsPage() {
             loading={loading}
             error={error}
             onEditContact={handleEditContact}
+            onDeleteContact={deleteContact}
           />
         )}
       </div>
