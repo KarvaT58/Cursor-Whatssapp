@@ -5,6 +5,7 @@ import { useAuth } from '@/providers/auth-provider'
 import { useWhatsAppGroups } from '@/hooks/use-whatsapp-groups'
 import { useGroupSync } from '@/hooks/use-group-sync'
 import { GroupList } from '@/components/groups/group-list'
+import { GroupsSearch } from '@/components/groups/groups-search'
 import { GroupForm } from '@/components/groups/group-form'
 import { ParticipantManager } from '@/components/groups/participant-manager'
 import { Database } from '@/types/database'
@@ -12,6 +13,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Users,
   MessageCircle,
@@ -19,6 +21,7 @@ import {
   AlertCircle,
   CheckCircle,
   Plus,
+  Search,
 } from 'lucide-react'
 
 type Group = Database['public']['Tables']['whatsapp_groups']['Row']
@@ -342,20 +345,43 @@ export default function GroupsPage() {
         </Card>
       </div>
 
-      {/* Groups List */}
-      <GroupList
-        groups={groups}
-        loading={loading}
-        error={error}
-        onEdit={handleEditGroup}
-        onDelete={handleDeleteGroup}
-        onAddParticipant={handleManageParticipants}
-        onRemoveParticipant={handleRemoveParticipant}
-        onSync={handleSyncGroup}
-        onSyncAll={handleSyncAll}
-        onViewMessages={handleViewMessages}
-        onCreateGroup={() => setShowGroupForm(true)}
-      />
+      {/* Groups Tabs */}
+      <Tabs defaultValue="list" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="list" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Lista de Grupos
+          </TabsTrigger>
+          <TabsTrigger value="search" className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            Buscar Grupos
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="list">
+          <GroupList
+            groups={groups}
+            loading={loading}
+            error={error}
+            onEdit={handleEditGroup}
+            onDelete={handleDeleteGroup}
+            onAddParticipant={handleManageParticipants}
+            onRemoveParticipant={handleRemoveParticipant}
+            onSync={handleSyncGroup}
+            onSyncAll={handleSyncAll}
+            onViewMessages={handleViewMessages}
+            onCreateGroup={() => setShowGroupForm(true)}
+          />
+        </TabsContent>
+        
+        <TabsContent value="search">
+          <GroupsSearch
+            onGroupSelect={handleEditGroup}
+            onGroupEdit={handleEditGroup}
+            onGroupDelete={handleDeleteGroup}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Group Form Dialog */}
       <GroupForm
