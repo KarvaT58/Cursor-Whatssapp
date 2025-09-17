@@ -65,53 +65,71 @@ let campaignSchedulerEvents: QueueEvents | null = null
 
 export function getCampaignMessagesQueue(): Queue<CampaignMessageJob> {
   if (!campaignMessagesQueue) {
-    const redis = getRedisClient()
-    campaignMessagesQueue = new Queue(QUEUE_NAMES.CAMPAIGN_MESSAGES, {
-      connection: redis,
-      defaultJobOptions: {
-        removeOnComplete: 100,
-        removeOnFail: 50,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
+    try {
+      const redis = getRedisClient()
+      campaignMessagesQueue = new Queue(QUEUE_NAMES.CAMPAIGN_MESSAGES, {
+        connection: redis,
+        defaultJobOptions: {
+          removeOnComplete: 100,
+          removeOnFail: 50,
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 2000,
+          },
         },
-      },
-    })
+      })
+    } catch (error) {
+      console.error('Failed to create campaign messages queue:', error)
+      throw error
+    }
   }
   return campaignMessagesQueue
 }
 
 export function getCampaignNotificationsQueue(): Queue<CampaignNotificationJob> {
   if (!campaignNotificationsQueue) {
-    const redis = getRedisClient()
-    campaignNotificationsQueue = new Queue(QUEUE_NAMES.CAMPAIGN_NOTIFICATIONS, {
-      connection: redis,
-      defaultJobOptions: {
-        removeOnComplete: 50,
-        removeOnFail: 25,
-        attempts: 2,
-      },
-    })
+    try {
+      const redis = getRedisClient()
+      campaignNotificationsQueue = new Queue(
+        QUEUE_NAMES.CAMPAIGN_NOTIFICATIONS,
+        {
+          connection: redis,
+          defaultJobOptions: {
+            removeOnComplete: 50,
+            removeOnFail: 25,
+            attempts: 2,
+          },
+        }
+      )
+    } catch (error) {
+      console.error('Failed to create campaign notifications queue:', error)
+      throw error
+    }
   }
   return campaignNotificationsQueue
 }
 
 export function getMessageRetryQueue(): Queue<MessageRetryJob> {
   if (!messageRetryQueue) {
-    const redis = getRedisClient()
-    messageRetryQueue = new Queue(QUEUE_NAMES.MESSAGE_RETRY, {
-      connection: redis,
-      defaultJobOptions: {
-        removeOnComplete: 50,
-        removeOnFail: 25,
-        attempts: 5,
-        backoff: {
-          type: 'exponential',
-          delay: 5000,
+    try {
+      const redis = getRedisClient()
+      messageRetryQueue = new Queue(QUEUE_NAMES.MESSAGE_RETRY, {
+        connection: redis,
+        defaultJobOptions: {
+          removeOnComplete: 50,
+          removeOnFail: 25,
+          attempts: 5,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
         },
-      },
-    })
+      })
+    } catch (error) {
+      console.error('Failed to create message retry queue:', error)
+      throw error
+    }
   }
   return messageRetryQueue
 }

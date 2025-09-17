@@ -6,7 +6,7 @@ export function getRedisClient(): Redis {
   if (!redis) {
     const redisUrl = process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL
 
-    if (!redisUrl) {
+    if (!redisUrl || redisUrl === 'your_redis_url') {
       throw new Error(
         'Redis URL not configured. Please set REDIS_URL or UPSTASH_REDIS_REST_URL environment variable.'
       )
