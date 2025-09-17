@@ -103,7 +103,7 @@ export function ContactsList({
                 {/* Avatar */}
                 <div className="relative">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                    {getInitials(contact.name)}
+                    {getInitials(contact?.name || 'Contato')}
                   </div>
                   {/* Status indicator - você pode implementar lógica de status aqui */}
                   <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-background rounded-full"></div>

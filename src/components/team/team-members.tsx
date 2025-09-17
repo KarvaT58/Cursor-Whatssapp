@@ -158,11 +158,11 @@ export function TeamMembers({ members, onInviteUser }: TeamMembersProps) {
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-                        {getInitials(member.name)}
+                        {getInitials(member?.name || 'Usuário')}
                       </div>
                       <div className="flex-1">
                         <CardTitle className="text-base flex items-center gap-2">
-                          {member.name}
+                          {member?.name || 'Usuário'}
                           {getRoleIcon(member.role)}
                         </CardTitle>
                         <p className="text-sm text-muted-foreground">

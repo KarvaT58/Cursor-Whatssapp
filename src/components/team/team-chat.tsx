@@ -146,13 +146,13 @@ export function TeamChat({ team, messages, members }: TeamChatProps) {
                 return (
                   <div key={message.id} className="flex gap-3">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
-                      {getInitials(member.name)}
+                      {getInitials(member?.name || 'Usuário')}
                     </div>
 
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-medium text-sm">
-                          {member.name}
+                          {member?.name || 'Usuário'}
                         </span>
                         <Badge
                           className={`${getRoleColor(member.role)} text-xs`}
@@ -210,10 +210,10 @@ export function TeamChat({ team, messages, members }: TeamChatProps) {
               className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50"
             >
               <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
-                {getInitials(member.name)}
+                {getInitials(member?.name || 'Usuário')}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{member.name}</p>
+                <p className="text-sm font-medium truncate">{member?.name || 'Usuário'}</p>
                 <Badge className={`${getRoleColor(member.role)} text-xs`}>
                   {getRoleLabel(member.role)}
                 </Badge>

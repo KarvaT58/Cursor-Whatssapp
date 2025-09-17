@@ -114,7 +114,7 @@ export function OnlineMembers({
                         member={member}
                         isOnline={true}
                         statusText={getStatusText(member)}
-                        initials={getInitials(member.name)}
+                        initials={getInitials(member?.name || 'Usuário')}
                       />
                     ))}
                   </div>
@@ -138,7 +138,7 @@ export function OnlineMembers({
                         member={member}
                         isOnline={false}
                         statusText={getStatusText(member)}
-                        initials={getInitials(member.name)}
+                        initials={getInitials(member?.name || 'Usuário')}
                       />
                     ))}
 

@@ -104,10 +104,10 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
         <CardContent>
           <div className="flex items-center gap-4 mb-6">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-lg">
-              {getInitials(user.name)}
+              {getInitials(user?.name || 'Usuário')}
             </div>
             <div>
-              <h3 className="text-lg font-semibold">{user.name}</h3>
+              <h3 className="text-lg font-semibold">{user?.name || 'Usuário'}</h3>
               <p className="text-muted-foreground">{user.email}</p>
               <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
