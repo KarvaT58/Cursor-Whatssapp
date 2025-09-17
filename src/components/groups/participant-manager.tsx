@@ -93,14 +93,14 @@ export function ParticipantManager({
       return
     }
 
-    if (group.participants?.includes(formattedPhone)) {
+    if (group?.participants?.includes(formattedPhone)) {
       setParticipantError('Participante já está no grupo')
       return
     }
 
     setActionLoading(true)
     try {
-      await onAddParticipant(group.id, formattedPhone)
+      await onAddParticipant(group?.id || '', formattedPhone)
       setNewParticipant('')
       setParticipantError(null)
     } catch (err) {
@@ -113,7 +113,7 @@ export function ParticipantManager({
   const handleRemoveParticipant = async (participant: string) => {
     setActionLoading(true)
     try {
-      await onRemoveParticipant(group.id, participant)
+      await onRemoveParticipant(group?.id || '', participant)
       setRemovingParticipant(null)
     } catch (err) {
       console.error('Erro ao remover participante:', err)
@@ -130,7 +130,7 @@ export function ParticipantManager({
   }
 
   const getParticipantCount = () => {
-    return group.participants?.length || 0
+    return group?.participants?.length || 0
   }
 
   return (
@@ -172,7 +172,7 @@ export function ParticipantManager({
                       participantes
                     </span>
                   </div>
-                  {group.whatsapp_id && (
+                  {group?.whatsapp_id && (
                     <div className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-green-600" />
                       <span className="text-sm text-muted-foreground">
@@ -227,7 +227,7 @@ export function ParticipantManager({
                 <Badge variant="outline">{getParticipantCount()}</Badge>
               </div>
 
-              {group.participants && group.participants.length > 0 ? (
+              {group?.participants && group.participants.length > 0 ? (
                 <div className="space-y-2">
                   {group.participants.map((participant, index) => (
                     <div
