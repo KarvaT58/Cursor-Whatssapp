@@ -159,7 +159,7 @@ export function GroupsList({
                   <div className="flex-1">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <MessageSquare className="size-4" />
-                      {group.name}
+                      {group?.name || 'Grupo'}
                     </CardTitle>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge variant="outline" className="text-xs">

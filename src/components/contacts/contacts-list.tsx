@@ -144,11 +144,11 @@ export function ContactsList({
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{contact.name}</CardTitle>
+                    <CardTitle className="text-lg">{contact?.name || 'Contato'}</CardTitle>
                     <div className="flex items-center gap-2 mt-1">
                       <Phone className="size-3 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
-                        {contact.phone}
+                        {contact?.phone || 'Telefone não disponível'}
                       </span>
                     </div>
                     {contact.email && (

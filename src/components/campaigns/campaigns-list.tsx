@@ -225,7 +225,7 @@ export function CampaignsList({
                   <div className="flex-1">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Megaphone className="size-4" />
-                      {campaign.name}
+                      {campaign?.name || 'Campanha'}
                     </CardTitle>
                     <div className="flex items-center gap-2 mt-1">
                       <Badge

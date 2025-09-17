@@ -218,10 +218,10 @@ export function TeamMembers({ className }: TeamMembersProps) {
                 </div>
                 <div>
                   <div className="font-medium">
-                    {member.name || member.email}
+                    {member?.name || member?.email || 'Usuário'}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {member.email}
+                    {member?.email || 'Email não disponível'}
                   </div>
                 </div>
               </div>

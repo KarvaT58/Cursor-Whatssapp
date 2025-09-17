@@ -151,7 +151,7 @@ export function TeamChat({ teamId, className }: TeamChatProps) {
           <div className="flex items-center gap-2">
             <Hash className="h-4 w-4" />
             <CardTitle className="text-lg">
-              {team?.team.name || 'Chat da Equipe'}
+              {team?.team?.name || 'Chat da Equipe'}
             </CardTitle>
             <Badge variant="secondary" className="ml-2">
               {channel}
@@ -348,7 +348,7 @@ function TeamMessageItem({
         {/* Avatar */}
         <div className="relative">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
-            {message.sender.name.charAt(0).toUpperCase()}
+            {message.sender?.name?.charAt(0).toUpperCase() || '?'}
           </div>
           {isOnline && (
             <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
@@ -358,7 +358,7 @@ function TeamMessageItem({
         {/* Message Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="font-medium text-sm">{message.sender.name}</span>
+            <span className="font-medium text-sm">{message.sender?.name || 'Usuário'}</span>
             <span className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(message.created_at), {
                 addSuffix: true,
@@ -391,7 +391,7 @@ function TeamMessageItem({
           {message.replyTo && (
             <div className="mt-2 p-2 bg-muted/50 rounded border-l-2 border-primary/50">
               <div className="text-xs text-muted-foreground mb-1">
-                Respondendo para {message.replyTo.sender.name}
+                Respondendo para {message.replyTo?.sender?.name || 'Usuário'}
               </div>
               <div className="text-sm truncate">{message.replyTo.content}</div>
             </div>

@@ -365,15 +365,15 @@ export function TeamMemberManagement({
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarFallback>
-                        {member.name?.charAt(0) || member.email.charAt(0)}
+                        {member?.name?.charAt(0) || member?.email?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="font-medium">
-                        {member.name || member.email}
+                        {member?.name || member?.email || 'Usuário'}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {member.email}
+                        {member?.email || 'Email não disponível'}
                       </div>
                       <div
                         className={`flex items-center gap-1 text-xs ${status.color}`}
