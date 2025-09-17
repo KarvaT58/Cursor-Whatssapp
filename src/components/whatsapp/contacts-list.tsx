@@ -113,7 +113,7 @@ export function ContactsList({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-sm truncate">
-                      {contact.name}
+                      {contact?.name || 'Contato'}
                     </h4>
                     <span className="text-xs text-muted-foreground">
                       {formatLastInteraction(contact.last_interaction)}

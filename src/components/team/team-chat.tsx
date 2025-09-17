@@ -113,7 +113,7 @@ export function TeamChat({ team, messages, members }: TeamChatProps) {
               <div>
                 <h3 className="font-semibold">Chat da Equipe</h3>
                 <p className="text-sm text-muted-foreground">
-                  {team.name} • {members.length} membro
+                  {team?.name || 'Equipe'} • {members.length} membro
                   {members.length !== 1 ? 's' : ''}
                 </p>
               </div>

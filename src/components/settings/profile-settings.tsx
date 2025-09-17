@@ -18,8 +18,8 @@ interface ProfileSettingsProps {
 
 export function ProfileSettings({ user }: ProfileSettingsProps) {
   const [formData, setFormData] = useState({
-    name: user.name || '',
-    email: user.email || '',
+    name: user?.name || '',
+    email: user?.email || '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -108,18 +108,18 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
             </div>
             <div>
               <h3 className="text-lg font-semibold">{user?.name || 'Usuário'}</h3>
-              <p className="text-muted-foreground">{user.email}</p>
+              <p className="text-muted-foreground">{user?.email || 'Email não disponível'}</p>
               <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="size-4" />
-                  <span>Membro desde: {formatDate(user.created_at)}</span>
+                  <span>Membro desde: {formatDate(user?.created_at || new Date())}</span>
                 </div>
-                {user.role && (
+                {user?.role && (
                   <div className="flex items-center gap-1">
                     <Building className="size-4" />
                     <span>
                       Função:{' '}
-                      {user.role === 'admin' ? 'Administrador' : 'Usuário'}
+                      {user?.role === 'admin' ? 'Administrador' : 'Usuário'}
                     </span>
                   </div>
                 )}

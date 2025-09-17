@@ -243,7 +243,7 @@ export function TeamMembers({ members, onInviteUser }: TeamMembersProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Remover membro da equipe</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover {userToRemove?.name} da equipe?
+              Tem certeza que deseja remover {userToRemove?.name || 'este usuário'} da equipe?
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
