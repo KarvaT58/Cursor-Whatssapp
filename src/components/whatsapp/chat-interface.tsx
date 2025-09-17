@@ -117,10 +117,10 @@ export function ChatInterface({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold">
-              {getInitials(contact.name)}
+              {getInitials(contact?.name || 'Contato')}
             </div>
             <div>
-              <h3 className="font-semibold">{contact.name}</h3>
+              <h3 className="font-semibold">{contact?.name || 'Contato'}</h3>
               <p className="text-sm text-muted-foreground">{contact.phone}</p>
             </div>
           </div>
@@ -173,7 +173,7 @@ export function ChatInterface({
               >
                 {message.direction === 'inbound' && (
                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-xs">
-                    {getInitials(contact.name)}
+                    {getInitials(contact?.name || 'Contato')}
                   </div>
                 )}
 

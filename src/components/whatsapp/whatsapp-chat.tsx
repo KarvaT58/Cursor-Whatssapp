@@ -126,7 +126,7 @@ export function WhatsAppChat({ className }: WhatsAppChatProps) {
       // Simular resposta automática (opcional)
       if (selectedContact && Math.random() > 0.7) {
         setTimeout(() => {
-          startTyping(selectedContact.name)
+          startTyping(selectedContact?.name || 'Contato')
         }, 1000)
       }
     } catch (error) {
@@ -195,7 +195,7 @@ export function WhatsAppChat({ className }: WhatsAppChatProps) {
               disabled={sendingMessage}
               placeholder={
                 selectedContact
-                  ? `Enviar mensagem para ${selectedContact.name}...`
+                  ? `Enviar mensagem para ${selectedContact?.name || 'Contato'}...`
                   : 'Enviar mensagem para o grupo...'
               }
             />
