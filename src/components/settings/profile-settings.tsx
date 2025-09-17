@@ -112,7 +112,7 @@ export function ProfileSettings({ user }: ProfileSettingsProps) {
               <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="size-4" />
-                  <span>Membro desde: {formatDate(user?.created_at || new Date())}</span>
+                  <span>Membro desde: {formatDate(user?.created_at || new Date().toISOString())}</span>
                 </div>
                 {user?.role && (
                   <div className="flex items-center gap-1">
