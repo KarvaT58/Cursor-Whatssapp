@@ -107,7 +107,7 @@ describe('useIntelligentCache', () => {
       result.current.set('key2', 'value2')
     })
 
-    const removed = result.current.remove('key1')
+    const removed = result.current.delete('key1')
     expect(removed).toBe(true)
     expect(result.current.get('key1')).toBeUndefined()
     expect(result.current.get('key2')).toBe('value2')

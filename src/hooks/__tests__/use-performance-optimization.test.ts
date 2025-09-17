@@ -1,3 +1,4 @@
+import React from 'react'
 import { renderHook, act } from '@testing-library/react'
 import { vi } from 'vitest'
 import { usePerformanceOptimization } from '../use-performance-optimization'
@@ -99,7 +100,7 @@ describe('usePerformanceOptimization', () => {
     Object.defineProperty(window, 'performance', {
       writable: true,
       value: {
-        now: jest.fn(() => Date.now()),
+        now: vi.fn(() => Date.now()),
         memory: {
           usedJSHeapSize: 1800000, // 90% usage
           totalJSHeapSize: 2000000,
