@@ -57,7 +57,8 @@ export function ContactSelector({
 
     return contacts.filter(
       (contact) =>
-        contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (contact?.name &&
+          contact.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         contact.phone.includes(searchTerm) ||
         (contact.email &&
           contact.email.toLowerCase().includes(searchTerm.toLowerCase()))

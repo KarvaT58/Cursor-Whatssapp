@@ -172,7 +172,7 @@ export function useContacts() {
       ),
       ...contacts.map((contact) =>
         [
-          contact.name,
+          contact?.name || '',
           contact.phone,
           contact.email || '',
           contact.tags?.join(';') || '',
