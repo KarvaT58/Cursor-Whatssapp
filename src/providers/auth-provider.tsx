@@ -15,9 +15,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
+    setMounted(true)
+
     const getUser = async () => {
       const {
         data: { user },
@@ -37,6 +40,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe()
   }, [supabase.auth])
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <AuthContext.Provider
+        value={{ user: null, loading: true, signOut: async () => {} }}
+      >
+        {children}
+      </AuthContext.Provider>
+    )
+  }
 
   const signOut = async () => {
     await supabase.auth.signOut()

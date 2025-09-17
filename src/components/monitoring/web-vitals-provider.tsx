@@ -7,7 +7,12 @@ interface WebVitalsProviderProps {
 }
 
 export function WebVitalsProvider({ children }: WebVitalsProviderProps) {
-  useWebVitals()
-  
+  const mounted = useWebVitals()
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return <>{children}</>
+  }
+
   return <>{children}</>
 }

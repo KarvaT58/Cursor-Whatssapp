@@ -50,6 +50,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const [lastConnectedAt, setLastConnectedAt] = useState<Date | null>(null)
   const [reconnectAttempts, setReconnectAttempts] = useState(0)
   const [channels, setChannels] = useState<RealtimeChannel[]>([])
+  const [mounted, setMounted] = useState(false)
   const supabase = createClient()
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined)
   const maxReconnectAttempts = 5
@@ -99,6 +100,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   }, [reconnect])
 
   useEffect(() => {
+    setMounted(true)
+
+    // Only run on client side
+    if (typeof window === 'undefined') return
+
     checkConnection()
 
     // Configurar listener para mudanças de conexão
@@ -242,6 +248,27 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
   const unsubscribe = (channel: RealtimeChannel) => {
     channel.unsubscribe()
     setChannels((prev) => prev.filter((c) => c !== channel))
+  }
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <RealtimeContext.Provider
+        value={{
+          isConnected: false,
+          connectionStatus: 'connecting',
+          lastConnectedAt: null,
+          reconnectAttempts: 0,
+          subscribe: () => ({}) as RealtimeChannel,
+          unsubscribe: () => {},
+          subscribeToTeamMessages: () => ({}) as RealtimeChannel,
+          subscribeToTeamPresence: () => ({}) as RealtimeChannel,
+          reconnect: () => {},
+        }}
+      >
+        {children}
+      </RealtimeContext.Provider>
+    )
   }
 
   return (
