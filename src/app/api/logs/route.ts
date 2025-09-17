@@ -72,9 +72,8 @@ export async function GET(request: NextRequest) {
     })
 
     requestLogger.logResponse(response, { 
-      teamId, 
-      userId, 
-      type 
+      teamId: teamId || undefined, 
+      userId: userId || undefined
     })
 
     return response
@@ -104,8 +103,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({ success: true })
     requestLogger.logResponse(response, { 
       teamId, 
-      userId, 
-      type: 'log-creation' 
+      userId
     })
 
     return response

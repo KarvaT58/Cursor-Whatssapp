@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
+import React from 'react'
 
 // Initialize Sentry
 export function initSentry() {
@@ -54,7 +55,7 @@ export const errorReporting = {
       Sentry.withScope((scope) => {
         if (context) {
           Object.keys(context).forEach((key) => {
-            scope.setContext(key, context[key])
+            scope.setContext(key, context[key] as any)
           })
         }
         Sentry.captureException(error)
@@ -67,7 +68,7 @@ export const errorReporting = {
       Sentry.withScope((scope) => {
         if (context) {
           Object.keys(context).forEach((key) => {
-            scope.setContext(key, context[key])
+            scope.setContext(key, context[key] as any)
           })
         }
         Sentry.captureMessage(message, level)
@@ -108,7 +109,7 @@ export const errorReporting = {
 export const performanceMonitoring = {
   startTransaction: (name: string, op: string) => {
     if (process.env.NODE_ENV === 'production') {
-      return Sentry.startTransaction({ name, op })
+      return Sentry.startSpan({ name, op }, () => {})
     }
     return null
   },
@@ -153,7 +154,7 @@ export function withSentryErrorHandler<T extends any[], R>(
 // React component error boundary
 export function withSentryErrorBoundary(Component: React.ComponentType<Record<string, unknown>>) {
   return Sentry.withErrorBoundary(Component, {
-    fallback: ({ error, resetError }: { error: Error; resetError: () => void }) => {
+    fallback: ({ error, resetError }: { error: unknown; resetError: () => void }) => {
       return React.createElement('div', { className: 'flex flex-col items-center justify-center min-h-screen p-4' },
         React.createElement('h2', { className: 'text-2xl font-bold text-red-600 mb-4' }, 'Algo deu errado!'),
         React.createElement('p', { className: 'text-gray-600 mb-4 text-center' }, 'Ocorreu um erro inesperado. Nossa equipe foi notificada.'),
@@ -165,7 +166,7 @@ export function withSentryErrorBoundary(Component: React.ComponentType<Record<st
     },
     beforeCapture: (scope, error, errorInfo) => {
       scope.setTag('errorBoundary', true)
-      scope.setContext('errorInfo', errorInfo)
+      scope.setContext('errorInfo', errorInfo as any)
     },
   })
 }

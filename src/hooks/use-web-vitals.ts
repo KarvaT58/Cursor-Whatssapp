@@ -9,12 +9,11 @@ export function useWebVitals() {
     if (typeof window === 'undefined') return
 
     // Import and use web-vitals library
-    import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
-      getCLS(reportWebVitals)
-      getFID(reportWebVitals)
-      getFCP(reportWebVitals)
-      getLCP(reportWebVitals)
-      getTTFB(reportWebVitals)
+    import('web-vitals').then(({ onCLS, onFCP, onLCP, onTTFB }) => {
+      onCLS(reportWebVitals)
+      onFCP(reportWebVitals)
+      onLCP(reportWebVitals)
+      onTTFB(reportWebVitals)
     }).catch((error) => {
       console.error('Failed to load web-vitals:', error)
     })

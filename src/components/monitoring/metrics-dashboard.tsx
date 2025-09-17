@@ -217,32 +217,32 @@ export function MetricsDashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">LCP (Largest Contentful Paint)</span>
-                <Badge variant={metrics?.performance.webVitals.lcp < 2500 ? 'default' : 'destructive'}>
-                  {formatTime(metrics?.performance.webVitals.lcp || 0)}
+                <Badge variant={(metrics?.performance?.webVitals?.lcp || 0) < 2500 ? 'default' : 'destructive'}>
+                  {formatTime(metrics?.performance?.webVitals?.lcp || 0)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">FID (First Input Delay)</span>
-                <Badge variant={metrics?.performance.webVitals.fid < 100 ? 'default' : 'destructive'}>
-                  {formatTime(metrics?.performance.webVitals.fid || 0)}
+                <Badge variant={(metrics?.performance?.webVitals?.fid || 0) < 100 ? 'default' : 'destructive'}>
+                  {formatTime(metrics?.performance?.webVitals?.fid || 0)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">CLS (Cumulative Layout Shift)</span>
-                <Badge variant={metrics?.performance.webVitals.cls < 0.1 ? 'default' : 'destructive'}>
-                  {(metrics?.performance.webVitals.cls || 0).toFixed(3)}
+                <Badge variant={(metrics?.performance?.webVitals?.cls || 0) < 0.1 ? 'default' : 'destructive'}>
+                  {(metrics?.performance?.webVitals?.cls || 0).toFixed(3)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">FCP (First Contentful Paint)</span>
-                <Badge variant={metrics?.performance.webVitals.fcp < 1800 ? 'default' : 'destructive'}>
-                  {formatTime(metrics?.performance.webVitals.fcp || 0)}
+                <Badge variant={(metrics?.performance?.webVitals?.fcp || 0) < 1800 ? 'default' : 'destructive'}>
+                  {formatTime(metrics?.performance?.webVitals?.fcp || 0)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">TTFB (Time to First Byte)</span>
-                <Badge variant={metrics?.performance.webVitals.ttfb < 600 ? 'default' : 'destructive'}>
-                  {formatTime(metrics?.performance.webVitals.ttfb || 0)}
+                <Badge variant={(metrics?.performance?.webVitals?.ttfb || 0) < 600 ? 'default' : 'destructive'}>
+                  {formatTime(metrics?.performance?.webVitals?.ttfb || 0)}
                 </Badge>
               </div>
             </div>
@@ -258,26 +258,26 @@ export function MetricsDashboard() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Average Response Time</span>
-                <Badge variant={metrics?.performance.api.averageResponseTime < 200 ? 'default' : 'destructive'}>
-                  {formatTime(metrics?.performance.api.averageResponseTime || 0)}
+                <Badge variant={(metrics?.performance?.api?.averageResponseTime || 0) < 200 ? 'default' : 'destructive'}>
+                  {formatTime(metrics?.performance?.api?.averageResponseTime || 0)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Total API Calls</span>
                 <Badge variant="outline">
-                  {formatNumber(metrics?.performance.api.totalCalls || 0)}
+                  {formatNumber(metrics?.performance?.api?.totalCalls || 0)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Database Query Time</span>
-                <Badge variant={metrics?.performance.database.averageQueryTime < 50 ? 'default' : 'destructive'}>
-                  {formatTime(metrics?.performance.database.averageQueryTime || 0)}
+                <Badge variant={(metrics?.performance?.database?.averageQueryTime || 0) < 50 ? 'default' : 'destructive'}>
+                  {formatTime(metrics?.performance?.database?.averageQueryTime || 0)}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Total Queries</span>
                 <Badge variant="outline">
-                  {formatNumber(metrics?.performance.database.totalQueries || 0)}
+                  {formatNumber(metrics?.performance?.database?.totalQueries || 0)}
                 </Badge>
               </div>
             </div>

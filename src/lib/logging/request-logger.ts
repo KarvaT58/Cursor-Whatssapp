@@ -13,6 +13,7 @@ export interface RequestLogData {
   error?: string
   requestSize?: number
   responseSize?: number
+  [key: string]: unknown
 }
 
 export class RequestLogger {

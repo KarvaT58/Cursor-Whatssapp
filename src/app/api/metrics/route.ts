@@ -45,34 +45,36 @@ export async function GET(request: NextRequest) {
       if (startDate) filters.startDate = new Date(startDate)
       if (endDate) filters.endDate = new Date(endDate)
 
+      const startDateObj = startDate ? new Date(startDate) : undefined
+      const endDateObj = endDate ? new Date(endDate) : undefined
+
       metrics.business = {
-        dashboard: businessMetrics.getDashboardData(teamId, userId),
+        dashboard: businessMetrics.getDashboardData(teamId || undefined, userId || undefined),
         campaigns: {
-          created: businessMetrics.getAggregatedMetrics('campaign.created', 'day', filters.startDate, filters.endDate),
-          started: businessMetrics.getAggregatedMetrics('campaign.started', 'day', filters.startDate, filters.endDate),
-          completed: businessMetrics.getAggregatedMetrics('campaign.completed', 'day', filters.startDate, filters.endDate),
+          created: businessMetrics.getAggregatedMetrics('campaign.created', 'day', startDateObj, endDateObj),
+          started: businessMetrics.getAggregatedMetrics('campaign.started', 'day', startDateObj, endDateObj),
+          completed: businessMetrics.getAggregatedMetrics('campaign.completed', 'day', startDateObj, endDateObj),
         },
         messages: {
-          sent: businessMetrics.getAggregatedMetrics('message.sent', 'day', filters.startDate, filters.endDate),
-          delivered: businessMetrics.getAggregatedMetrics('message.delivered', 'day', filters.startDate, filters.endDate),
-          failed: businessMetrics.getAggregatedMetrics('message.failed', 'day', filters.startDate, filters.endDate),
+          sent: businessMetrics.getAggregatedMetrics('message.sent', 'day', startDateObj, endDateObj),
+          delivered: businessMetrics.getAggregatedMetrics('message.delivered', 'day', startDateObj, endDateObj),
+          failed: businessMetrics.getAggregatedMetrics('message.failed', 'day', startDateObj, endDateObj),
         },
         users: {
-          registrations: businessMetrics.getAggregatedMetrics('user.registration', 'day', filters.startDate, filters.endDate),
-          logins: businessMetrics.getAggregatedMetrics('user.login', 'day', filters.startDate, filters.endDate),
+          registrations: businessMetrics.getAggregatedMetrics('user.registration', 'day', startDateObj, endDateObj),
+          logins: businessMetrics.getAggregatedMetrics('user.login', 'day', startDateObj, endDateObj),
         },
         contacts: {
-          created: businessMetrics.getAggregatedMetrics('contact.created', 'day', filters.startDate, filters.endDate),
-          imported: businessMetrics.getAggregatedMetrics('contact.imported', 'day', filters.startDate, filters.endDate),
+          created: businessMetrics.getAggregatedMetrics('contact.created', 'day', startDateObj, endDateObj),
+          imported: businessMetrics.getAggregatedMetrics('contact.imported', 'day', startDateObj, endDateObj),
         },
       }
     }
 
     const response = NextResponse.json(metrics)
-    requestLogger.logResponse(response, { 
-      teamId, 
-      userId, 
-      type 
+    requestLogger.logResponse(response, {
+      teamId: teamId || undefined,
+      userId: userId || undefined
     })
 
     return response

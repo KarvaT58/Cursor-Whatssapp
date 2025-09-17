@@ -8,6 +8,7 @@ export interface BusinessMetric {
   teamId?: string
   campaignId?: string
   tags?: Record<string, string>
+  [key: string]: unknown
 }
 
 class BusinessMetrics {

@@ -131,7 +131,6 @@ class HealthChecker {
       // Check external services like Supabase
       const response = await fetch('https://api.supabase.com/health', {
         method: 'GET',
-        timeout: 5000,
       })
 
       const responseTime = Date.now() - start
