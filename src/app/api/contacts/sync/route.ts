@@ -125,6 +125,12 @@ export async function POST(request: NextRequest) {
       }>,
     }
 
+    // Buscar todos os contatos existentes UMA VEZ (fora do loop)
+    const { data: existingContacts } = await supabase
+      .from('contacts')
+      .select('id, name, phone')
+      .eq('user_id', user.id)
+
     // Processar cada contato do WhatsApp
     for (const whatsappContact of whatsappContacts) {
       try {
@@ -154,12 +160,6 @@ export async function POST(request: NextRequest) {
 
         // Usar pushname se disponível, senão usar name
         const contactName = pushname || name || 'Contato sem nome'
-
-        // Buscar todos os contatos existentes para verificar duplicatas
-        const { data: existingContacts } = await supabase
-          .from('contacts')
-          .select('id, name, phone')
-          .eq('user_id', user.id)
 
         // Verificar se já existe contato com o mesmo telefone (usando comparação normalizada)
         const duplicateContact = existingContacts?.find((contact) =>

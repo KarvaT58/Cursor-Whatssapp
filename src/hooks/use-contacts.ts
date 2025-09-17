@@ -209,6 +209,12 @@ export function useContacts() {
         throw new Error('User not authenticated')
       }
 
+      // Buscar todos os contatos existentes UMA VEZ (fora do loop)
+      const { data: existingContacts } = await supabase
+        .from('contacts')
+        .select('phone')
+        .eq('user_id', user.id)
+
       // Validate and normalize all phone numbers
       const validatedContacts = []
       const errors = []
@@ -238,11 +244,6 @@ export function useContacts() {
         }
 
         // Check for duplicates with existing contacts in database
-        const { data: existingContacts } = await supabase
-          .from('contacts')
-          .select('phone')
-          .eq('user_id', user.id)
-
         if (existingContacts) {
           const isDuplicateWithExisting = existingContacts.some(
             (existingContact) =>
