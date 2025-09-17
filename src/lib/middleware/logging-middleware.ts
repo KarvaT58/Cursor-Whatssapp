@@ -45,7 +45,7 @@ export function withLogging(handler: (req: NextRequest) => Promise<NextResponse>
   }
 }
 
-export function withPerformanceMonitoring<T extends any[], R>(
+export function withPerformanceMonitoring<T extends unknown[], R>(
   name: string,
   handler: (...args: T) => Promise<R>
 ) {
@@ -72,7 +72,7 @@ export function withPerformanceMonitoring<T extends any[], R>(
   }
 }
 
-export function withAuditLogging<T extends any[], R>(
+export function withAuditLogging<T extends unknown[], R>(
   action: string,
   resource: string,
   handler: (...args: T) => Promise<R>
