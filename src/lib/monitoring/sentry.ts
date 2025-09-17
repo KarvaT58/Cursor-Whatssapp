@@ -55,7 +55,7 @@ export const errorReporting = {
       Sentry.withScope((scope) => {
         if (context) {
           Object.keys(context).forEach((key) => {
-            scope.setContext(key, context[key] as any)
+            scope.setContext(key, context[key] as Record<string, unknown>)
           })
         }
         Sentry.captureException(error)
@@ -68,7 +68,7 @@ export const errorReporting = {
       Sentry.withScope((scope) => {
         if (context) {
           Object.keys(context).forEach((key) => {
-            scope.setContext(key, context[key] as any)
+            scope.setContext(key, context[key] as Record<string, unknown>)
           })
         }
         Sentry.captureMessage(message, level)
@@ -114,28 +114,28 @@ export const performanceMonitoring = {
     return null
   },
 
-  startSpan: (transaction: any, name: string, op: string) => {
-    if (process.env.NODE_ENV === 'production' && transaction) {
-      return transaction.startChild({ name, op })
+  startSpan: (transaction: unknown, name: string, op: string) => {
+    if (process.env.NODE_ENV === 'production' && transaction && typeof transaction === 'object' && transaction !== null && 'startChild' in transaction) {
+      return (transaction as { startChild: (options: { name: string; op: string }) => unknown }).startChild({ name, op })
     }
     return null
   },
 
-  finishSpan: (span: any) => {
-    if (process.env.NODE_ENV === 'production' && span) {
-      span.finish()
+  finishSpan: (span: unknown) => {
+    if (process.env.NODE_ENV === 'production' && span && typeof span === 'object' && span !== null && 'finish' in span) {
+      (span as { finish: () => void }).finish()
     }
   },
 
-  finishTransaction: (transaction: any) => {
-    if (process.env.NODE_ENV === 'production' && transaction) {
-      transaction.finish()
+  finishTransaction: (transaction: unknown) => {
+    if (process.env.NODE_ENV === 'production' && transaction && typeof transaction === 'object' && transaction !== null && 'finish' in transaction) {
+      (transaction as { finish: () => void }).finish()
     }
   },
 }
 
 // API route error handler
-export function withSentryErrorHandler<T extends any[], R>(
+export function withSentryErrorHandler<T extends unknown[], R>(
   handler: (...args: T) => Promise<R>
 ) {
   return async (...args: T): Promise<R> => {
@@ -154,7 +154,7 @@ export function withSentryErrorHandler<T extends any[], R>(
 // React component error boundary
 export function withSentryErrorBoundary(Component: React.ComponentType<Record<string, unknown>>) {
   return Sentry.withErrorBoundary(Component, {
-    fallback: ({ error, resetError }: { error: unknown; resetError: () => void }) => {
+    fallback: ({ resetError }: { error: unknown; resetError: () => void }) => {
       return React.createElement('div', { className: 'flex flex-col items-center justify-center min-h-screen p-4' },
         React.createElement('h2', { className: 'text-2xl font-bold text-red-600 mb-4' }, 'Algo deu errado!'),
         React.createElement('p', { className: 'text-gray-600 mb-4 text-center' }, 'Ocorreu um erro inesperado. Nossa equipe foi notificada.'),
@@ -166,7 +166,7 @@ export function withSentryErrorBoundary(Component: React.ComponentType<Record<st
     },
     beforeCapture: (scope, error, errorInfo) => {
       scope.setTag('errorBoundary', true)
-      scope.setContext('errorInfo', errorInfo as any)
+      scope.setContext('errorInfo', errorInfo as unknown as Record<string, unknown>)
     },
   })
 }
