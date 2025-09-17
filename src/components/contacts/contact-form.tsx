@@ -50,7 +50,7 @@ export function ContactForm({
   useEffect(() => {
     if (currentContact) {
       setFormData({
-        name: currentContact.name,
+        name: currentContact?.name || '',
         phone: currentContact.phone,
         email: currentContact.email || '',
         notes: currentContact.notes || '',

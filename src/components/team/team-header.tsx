@@ -29,7 +29,7 @@ export function TeamHeader({
           <div className="flex items-center gap-2">
             <Users className="size-5 text-primary" />
             <div>
-              <h1 className="text-xl font-semibold">{team.name}</h1>
+              <h1 className="text-xl font-semibold">{team?.name || 'Equipe'}</h1>
               {team.description && (
                 <p className="text-sm text-muted-foreground">
                   {team.description}

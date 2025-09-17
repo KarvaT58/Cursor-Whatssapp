@@ -237,7 +237,7 @@ export function GroupCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Grupo</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o grupo &quot;{group.name}&quot;?
+              Tem certeza que deseja excluir o grupo &quot;{group?.name || 'Grupo'}&quot;?
               Esta ação não pode ser desfeita e todas as mensagens relacionadas
               serão perdidas.
             </AlertDialogDescription>
@@ -264,7 +264,7 @@ export function GroupCard({
             <AlertDialogTitle>Remover Participante</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja remover o participante &quot;
-              {showRemoveParticipantDialog}&quot; do grupo &quot;{group.name}
+              {showRemoveParticipantDialog}&quot; do grupo &quot;{group?.name || 'Grupo'}
               &quot;?
             </AlertDialogDescription>
           </AlertDialogHeader>

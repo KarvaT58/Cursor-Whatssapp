@@ -69,7 +69,7 @@ export function ContactSelector({
     const groups: { [key: string]: Contact[] } = {}
 
     filteredContacts.forEach((contact) => {
-      const initial = contact.name.charAt(0).toUpperCase()
+      const initial = contact?.name?.charAt(0).toUpperCase() || '?'
       if (!groups[initial]) {
         groups[initial] = []
       }
@@ -231,14 +231,14 @@ export function ContactSelector({
                           }
                         />
                         <AvatarFallback>
-                          {contact.name.charAt(0).toUpperCase()}
+                          {contact?.name?.charAt(0).toUpperCase() || '?'}
                         </AvatarFallback>
                       </Avatar>
 
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <h3 className="font-medium truncate">
-                            {contact.name}
+                            {contact?.name || 'Contato'}
                           </h3>
                           <span
                             className={`text-xs ${

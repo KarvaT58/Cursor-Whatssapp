@@ -124,7 +124,7 @@ export function MessageTemplate({
     if (template) {
       setEditingTemplate(template)
       setFormData({
-        name: template.name,
+        name: template?.name || '',
         content: template.content,
         category: template.category,
         isFavorite: template.isFavorite,

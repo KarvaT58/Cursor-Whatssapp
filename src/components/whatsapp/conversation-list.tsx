@@ -200,7 +200,7 @@ export function ConversationList({
                       />
                       <AvatarFallback>
                         {conversation.contact ? (
-                          conversation.contact.name.charAt(0).toUpperCase()
+                          conversation.contact?.name?.charAt(0).toUpperCase() || '?'
                         ) : (
                           <Users className="w-6 h-6" />
                         )}
