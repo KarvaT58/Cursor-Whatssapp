@@ -143,7 +143,8 @@ export function ParticipantManager({
               Gerenciar Participantes
             </DialogTitle>
             <DialogDescription>
-              Adicione ou remova participantes do grupo &quot;{group.name}&quot;
+              Adicione ou remova participantes do grupo &quot;
+              {group?.name || 'Grupo'}&quot;
             </DialogDescription>
           </DialogHeader>
 
@@ -286,8 +287,8 @@ export function ParticipantManager({
             <AlertDialogTitle>Remover Participante</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja remover o participante &quot;
-              {removingParticipant}&quot; do grupo &quot;{group.name}&quot;?
-              Esta ação não pode ser desfeita.
+              {removingParticipant}&quot; do grupo &quot;
+              {group?.name || 'Grupo'}&quot;? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
