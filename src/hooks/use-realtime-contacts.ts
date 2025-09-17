@@ -27,8 +27,6 @@ export function useRealtimeContacts({
     if (!isConnected) return
 
     const contactsChannel = subscribe('contacts', (payload) => {
-      console.log('Contact update received:', payload)
-
       if (payload.eventType === 'INSERT' && payload.new) {
         const contact = payload.new as Contact
         onContactAdded?.(contact)

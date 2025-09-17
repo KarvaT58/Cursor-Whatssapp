@@ -24,6 +24,7 @@ export function ContactsPage() {
     addContact,
     updateContact,
     deleteContact,
+    setContacts,
   } = useContacts()
   const [syncing, setSyncing] = useState(false)
 
@@ -35,8 +36,47 @@ export function ContactsPage() {
     fetchContacts()
   }, [fetchContacts])
 
-  // Use realtime updates
-  useRealtimeContacts()
+  // Temporariamente removido para testar se há conflito com o realtime do useContacts
+  // useRealtimeContacts({
+  //   onContactAdded: (contact) => {
+  //     console.log('🔔 useRealtimeContacts: onContactAdded', contact)
+  //     setContacts((prev) => (prev ? [...prev, contact] : [contact]))
+  //   },
+  //   onContactUpdated: (updatedContact) => {
+  //     console.log('🔔 useRealtimeContacts: onContactUpdated', updatedContact)
+  //     setContacts((prev) =>
+  //       prev ? prev.map(contact =>
+  //         contact.id === updatedContact.id ? updatedContact : contact
+  //       ) : [updatedContact]
+  //     )
+  //   },
+  //   onContactDeleted: (contactId) => {
+  //     console.log('🔔 useRealtimeContacts: onContactDeleted', contactId)
+  //     setContacts((prev) =>
+  //       prev ? prev.filter(contact => contact.id !== contactId) : []
+  //     )
+  //   },
+  //   onContactImported: (count) => {
+  //     console.log('🔔 useRealtimeContacts: onContactImported', count)
+  //     // Refresh the entire contacts list when import is completed
+  //     fetchContacts()
+  //   }
+  // })
+
+  // Callback para quando a importação for concluída
+  const handleImportCompleted = (result: {
+    imported: number
+    updated: number
+    skipped: number
+    errors: Array<{
+      index: number
+      error: string
+      contact: Record<string, unknown>
+    }>
+  }) => {
+    // Refresh the contacts list to show the newly imported contacts
+    fetchContacts()
+  }
 
   const filteredContacts = (contacts || []).filter(
     (contact) =>
@@ -100,7 +140,9 @@ export function ContactsPage() {
         filteredCount={filteredContacts.length}
         syncing={syncing}
         canSync={!!zApiInstances?.find((instance) => instance.is_active)}
-        importComponent={<ContactsImport />}
+        importComponent={
+          <ContactsImport onImportCompleted={handleImportCompleted} />
+        }
       />
 
       <div className="flex-1 overflow-hidden">

@@ -114,11 +114,44 @@ export function formatPhoneForDisplay(normalizedPhone: string): string {
 
 /**
  * Checks if two phone numbers are the same (considering different formats)
+ * Handles Brazilian mobile number rule: 12 digits vs 13 digits (with/without 9)
  */
 export function arePhoneNumbersEqual(phone1: string, phone2: string): boolean {
   const normalized1 = normalizePhoneNumber(phone1)
   const normalized2 = normalizePhoneNumber(phone2)
-  return normalized1 === normalized2
+
+  // Direct comparison first
+  if (normalized1 === normalized2) {
+    return true
+  }
+
+  // Brazilian mobile number rule: compare 12-digit vs 13-digit versions
+  // If one is 12 digits and other is 13 digits, check if they represent the same number
+  if (normalized1.length === 12 && normalized2.length === 13) {
+    // Check if the 13-digit version is the 12-digit version with a 9 added after the area code
+    const areaCode1 = normalized1.substring(0, 4) // 5545
+    const number1 = normalized1.substring(4) // 99854508
+    const areaCode2 = normalized2.substring(0, 4) // 5545
+    const number2 = normalized2.substring(4) // 999854508
+
+    if (areaCode1 === areaCode2 && number2 === '9' + number1) {
+      return true
+    }
+  }
+
+  if (normalized1.length === 13 && normalized2.length === 12) {
+    // Check if the 13-digit version is the 12-digit version with a 9 added after the area code
+    const areaCode1 = normalized1.substring(0, 4) // 5545
+    const number1 = normalized1.substring(4) // 999854508
+    const areaCode2 = normalized2.substring(0, 4) // 5545
+    const number2 = normalized2.substring(4) // 99854508
+
+    if (areaCode1 === areaCode2 && number1 === '9' + number2) {
+      return true
+    }
+  }
+
+  return false
 }
 
 /**

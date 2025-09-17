@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { processPhoneForStorage, arePhoneNumbersEqual } from '@/lib/phone-utils'
+import {
+  processPhoneForStorage,
+  arePhoneNumbersEqual,
+  normalizePhoneNumber,
+} from '@/lib/phone-utils'
 import type { Database } from '@/types/database'
 
 type Contact = Database['public']['Tables']['contacts']['Row']
@@ -216,8 +220,12 @@ export function useContacts() {
         .eq('user_id', user.id)
 
       // Validate and normalize all phone numbers
-      const validatedContacts = []
-      const errors = []
+      const validatedContacts: Array<
+        Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'user_id'> & {
+          user_id: string
+        }
+      > = []
+      const errors: string[] = []
 
       for (let i = 0; i < contactsData.length; i++) {
         const contact = contactsData[i]
@@ -430,5 +438,6 @@ export function useContacts() {
     fetchContacts,
     syncContactsFromWhatsApp,
     refetch: fetchContacts,
+    setContacts,
   }
 }

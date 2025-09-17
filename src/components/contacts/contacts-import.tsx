@@ -37,7 +37,11 @@ interface ImportResult {
   }>
 }
 
-export function ContactsImport() {
+interface ContactsImportProps {
+  onImportCompleted?: (result: ImportResult) => void
+}
+
+export function ContactsImport({ onImportCompleted }: ContactsImportProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [contacts, setContacts] = useState<Record<string, unknown>[]>([])
@@ -74,6 +78,9 @@ export function ContactsImport() {
       const result = await importContacts(contacts, overwrite)
       setImportResult(result)
       setStep('result')
+
+      // Notificar o componente pai sobre a importação concluída
+      onImportCompleted?.(result)
     } catch (err) {
       console.error('Erro na importação:', err)
     }

@@ -1,0 +1,3 @@
+Nome,Telefone,Email,Tags,Notas
+Teste Duplicata,5545999854508,teste@teste.com,teste,Este deve ser rejeitado - já existe
+Maria Santos,11987654321,maria@teste.com,importado,Este deve ser importado

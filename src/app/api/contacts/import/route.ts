@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { processPhoneForStorage, arePhoneNumbersEqual } from '@/lib/phone-utils'
 
 // Schema para importação de contatos
 const ImportContactSchema = z.object({
@@ -52,64 +53,64 @@ export async function POST(request: NextRequest) {
       }>,
     }
 
-    // Processar cada contato
+    // Buscar todos os contatos existentes UMA VEZ (fora do loop)
+    const { data: existingContacts } = await supabase
+      .from('contacts')
+      .select('id, phone')
+      .eq('user_id', user.id)
+
+    // Validar e preparar contatos para inserção
+    const contactsToInsert: Array<Record<string, unknown>> = []
+    const contactsToUpdate: Array<{
+      id: string
+      data: Record<string, unknown>
+    }> = []
+
     for (let i = 0; i < contacts.length; i++) {
       const contact = contacts[i]
 
       try {
-        // Verificar se já existe contato com o mesmo telefone
-        const { data: existingContact } = await supabase
-          .from('contacts')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('phone', contact.phone)
-          .single()
+        // Validar e normalizar telefone
+        const phoneValidation = processPhoneForStorage(contact.phone)
+
+        if (!phoneValidation.isValid) {
+          results.errors.push({
+            index: i,
+            error: `Telefone inválido: ${phoneValidation.error}`,
+            contact,
+          })
+          continue
+        }
+
+        // Verificar se já existe contato com o mesmo telefone (usando comparação normalizada)
+        const existingContact = existingContacts?.find((existing) =>
+          arePhoneNumbersEqual(existing.phone, phoneValidation.normalized!)
+        )
 
         if (existingContact) {
           if (overwrite) {
-            // Atualizar contato existente
-            const { error: updateError } = await supabase
-              .from('contacts')
-              .update({
+            // Preparar para atualização
+            contactsToUpdate.push({
+              id: existingContact.id,
+              data: {
                 ...contact,
+                phone: phoneValidation.normalized!,
                 updated_at: new Date().toISOString(),
-              })
-              .eq('id', existingContact.id)
-              .eq('user_id', user.id)
-
-            if (updateError) {
-              results.errors.push({
-                index: i,
-                error: `Erro ao atualizar: ${updateError.message}`,
-                contact,
-              })
-            } else {
-              results.updated++
-            }
+              },
+            })
           } else {
             // Pular contato existente
             results.skipped++
           }
         } else {
-          // Criar novo contato
-          const { error: insertError } = await supabase
-            .from('contacts')
-            .insert({
-              ...contact,
-              user_id: user.id,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-
-          if (insertError) {
-            results.errors.push({
-              index: i,
-              error: `Erro ao criar: ${insertError.message}`,
-              contact,
-            })
-          } else {
-            results.imported++
-          }
+          // Preparar para inserção
+          contactsToInsert.push({
+            ...contact,
+            phone: phoneValidation.normalized!,
+            user_id: user.id,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
         }
       } catch (error) {
         results.errors.push({
@@ -117,6 +118,44 @@ export async function POST(request: NextRequest) {
           error: `Erro de validação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
           contact,
         })
+      }
+    }
+
+    // Executar atualizações em lote
+    if (contactsToUpdate.length > 0) {
+      for (const updateData of contactsToUpdate) {
+        const { error: updateError } = await supabase
+          .from('contacts')
+          .update(updateData.data)
+          .eq('id', updateData.id)
+          .eq('user_id', user.id)
+
+        if (updateError) {
+          results.errors.push({
+            index: -1,
+            error: `Erro ao atualizar contato: ${updateError.message}`,
+            contact: updateData.data,
+          })
+        } else {
+          results.updated++
+        }
+      }
+    }
+
+    // Executar inserções em lote
+    if (contactsToInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from('contacts')
+        .insert(contactsToInsert)
+
+      if (insertError) {
+        results.errors.push({
+          index: -1,
+          error: `Erro ao inserir contatos: ${insertError.message}`,
+          contact: {},
+        })
+      } else {
+        results.imported = contactsToInsert.length
       }
     }
 
