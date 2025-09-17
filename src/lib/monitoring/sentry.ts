@@ -143,7 +143,7 @@ export function withSentryErrorHandler<T extends unknown[], R>(
       return await handler(...args)
     } catch (error) {
       errorReporting.captureException(error as Error, {
-        handler: handler.name,
+        handler: handler?.name || 'unknown',
         args: args.length,
       })
       throw error
