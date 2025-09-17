@@ -51,14 +51,7 @@ export function useRealtimeContacts({
       unsubscribe(contactsChannel)
       setChannels((prev) => prev.filter((c) => c !== contactsChannel))
     }
-  }, [
-    isConnected,
-    onContactAdded,
-    onContactUpdated,
-    onContactDeleted,
-    subscribe,
-    unsubscribe,
-  ])
+  }, [isConnected]) // Remove function dependencies to prevent loops
 
   // Subscribe to contact import jobs
   useEffect(() => {
@@ -84,14 +77,14 @@ export function useRealtimeContacts({
       unsubscribe(importChannel)
       setChannels((prev) => prev.filter((c) => c !== importChannel))
     }
-  }, [isConnected, onContactImported, subscribe, unsubscribe])
+  }, [isConnected]) // Remove function dependencies to prevent loops
 
   // Cleanup all channels on unmount
   useEffect(() => {
     return () => {
       channels.forEach((channel) => unsubscribe(channel))
     }
-  }, [channels, unsubscribe])
+  }, []) // Remove dependencies to prevent cleanup loops
 
   return {
     isConnected,

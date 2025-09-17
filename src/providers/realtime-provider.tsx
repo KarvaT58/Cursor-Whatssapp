@@ -151,7 +151,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       // Limpar todos os canais ao desmontar
       channels.forEach((channel) => channel.unsubscribe())
     }
-  }, [supabase, channels, checkConnection, isConnected])
+  }, [supabase.auth]) // Remove problematic dependencies
 
   const subscribe = (
     table: string,
