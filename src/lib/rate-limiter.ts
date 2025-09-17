@@ -1,4 +1,5 @@
 import { getRedisClient } from '@/lib/redis/client'
+import type Redis from 'ioredis'
 
 export interface RateLimitConfig {
   windowMs: number // Time window in milliseconds
@@ -14,14 +15,37 @@ export interface RateLimitResult {
 }
 
 export class RateLimiter {
-  private redis = getRedisClient()
+  private redis: Redis | null = null
   private config: RateLimitConfig
 
   constructor(config: RateLimitConfig) {
     this.config = config
   }
 
+  private getRedis(): Redis | null {
+    if (!this.redis) {
+      try {
+        this.redis = getRedisClient()
+      } catch (error) {
+        console.warn('Redis not available, rate limiting disabled:', error)
+        return null
+      }
+    }
+    return this.redis
+  }
+
   async checkLimit(identifier: string): Promise<RateLimitResult> {
+    const redis = this.getRedis()
+
+    // If Redis is not available, allow all requests
+    if (!redis) {
+      return {
+        allowed: true,
+        remaining: this.config.maxRequests - 1,
+        resetTime: Date.now() + this.config.windowMs,
+      }
+    }
+
     const key = this.config.keyGenerator
       ? this.config.keyGenerator(identifier)
       : `rate_limit:${identifier}`
@@ -31,7 +55,7 @@ export class RateLimiter {
 
     try {
       // Use Redis pipeline for atomic operations
-      const pipeline = this.redis.pipeline()
+      const pipeline = redis.pipeline()
 
       // Remove expired entries
       pipeline.zremrangebyscore(key, 0, windowStart)
@@ -58,7 +82,7 @@ export class RateLimiter {
 
       if (!allowed) {
         // Get the oldest request to calculate retry after
-        const oldestRequest = await this.redis.zrange(key, 0, 0, 'WITHSCORES')
+        const oldestRequest = await redis.zrange(key, 0, 0, 'WITHSCORES')
         const retryAfter =
           oldestRequest.length > 0
             ? Math.ceil(
@@ -91,14 +115,20 @@ export class RateLimiter {
   }
 
   async resetLimit(identifier: string): Promise<void> {
+    const redis = this.getRedis()
+    if (!redis) return // No-op if Redis not available
+
     const key = this.config.keyGenerator
       ? this.config.keyGenerator(identifier)
       : `rate_limit:${identifier}`
 
-    await this.redis.del(key)
+    await redis.del(key)
   }
 
   async getRemaining(identifier: string): Promise<number> {
+    const redis = this.getRedis()
+    if (!redis) return this.config.maxRequests // Return max if Redis not available
+
     const key = this.config.keyGenerator
       ? this.config.keyGenerator(identifier)
       : `rate_limit:${identifier}`
@@ -108,8 +138,8 @@ export class RateLimiter {
 
     try {
       // Remove expired entries and count remaining
-      await this.redis.zremrangebyscore(key, 0, windowStart)
-      const count = await this.redis.zcard(key)
+      await redis.zremrangebyscore(key, 0, windowStart)
+      const count = await redis.zcard(key)
 
       return Math.max(0, this.config.maxRequests - count)
     } catch (error) {
