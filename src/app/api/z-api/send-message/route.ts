@@ -9,7 +9,7 @@ const SendMessageSchema = z.object({
   phone: z
     .string()
     .min(1, 'Telefone é obrigatório')
-    .regex(/^\+?[1-9]\d{1,14}$/, 'Formato de telefone inválido'),
+    .regex(/^\+?[1-9]\d{1,14}$/, 'Formato de telefone inválido (use formato: +5511999999999)'),
   message: z
     .string()
     .min(1, 'Mensagem é obrigatória')
@@ -24,8 +24,8 @@ const SendMessageSchema = z.object({
   groupId: z.string().optional(),
 })
 
-// POST /api/z-api/send-message - Enviar mensagem via Z-API
-export async function POST(request: NextRequest) {
+// GET /api/z-api/send-message - Testar conectividade
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
 
@@ -38,10 +38,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    return NextResponse.json({
+      success: true,
+      message: 'API Z-API Send Message está funcionando',
+      user: {
+        id: user.id,
+        email: user.email,
+      },
+      timestamp: new Date().toISOString(),
+    })
+  } catch (error) {
+    console.error('Erro no endpoint GET /api/z-api/send-message:', error)
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    )
+  }
+}
+
+// POST /api/z-api/send-message - Enviar mensagem via Z-API
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+
+    // Verificar autenticação
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
+    if (authError || !user) {
+      console.error('Erro de autenticação:', authError)
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     const body = await request.json()
+    console.log('Dados recebidos:', body)
 
     // Validar dados
     const validatedData = SendMessageSchema.parse(body)
+    console.log('Dados validados:', validatedData)
 
     // Buscar instância Z-API do usuário
     const { data: instance, error: instanceError } = await supabase
@@ -53,11 +88,16 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (instanceError || !instance) {
+      console.error('Erro ao buscar instância Z-API:', instanceError)
+      console.log('InstanceId procurado:', validatedData.instanceId)
+      console.log('UserId:', user.id)
       return NextResponse.json(
         { error: 'Instância Z-API não encontrada ou inativa' },
         { status: 404 }
       )
     }
+
+    console.log('Instância Z-API encontrada:', instance)
 
     // Criar cliente Z-API
     const zApiClient = new ZApiClient(
@@ -69,11 +109,19 @@ export async function POST(request: NextRequest) {
     // Enviar mensagem
     let result
     if (validatedData.isGroup) {
+      console.log('Enviando mensagem para grupo:', validatedData.phone)
       result = await zApiClient.sendGroupMessage(
         validatedData.phone,
         validatedData.message
       )
     } else {
+      console.log('Enviando mensagem individual:', {
+        phone: validatedData.phone,
+        message: validatedData.message,
+        type: validatedData.type,
+        mediaUrl: validatedData.mediaUrl,
+        fileName: validatedData.fileName,
+      })
       result = await zApiClient.sendMessage({
         phone: validatedData.phone,
         message: validatedData.message,
@@ -83,7 +131,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    console.log('Resultado do envio:', result)
+
     if (!result.success) {
+      console.error('Erro ao enviar mensagem:', result.error)
       return NextResponse.json(
         { error: result.error || 'Erro ao enviar mensagem' },
         { status: 400 }
@@ -142,10 +193,15 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error('Erro de validação Zod:', error.issues)
       return NextResponse.json(
         {
           error: 'Dados inválidos',
-          details: error.issues,
+          details: error.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            code: issue.code
+          })),
         },
         { status: 400 }
       )
