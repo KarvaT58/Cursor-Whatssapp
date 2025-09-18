@@ -1,284 +1,349 @@
-'use client'
+'use client';
 
-import { useState } from 'react'
-import { useCampaigns } from '@/hooks/use-campaigns'
-import { CampaignMetricsComponent } from '@/components/campaigns/campaign-metrics'
-import { CampaignList } from '@/components/campaigns/campaign-list'
-import { CampaignBuilder } from '@/components/campaigns/campaign-builder'
-import { CampaignStats } from '@/components/campaigns/campaign-stats'
-import { MessageTemplate } from '@/components/campaigns/message-template'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Plus,
-  BarChart3,
-  TrendingUp,
-  Users,
-  MessageSquare,
-  Clock,
-} from 'lucide-react'
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Play, Pause, Edit, Trash2, Clock, Users, MessageSquare, TrendingUp } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+
+interface Campaign {
+  id: string;
+  name: string;
+  description?: string;
+  status: 'draft' | 'active' | 'paused' | 'completed' | 'cancelled';
+  send_order: 'text_first' | 'media_first' | 'together';
+  instance_id: string;
+  created_at: string;
+  updated_at: string;
+  stats?: {
+    sent: number;
+    delivered: number;
+    read: number;
+    failed: number;
+    total: number;
+  };
+}
 
 export default function CampaignsPage() {
-  const [activeTab, setActiveTab] = useState('overview')
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false)
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  const {
-    campaigns,
-    loading,
-    error,
-    metrics,
-    startCampaign,
-    pauseCampaign,
-    stopCampaign,
-    deleteCampaign,
-  } = useCampaigns()
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
 
-  // Mock stats data - in real app this would come from API
-  const mockStats = {
-    totalCampaigns: campaigns?.length || 0,
-    activeCampaigns:
-      campaigns?.filter((c) => c.status === 'running').length || 0,
-    completedCampaigns:
-      campaigns?.filter((c) => c.status === 'completed').length || 0,
-    totalRecipients: 2847,
-    messagesDelivered: 2683,
-    messagesRead: 2096,
-    messagesFailed: 164,
-    deliveryRate: 94.2,
-    readRate: 78.1,
-    clickRate: 12.4,
-    recentCampaigns:
-      campaigns?.slice(0, 5).map((campaign) => ({
-        id: campaign.id,
-        name: campaign.name,
-        status: campaign.status,
-        recipients: campaign.recipients?.length || 0,
-        delivered: Math.floor((campaign.recipients?.length || 0) * 0.94),
-        read: Math.floor((campaign.recipients?.length || 0) * 0.78),
-        failed: Math.floor((campaign.recipients?.length || 0) * 0.06),
-        createdAt: campaign.created_at || '',
-      })) || [],
-  }
+  const fetchCampaigns = async () => {
+    try {
+      const response = await fetch('/api/campaigns');
+      if (response.ok) {
+        const data = await response.json();
+        setCampaigns(Array.isArray(data) ? data : []);
+      } else {
+        console.error('Erro na resposta da API de campanhas:', response.status);
+        setCampaigns([]);
+      }
+    } catch (error) {
+      console.error('Erro ao buscar campanhas:', error);
+      setCampaigns([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleSaveCampaign = (campaignData: {
-    name: string
-    message: string
-    recipients: string[]
-    scheduledAt?: Date
-    isScheduled: boolean
-  }) => {
-    console.log('Saving campaign:', campaignData)
-    // TODO: Implement save campaign logic
-    setIsBuilderOpen(false)
-  }
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-black text-white';
+      case 'paused': return 'bg-gray-100 text-gray-900 border border-gray-300';
+      case 'completed': return 'bg-gray-200 text-gray-900';
+      case 'cancelled': return 'bg-gray-100 text-gray-600 border border-gray-200';
+      default: return 'bg-gray-50 text-gray-700 border border-gray-200';
+    }
+  };
 
-  const handleSendCampaign = (campaignData: {
-    name: string
-    message: string
-    recipients: string[]
-    scheduledAt?: Date
-    isScheduled: boolean
-  }) => {
-    console.log('Sending campaign:', campaignData)
-    // TODO: Implement send campaign logic
-    setIsBuilderOpen(false)
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active': return 'Ativa';
+      case 'paused': return 'Pausada';
+      case 'completed': return 'Concluída';
+      case 'cancelled': return 'Cancelada';
+      default: return 'Rascunho';
+    }
+  };
+
+  const getSendOrderText = (order: string) => {
+    switch (order) {
+      case 'text_first': return 'Texto primeiro';
+      case 'media_first': return 'Mídia primeiro';
+      case 'together': return 'Juntos';
+      default: return 'Texto primeiro';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto"></div>
+          <p className="mt-2 text-gray-600">Carregando campanhas...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Campanhas</h1>
-          <p className="text-muted-foreground">
-            Gerencie suas campanhas de marketing em massa
+          <h1 className="text-3xl font-bold text-gray-900">Campanhas WhatsApp</h1>
+          <p className="text-gray-600 mt-1">
+            Gerencie suas campanhas de marketing e comunicação
           </p>
         </div>
-        <Dialog open={isBuilderOpen} onOpenChange={setIsBuilderOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Campanha
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Nova Campanha</DialogTitle>
-              <DialogDescription>
-                Crie uma nova campanha de marketing em massa
-              </DialogDescription>
-            </DialogHeader>
-            <CampaignBuilder
-              onSave={handleSaveCampaign}
-              onSend={handleSendCampaign}
-            />
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => router.push('/dashboard/campaigns/new')}
+          className="bg-black hover:bg-gray-800 text-white"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Campanha
+        </Button>
       </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="space-y-4"
-      >
-        <TabsList>
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
-          <TabsTrigger value="builder">Criar Campanha</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="metrics">Métricas</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          {/* Quick Stats */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Total de Campanhas
-                </CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {mockStats.totalCampaigns}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  <TrendingUp className="inline h-3 w-3 mr-1" />
-                  +2 esta semana
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border border-gray-200">
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <MessageSquare className="h-6 w-6 text-gray-700" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total</p>
+                <p className="text-2xl font-bold text-gray-900">{campaigns.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border border-gray-200">
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-black rounded-lg">
+                <Play className="h-6 w-6 text-white" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Ativas</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {campaigns.filter(c => c.status === 'active').length}
                 </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Mensagens Enviadas
-                </CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {mockStats.totalRecipients.toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  <TrendingUp className="inline h-3 w-3 mr-1" />
-                  +180 hoje
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border border-gray-200">
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Pause className="h-6 w-6 text-gray-700" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Pausadas</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {campaigns.filter(c => c.status === 'paused').length}
                 </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Taxa de Entrega
-                </CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {mockStats.deliveryRate}%
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  <TrendingUp className="inline h-3 w-3 mr-1" />
-                  +1.2% vs. mês anterior
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border border-gray-200">
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Clock className="h-6 w-6 text-gray-700" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Rascunhos</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {campaigns.filter(c => c.status === 'draft').length}
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Campanhas Ativas
-                </CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {mockStats.activeCampaigns}
+      {/* Campaigns List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {campaigns.map((campaign) => (
+          <Card key={campaign.id} className="border border-gray-200 hover:shadow-lg transition-all duration-200 hover:border-gray-300">
+            <CardHeader className="pb-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <CardTitle className="text-lg font-semibold text-gray-900">{campaign.name}</CardTitle>
+                  {campaign.description && (
+                    <CardDescription className="mt-1 text-gray-600">
+                      {campaign.description}
+                    </CardDescription>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  2 agendadas para amanhã
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <CampaignStats stats={mockStats} />
-        </TabsContent>
-
-        <TabsContent value="campaigns">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                Lista de Campanhas
-              </CardTitle>
-              <CardDescription>
-                Gerencie e monitore suas campanhas de mensagens
-              </CardDescription>
+                <Badge className={`${getStatusColor(campaign.status)} text-xs font-medium px-2 py-1`}>
+                  {getStatusText(campaign.status)}
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent>
-              <CampaignList
-                campaigns={campaigns}
-                loading={loading}
-                onStartCampaign={startCampaign}
-                onPauseCampaign={pauseCampaign}
-                onStopCampaign={stopCampaign}
-                onDeleteCampaign={deleteCampaign}
-                onEditCampaign={(id) => console.log('Edit campaign:', id)}
-              />
+            
+            <CardContent className="pt-0">
+              <div className="space-y-4">
+                {/* Send Order */}
+                <div className="flex items-center text-sm text-gray-600">
+                  <MessageSquare className="h-4 w-4 mr-2 text-gray-500" />
+                  {getSendOrderText(campaign.send_order)}
+                </div>
+                
+                {/* Stats */}
+                {campaign.stats && (
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center">
+                      <Users className="h-4 w-4 mr-2 text-gray-600" />
+                      <span className="text-gray-700 font-medium">
+                        {campaign.stats.sent || 0} enviadas
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <MessageSquare className="h-4 w-4 mr-2 text-gray-600" />
+                      <span className="text-gray-700 font-medium">
+                        {campaign.stats.delivered || 0} entregues
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Actions */}
+                <div className="flex flex-wrap gap-2 pt-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                    onClick={() => router.push(`/dashboard/campaigns/${campaign.id}/edit`)}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Editar
+                  </Button>
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                    onClick={() => router.push(`/dashboard/campaigns/${campaign.id}/reports`)}
+                  >
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    Relatórios
+                  </Button>
+                  
+                  {campaign.status === 'active' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-gray-400 text-gray-700 hover:bg-gray-100"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`/api/campaigns/${campaign.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: 'paused' })
+                          });
+                          if (response.ok) {
+                            fetchCampaigns(); // Recarregar lista
+                          }
+                        } catch (error) {
+                          console.error('Erro ao pausar campanha:', error);
+                        }
+                      }}
+                    >
+                      <Pause className="h-4 w-4 mr-1" />
+                      Pausar
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-black text-black hover:bg-gray-100"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`/api/campaigns/${campaign.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ status: 'active' })
+                          });
+                          if (response.ok) {
+                            fetchCampaigns(); // Recarregar lista
+                          }
+                        } catch (error) {
+                          console.error('Erro ao ativar campanha:', error);
+                        }
+                      }}
+                    >
+                      <Play className="h-4 w-4 mr-1" />
+                      Ativar
+                    </Button>
+                  )}
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-gray-300 text-gray-600 hover:bg-gray-50"
+                    onClick={async () => {
+                      if (confirm('Tem certeza que deseja excluir esta campanha?')) {
+                        try {
+                          const response = await fetch(`/api/campaigns/${campaign.id}`, {
+                            method: 'DELETE'
+                          });
+                          if (response.ok) {
+                            fetchCampaigns(); // Recarregar lista
+                          }
+                        } catch (error) {
+                          console.error('Erro ao excluir campanha:', error);
+                        }
+                      }
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" />
+                    Excluir
+                  </Button>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        ))}
+      </div>
 
-        <TabsContent value="builder">
-          <Card>
-            <CardHeader>
-              <CardTitle>Criar Nova Campanha</CardTitle>
-              <CardDescription>
-                Use o construtor de campanhas para criar mensagens
-                personalizadas
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <CampaignBuilder
-                onSave={handleSaveCampaign}
-                onSend={handleSendCampaign}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="templates">
-          <MessageTemplate
-            onSave={(template) => console.log('Save template:', template)}
-            onEdit={(template) => console.log('Edit template:', template)}
-            onDelete={(templateId) =>
-              console.log('Delete template:', templateId)
-            }
-            onSelect={(template) => console.log('Select template:', template)}
-          />
-        </TabsContent>
-
-        <TabsContent value="metrics">
-          <CampaignMetricsComponent metrics={metrics} loading={loading} />
-        </TabsContent>
-      </Tabs>
+      {/* Empty State */}
+      {campaigns.length === 0 && (
+        <Card className="text-center py-16 border border-gray-200">
+          <CardContent>
+            <div className="p-4 bg-gray-100 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
+              <MessageSquare className="h-10 w-10 text-gray-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              Nenhuma campanha encontrada
+            </h3>
+            <p className="text-gray-600 mb-8 max-w-md mx-auto">
+              Crie sua primeira campanha para começar a enviar mensagens em massa para seus grupos
+            </p>
+            <Button 
+              onClick={() => router.push('/dashboard/campaigns/new')}
+              className="bg-black hover:bg-gray-800 text-white px-6 py-3"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Criar Primeira Campanha
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
-  )
+  );
 }

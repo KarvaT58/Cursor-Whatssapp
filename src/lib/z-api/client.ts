@@ -280,6 +280,19 @@ export class ZApiClient {
     })
   }
 
+  // Enviar mídia genérica (método alternativo)
+  async sendGenericMedia(
+    phone: string,
+    mediaUrl: string,
+    fileName?: string
+  ): Promise<ZApiResponse> {
+    return this.makeRequest('/send-media', 'POST', {
+      phone,
+      mediaUrl,
+      fileName,
+    })
+  }
+
   // Enviar mensagem de imagem
   async sendImageMessage(
     phone: string,
@@ -289,7 +302,7 @@ export class ZApiClient {
     return this.makeRequest('/send-image', 'POST', {
       phone,
       image: imageUrl,
-      caption: message,
+      caption: message || '',
     })
   }
 
@@ -304,18 +317,30 @@ export class ZApiClient {
       phone,
       document: documentUrl,
       fileName,
-      caption: message,
+      caption: message || '',
     })
   }
 
   // Enviar mensagem de áudio
   async sendAudioMessage(
     phone: string,
-    audioUrl: string
+    audioUrl: string,
+    fileName?: string
   ): Promise<ZApiResponse> {
     return this.makeRequest('/send-audio', 'POST', {
       phone,
       audio: audioUrl,
+    })
+  }
+
+  // Enviar mensagem de vídeo
+  async sendVideoMessage(
+    phone: string,
+    videoUrl: string
+  ): Promise<ZApiResponse> {
+    return this.makeRequest('/send-video', 'POST', {
+      phone,
+      video: videoUrl,
     })
   }
 
@@ -848,49 +873,81 @@ export class ZApiClient {
   }): Promise<ZApiResponse> {
     console.log('👥 Criando grupo:', data)
     
-    try {
-      // Formatar dados conforme documentação Z-API (baseado no sistema que funciona)
-      const requestData = {
-        groupName: data.name,
-        phones: data.participants,  // ✅ Enviar números sem formatação, como no sistema que funciona
-        autoInvite: true
-      }
+    const maxRetries = 3
+    let lastError: string | null = null
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Formatar dados conforme documentação Z-API (baseado no sistema que funciona)
+        const requestData = {
+          groupName: data.name,
+          phones: data.participants,  // ✅ Enviar números sem formatação, como no sistema que funciona
+          autoInvite: true
+        }
 
-      console.log('📤 Dados enviados para Z-API:', JSON.stringify(requestData, null, 2))
+        console.log(`📤 Dados enviados para Z-API (tentativa ${attempt}/${maxRetries}):`, JSON.stringify(requestData, null, 2))
 
-      // Usar o endpoint correto da Z-API com a instância
-      const url = `${this.baseUrl}/instances/${this.instanceId}/token/${this.instanceToken}/create-group`
+        // Usar o endpoint correto da Z-API com a instância
+        const url = `${this.baseUrl}/instances/${this.instanceId}/token/${this.instanceToken}/create-group`
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: this.getHeaders(),
-        body: JSON.stringify(requestData)
-      })
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(requestData)
+        })
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('❌ Erro ao criar grupo:', response.status, errorText)
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error(`❌ Erro ao criar grupo (tentativa ${attempt}):`, response.status, errorText)
+          
+          // Verificar se é erro de rate limit (429)
+          if (response.status === 429) {
+            lastError = `Rate limit atingido (429): ${errorText}`
+            
+            if (attempt < maxRetries) {
+              const waitTime = attempt * 10000 // 10s, 20s, 30s
+              console.log(`⏳ Rate limit atingido. Aguardando ${waitTime/1000}s antes da próxima tentativa...`)
+              await new Promise(resolve => setTimeout(resolve, waitTime))
+              continue
+            } else {
+              return {
+                success: false,
+                error: `Rate limit atingido após ${maxRetries} tentativas. Aguarde alguns minutos e tente novamente.`
+              }
+            }
+          }
+          
+          return {
+            success: false,
+            error: `Erro ${response.status}: ${errorText}`
+          }
+        }
+
+        const result = await response.json()
+        console.log('✅ Grupo criado:', result)
+
         return {
-          success: false,
-          error: `Erro ${response.status}: ${errorText}`
+          success: true,
+          data: result,
+          message: 'Grupo criado com sucesso'
+        }
+
+      } catch (error) {
+        console.error(`❌ Erro ao criar grupo (tentativa ${attempt}):`, error)
+        lastError = error instanceof Error ? error.message : 'Erro desconhecido'
+        
+        // Se não for a última tentativa, aguardar antes de tentar novamente
+        if (attempt < maxRetries) {
+          const waitTime = attempt * 5000 // 5s, 10s
+          console.log(`⏳ Aguardando ${waitTime/1000}s antes da próxima tentativa...`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
         }
       }
-
-      const result = await response.json()
-      console.log('✅ Grupo criado:', result)
-
-      return {
-        success: true,
-        data: result,
-        message: 'Grupo criado com sucesso'
-      }
-
-    } catch (error) {
-      console.error('❌ Erro ao criar grupo:', error)
-      return {
-        success: false,
-        error: 'Erro ao criar grupo'
-      }
+    }
+    
+    return {
+      success: false,
+      error: lastError || 'Erro interno ao criar grupo'
     }
   }
 

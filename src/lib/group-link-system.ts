@@ -318,7 +318,7 @@ export class GroupLinkSystem {
   /**
    * Verifica se grupo precisa ser expandido (criar novo grupo)
    */
-  async checkAndExpandGroupFamily(familyId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+  async checkAndExpandGroupFamily(familyId: string): Promise<{ success: boolean; data?: any; error?: string }> { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
       console.log('🔍 VERIFICANDO EXPANSÃO DA FAMÍLIA DE GRUPOS ===')
       console.log('Family ID:', familyId)
@@ -344,7 +344,7 @@ export class GroupLinkSystem {
 
       // Verificar se algum grupo está próximo do limite
       const groupsNearLimit = family.whatsapp_groups.filter(
-        (group: any) => group.participants.length >= family.max_participants_per_group * 0.9
+        (group: any) => group.participants.length >= family.max_participants_per_group * 0.9 // eslint-disable-line @typescript-eslint/no-explicit-any
       )
 
       if (groupsNearLimit.length > 0) {

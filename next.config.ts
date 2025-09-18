@@ -11,27 +11,66 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
-  experimental: {
-    turbo: {
-      // Configurações para resolver problemas com caracteres especiais no caminho
-      resolveAlias: {
-        // Mapear caminhos para evitar problemas com caracteres especiais
-      },
-    },
+  // Configurações otimizadas para Vercel
+  output: 'standalone',
+  poweredByHeader: false,
+  compress: true,
+  generateEtags: false,
+  
+  // Configurações de imagem para otimização
+  images: {
+    domains: ['via.placeholder.com', 'localhost'],
+    formats: ['image/webp', 'image/avif'],
+    minimumCacheTTL: 60,
   },
-  // Configurações adicionais para resolver problemas de encoding
-  webpack: (config, { isServer }) => {
-    // Configurar encoding UTF-8 para resolver problemas com caracteres especiais
-    config.module.rules.push({
-      test: /\.(js|jsx|ts|tsx)$/,
-      use: {
-        loader: 'babel-loader',
-        options: {
-          presets: ['next/babel'],
-        },
+  
+  // Configurações experimentais otimizadas
+  experimental: {
+    serverComponentsExternalPackages: ['@supabase/supabase-js'],
+    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
+  },
+  
+  // Configurações de headers para segurança e performance
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'origin-when-cross-origin',
+          },
+        ],
       },
-    })
-    return config
+      {
+        source: '/api/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, max-age=0',
+          },
+        ],
+      },
+    ]
+  },
+  
+  // Configurações de redirecionamento
+  async redirects() {
+    return [
+      {
+        source: '/dashboard',
+        destination: '/dashboard/overview',
+        permanent: true,
+      },
+    ]
   },
 }
 
