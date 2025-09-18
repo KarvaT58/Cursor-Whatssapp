@@ -42,7 +42,7 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
     } finally {
       setLoading(false)
     }
-  }, [userId, supabase])
+  }, [userId])
 
   // Carregar grupos inicialmente
   useEffect(() => {
@@ -87,26 +87,50 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId, supabase])
+  }, [userId])
 
   // Criar grupo
   const createGroup = useCallback(
     async (groupData: Omit<GroupInsert, 'user_id'>) => {
       try {
-        const { data, error: insertError } = await supabase
-          .from('whatsapp_groups')
-          .insert({
-            ...groupData,
-            user_id: userId,
-          })
-          .select()
-          .single()
-
-        if (insertError) {
-          throw insertError
+        setError(null)
+        
+        // Validar dados obrigatórios
+        if (!groupData.name?.trim()) {
+          throw new Error('Nome do grupo é obrigatório')
         }
 
-        return { success: true, data }
+        if (!groupData.participants || groupData.participants.length === 0) {
+          throw new Error('É necessário pelo menos um participante para criar o grupo')
+        }
+
+        // Fazer requisição para a API
+        const response = await fetch('/api/groups', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(groupData),
+        })
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Erro ao criar grupo')
+        }
+
+        // Se o grupo foi criado com sucesso, recarregar a lista para garantir que está atualizada
+        if (result.success) {
+          await loadGroups()
+        }
+        
+        return { 
+          success: result.success,
+          data: result.data,
+          message: result.message,
+          warning: result.warning,
+          whatsapp_id: result.whatsapp_id
+        }
       } catch (err) {
         const errorMessage =
           err instanceof Error ? err.message : 'Erro ao criar grupo'
@@ -114,13 +138,56 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
         return { success: false, error: errorMessage }
       }
     },
-    [userId, supabase]
+    [userId]
   )
 
   // Atualizar grupo
   const updateGroup = useCallback(
     async (groupId: string, updates: GroupUpdate) => {
       try {
+        // Se estiver atualizando apenas o nome, usar a API route específica
+        if (updates.name && Object.keys(updates).length === 1) {
+          const response = await fetch(`/api/groups/${groupId}/name`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ name: updates.name }),
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'Erro ao atualizar nome do grupo')
+          }
+
+          const result = await response.json()
+          // Recarregar a lista para garantir que está atualizada
+          await loadGroups()
+          return { success: true, data: result.group }
+        }
+
+        // Se estiver atualizando apenas a descrição, usar a API route específica
+        if (updates.description !== undefined && Object.keys(updates).length === 1) {
+          const response = await fetch(`/api/groups/${groupId}/description`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ description: updates.description }),
+          })
+
+          if (!response.ok) {
+            const errorData = await response.json()
+            throw new Error(errorData.error || 'Erro ao atualizar descrição do grupo')
+          }
+
+          const result = await response.json()
+          // Recarregar a lista para garantir que está atualizada
+          await loadGroups()
+          return { success: true, data: result.group }
+        }
+
+        // Para outras atualizações, usar o método direto do Supabase
         const { data, error: updateError } = await supabase
           .from('whatsapp_groups')
           .update(updates)
@@ -133,6 +200,8 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
           throw updateError
         }
 
+        // Recarregar a lista para garantir que está atualizada
+        await loadGroups()
         return { success: true, data }
       } catch (err) {
         const errorMessage =
@@ -141,7 +210,7 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
         return { success: false, error: errorMessage }
       }
     },
-    [userId, supabase]
+    [userId]
   )
 
   // Excluir grupo
@@ -158,6 +227,8 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
           throw deleteError
         }
 
+        // Recarregar a lista para garantir que está atualizada
+        await loadGroups()
         return { success: true }
       } catch (err) {
         const errorMessage =
@@ -166,7 +237,7 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
         return { success: false, error: errorMessage }
       }
     },
-    [userId, supabase]
+    [userId]
   )
 
   // Adicionar participante ao grupo
@@ -205,7 +276,7 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
         return { success: false, error: errorMessage }
       }
     },
-    [groups, userId, supabase]
+    [groups, userId]
   )
 
   // Remover participante do grupo
@@ -242,7 +313,7 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
         return { success: false, error: errorMessage }
       }
     },
-    [groups, userId, supabase]
+    [groups, userId]
   )
 
   // Buscar grupos

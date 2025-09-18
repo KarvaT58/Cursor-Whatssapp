@@ -3,154 +3,157 @@
 ## Fase 1: Endpoints Básicos da Z-API para Grupos
 
 ### 1.1 Implementar Busca de Grupos
-- [ ] Criar endpoint `GET /api/groups/search` 
-- [ ] Implementar filtros por nome, participantes, descrição
-- [ ] Adicionar paginação e ordenação
-- [ ] Integrar com interface de busca no frontend
-- [ ] _Requisitos: Funcionalidade básica de busca de grupos_
+- [x] Criar endpoint `GET /api/groups/search` 
+- [x] Implementar filtros por nome, participantes, descrição
+- [x] Adicionar paginação e ordenação
+- [x] Integrar com interface de busca no frontend
+- [x] _Requisitos: Funcionalidade básica de busca de grupos_
 
 ### 1.2 Endpoints Específicos para Atualização
-- [ ] Criar endpoint `PATCH /api/groups/[id]/name` para atualizar nome
-- [ ] Criar endpoint `PATCH /api/groups/[id]/description` para atualizar descrição
-- [ ] Criar endpoint `PATCH /api/groups/[id]/image` para atualizar imagem
-- [ ] Implementar validações específicas para cada endpoint
-- [ ] _Requisitos: Atualizações granulares de grupos_
+- [x] Criar endpoint `PATCH /api/groups/[id]/name` para atualizar nome
+- [x] Criar endpoint `PATCH /api/groups/[id]/description` para atualizar descrição
+- [x] Criar endpoint `PATCH /api/groups/[id]/image` para atualizar imagem
+- [x] Implementar validações específicas para cada endpoint
+- [x] _Requisitos: Atualizações granulares de grupos_
 
 ### 1.3 Gerenciamento de Participantes via Z-API
-- [ ] Criar endpoint `POST /api/groups/[id]/participants` para adicionar participantes
-- [ ] Criar endpoint `DELETE /api/groups/[id]/participants` para remover participantes
-- [ ] Implementar validação de números de telefone
-- [ ] Adicionar logs de auditoria para mudanças de participantes
-- [ ] _Requisitos: Gerenciamento avançado de participantes_
+- [x] Criar endpoint `POST /api/groups/[id]/participants` para adicionar participantes
+- [x] Criar endpoint `DELETE /api/groups/[id]/participants` para remover participantes
+- [x] Implementar validação de números de telefone
+- [x] Adicionar logs de auditoria para mudanças de participantes
+- [x] _Requisitos: Gerenciamento avançado de participantes_
 
 ## Fase 2: Sistema de Administração de Grupos
 
 ### 2.1 Gerenciamento de Administradores
-- [ ] Criar endpoint `POST /api/groups/[id]/admins` para promover admin
-- [ ] Criar endpoint `DELETE /api/groups/[id]/admins` para remover admin
-- [ ] Implementar sistema de permissões baseado em roles
-- [ ] Criar interface para gerenciar administradores
-- [ ] _Requisitos: Controle de administração de grupos_
+- [x] Criar endpoint `POST /api/groups/[id]/admins` para promover admin
+- [x] Criar endpoint `DELETE /api/groups/[id]/admins` para remover admin
+- [x] Implementar sistema de permissões baseado em roles
+- [x] Criar interface para gerenciar administradores
+- [x] _Requisitos: Controle de administração de grupos_
 
 ### 2.2 Sistema de Aprovação de Participantes
-- [ ] Criar endpoint `POST /api/groups/[id]/approve` para aprovar participantes
-- [ ] Criar endpoint `POST /api/groups/[id]/reject` para rejeitar participantes
-- [ ] Implementar fila de participantes pendentes
-- [ ] Criar interface para gerenciar aprovações
-- [ ] _Requisitos: Controle de entrada em grupos_
+- [x] Criar endpoint `POST /api/groups/[id]/approve` para aprovar participantes
+- [x] Criar endpoint `POST /api/groups/[id]/reject` para rejeitar participantes
+- [x] Implementar fila de participantes pendentes
+- [x] Criar interface para gerenciar aprovações
+- [x] _Requisitos: Controle de entrada em grupos_
 
 ### 2.3 Funcionalidade de Sair do Grupo
-- [ ] Criar endpoint `POST /api/groups/[id]/leave` para sair do grupo
-- [ ] Implementar validação de permissões
-- [ ] Adicionar notificação para outros membros
-- [ ] _Requisitos: Funcionalidade básica de saída_
+- [x] Criar endpoint `POST /api/groups/[id]/leave` para sair do grupo
+- [x] Implementar validação de permissões
+- [x] Adicionar notificação para outros membros
+- [x] _Requisitos: Funcionalidade básica de saída_
 
 ## Fase 3: Sistema de Menções e Interações
 
 ### 3.1 Sistema de Menções
-- [ ] Implementar funcionalidade de menção de membros (@membro)
-- [ ] Implementar funcionalidade de menção de grupo (@grupo)
-- [ ] Criar autocomplete para menções
-- [ ] Adicionar notificações para membros mencionados
-- [ ] _Requisitos: Sistema de menções avançado_
+- [x] Implementar funcionalidade de menção de membros (@membro)
+- [x] Implementar funcionalidade de menção de grupo (@grupo)
+- [x] Criar autocomplete para menções
+- [x] Adicionar notificações para membros mencionados
+- [x] _Requisitos: Sistema de menções avançado_
 
 ### 3.2 Sistema de Reações
-- [ ] Implementar reações com emojis para mensagens
-- [ ] Criar endpoint `POST /api/messages/[id]/reactions`
-- [ ] Implementar contadores de reações
-- [ ] Criar interface para visualizar reações
-- [ ] _Requisitos: Sistema de reações do WhatsApp_
+- [x] Implementar reações com emojis para mensagens
+- [x] Criar endpoint `POST /api/messages/[id]/reactions`
+- [x] Implementar contadores de reações
+- [x] Criar interface para visualizar reações
+- [x] _Requisitos: Sistema de reações do WhatsApp_
 
 ### 3.3 Sistema de Enquetes
-- [ ] Implementar criação de enquetes em grupos
-- [ ] Criar endpoint `POST /api/groups/[id]/polls`
-- [ ] Implementar sistema de votação
-- [ ] Criar interface para visualizar resultados
-- [ ] _Requisitos: Sistema de enquetes do WhatsApp_
+- [x] Implementar criação de enquetes em grupos
+- [x] Criar endpoint `POST /api/groups/[id]/polls`
+- [x] Implementar sistema de votação
+- [x] Criar interface para visualizar resultados
+- [x] _Requisitos: Sistema de enquetes do WhatsApp_
 
 ## Fase 4: Sistema de Links de Convite
 
 ### 4.1 Gerenciamento de Links de Convite
-- [ ] Criar endpoint `GET /api/groups/[id]/invite-link` para obter link
-- [ ] Criar endpoint `POST /api/groups/[id]/reset-invite-link` para redefinir link
-- [ ] Implementar expiração de links de convite
-- [ ] Criar interface para gerenciar links
-- [ ] _Requisitos: Sistema de convites para grupos_
+- [x] Criar endpoint `GET /api/groups/[id]/invite-link` para obter link
+- [x] Criar endpoint `POST /api/groups/[id]/invite-link` para criar link
+- [x] Criar endpoint `DELETE /api/groups/[id]/invite-link` para revogar link
+- [x] Implementar expiração de links de convite
+- [x] Implementar limite de usos por link
+- [x] Criar interface para gerenciar links
+- [x] _Requisitos: Sistema de convites para grupos_
 
 ### 4.2 Aceitar Convites
-- [ ] Criar endpoint `POST /api/groups/accept-invite` para aceitar convite
-- [ ] Implementar validação de links de convite
-- [ ] Adicionar notificação de novo membro
-- [ ] _Requisitos: Funcionalidade de aceitar convites_
+- [x] Criar endpoint `POST /api/groups/join` para aceitar convite
+- [x] Implementar validação de links de convite
+- [x] Implementar verificação de expiração e limite de usos
+- [x] Adicionar notificação de novo membro
+- [x] _Requisitos: Funcionalidade de aceitar convites_
 
 ## Fase 5: Sistema de Comunidades WhatsApp
 
 ### 5.1 Estrutura de Comunidades
-- [ ] Criar tabela `whatsapp_communities` no Supabase
-- [ ] Implementar relacionamento entre comunidades e grupos
-- [ ] Criar tipos TypeScript para comunidades
-- [ ] Configurar RLS para comunidades
-- [ ] _Requisitos: Base para sistema de comunidades_
+- [x] Criar tabela `whatsapp_communities` no Supabase
+- [x] Implementar relacionamento entre comunidades e grupos
+- [x] Criar tipos TypeScript para comunidades
+- [x] Configurar RLS para comunidades
+- [x] _Requisitos: Base para sistema de comunidades_
 
 ### 5.2 Gerenciamento de Comunidades
-- [ ] Criar endpoint `POST /api/communities` para criar comunidade
-- [ ] Criar endpoint `GET /api/communities` para listar comunidades
-- [ ] Criar endpoint `PUT /api/communities/[id]` para atualizar comunidade
-- [ ] Criar endpoint `DELETE /api/communities/[id]` para desativar comunidade
-- [ ] _Requisitos: CRUD básico de comunidades_
+- [x] Criar endpoint `POST /api/communities` para criar comunidade
+- [x] Criar endpoint `GET /api/communities` para listar comunidades
+- [x] Criar endpoint `PUT /api/communities/[id]` para atualizar comunidade
+- [x] Criar endpoint `DELETE /api/communities/[id]` para desativar comunidade
+- [x] _Requisitos: CRUD básico de comunidades_
 
 ### 5.3 Grupo de Avisos
-- [ ] Implementar criação automática de grupo de avisos
-- [ ] Criar endpoint para envio de mensagens para toda a comunidade
-- [ ] Implementar sistema de permissões para grupo de avisos
-- [ ] Criar interface para gerenciar grupo de avisos
-- [ ] _Requisitos: Sistema de anúncios da comunidade_
+- [x] Implementar criação automática de grupo de avisos
+- [x] Criar endpoint para envio de mensagens para toda a comunidade
+- [x] Implementar sistema de permissões para grupo de avisos
+- [x] Criar interface para gerenciar grupo de avisos
+- [x] _Requisitos: Sistema de anúncios da comunidade_
 
 ### 5.4 Vinculação de Grupos
-- [ ] Criar endpoint `POST /api/communities/[id]/groups` para vincular grupo
-- [ ] Criar endpoint `DELETE /api/communities/[id]/groups` para desvincular grupo
-- [ ] Implementar validação de permissões
-- [ ] Criar interface para gerenciar grupos da comunidade
-- [ ] _Requisitos: Gerenciamento de grupos em comunidades_
+- [x] Criar endpoint `POST /api/communities/[id]/groups` para vincular grupo
+- [x] Criar endpoint `DELETE /api/communities/[id]/groups` para desvincular grupo
+- [x] Implementar validação de permissões
+- [x] Criar interface para gerenciar grupos da comunidade
+- [x] _Requisitos: Gerenciamento de grupos em comunidades_
 
 ## Fase 6: Funcionalidades Avançadas
 
 ### 6.1 Sistema de Moderação
-- [ ] Implementar funcionalidade para administradores apagarem mensagens
-- [ ] Criar endpoint `DELETE /api/messages/[id]` para apagar mensagem
-- [ ] Implementar sistema de denúncias
-- [ ] Criar interface de moderação
-- [ ] _Requisitos: Sistema de moderação de conteúdo_
+- [x] Implementar funcionalidade para administradores apagarem mensagens
+- [x] Criar endpoint `DELETE /api/groups/[id]/messages/[messageId]` para apagar mensagem
+- [x] Implementar sistema de denúncias
+- [x] Criar interface de moderação
+- [x] _Requisitos: Sistema de moderação de conteúdo_
 
 ### 6.2 Chamadas de Áudio em Grupo
-- [ ] Implementar suporte a chamadas de áudio (até 32 participantes)
-- [ ] Criar endpoint `POST /api/groups/[id]/audio-call`
-- [ ] Implementar sistema de convites para chamadas
-- [ ] Criar interface para gerenciar chamadas
-- [ ] _Requisitos: Sistema de chamadas de áudio_
+- [x] Implementar suporte a chamadas de áudio (até 32 participantes)
+- [x] Criar endpoint `POST /api/groups/[id]/audio-call`
+- [x] Implementar sistema de convites para chamadas
+- [x] Criar interface para gerenciar chamadas
+- [x] _Requisitos: Sistema de chamadas de áudio_
 
 ### 6.3 Compartilhamento de Arquivos Grandes
-- [ ] Implementar suporte a arquivos de até 2GB
-- [ ] Criar sistema de upload com progress
-- [ ] Implementar compressão de arquivos
-- [ ] Criar interface para gerenciar arquivos
-- [ ] _Requisitos: Sistema de arquivos grandes_
+- [x] Implementar suporte a arquivos de até 2GB
+- [x] Criar sistema de upload com progress
+- [x] Implementar compressão de arquivos
+- [x] Criar interface para gerenciar arquivos
+- [x] _Requisitos: Sistema de arquivos grandes_
 
 ## Fase 7: Interface de Usuário
 
 ### 7.1 Componentes de Comunidades
-- [ ] Criar componente `CommunityForm` para criar/editar comunidades
-- [ ] Criar componente `CommunityList` para listar comunidades
-- [ ] Criar componente `CommunityCard` para exibir comunidade
-- [ ] Criar componente `CommunityGroups` para gerenciar grupos
-- [ ] _Requisitos: Interface para comunidades_
+- [x] Criar componente `CommunityForm` para criar/editar comunidades
+- [x] Criar componente `CommunityList` para listar comunidades
+- [x] Criar componente `CommunityCard` para exibir comunidade
+- [x] Criar componente `CommunityGroups` para gerenciar grupos
+- [x] _Requisitos: Interface para comunidades_
 
 ### 7.2 Componentes de Moderação
-- [ ] Criar componente `ModerationPanel` para administradores
-- [ ] Criar componente `MessageActions` para ações em mensagens
-- [ ] Criar componente `ParticipantManager` avançado
-- [ ] Criar componente `AdminSettings` para configurações
-- [ ] _Requisitos: Interface de moderação_
+- [x] Criar componente `ModerationPanel` para administradores
+- [x] Criar componente `MessageActions` para ações em mensagens
+- [x] Criar componente `ParticipantManager` avançado
+- [x] Criar componente `AdminSettings` para configurações
+- [x] _Requisitos: Interface de moderação_
 
 ### 7.3 Componentes de Interação
 - [ ] Criar componente `MentionInput` para menções

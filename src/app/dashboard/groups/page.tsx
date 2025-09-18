@@ -1,13 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useWhatsAppGroups } from '@/hooks/use-whatsapp-groups'
+import { useGroupNotifications } from '@/hooks/use-group-notifications'
+import { ZApiClient } from '@/lib/z-api/client'
 import { useGroupSync } from '@/hooks/use-group-sync'
+import { useToast } from '@/hooks/use-toast'
 import { GroupList } from '@/components/groups/group-list'
 import { GroupsSearch } from '@/components/groups/groups-search'
 import { GroupForm } from '@/components/groups/group-form'
 import { ParticipantManager } from '@/components/groups/participant-manager'
+import { GroupManagement } from '@/components/groups/GroupManagement'
 import { Database } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -28,10 +32,12 @@ type Group = Database['public']['Tables']['whatsapp_groups']['Row']
 
 export default function GroupsPage() {
   const { user, loading: authLoading } = useAuth()
+  const { toast } = useToast()
   const supabase = createClient()
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
   const [showGroupForm, setShowGroupForm] = useState(false)
   const [showParticipantManager, setShowParticipantManager] = useState(false)
+  const [showGroupManagement, setShowGroupManagement] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -44,12 +50,49 @@ export default function GroupsPage() {
     deleteGroup,
     addParticipant,
     removeParticipant,
+    refreshGroups,
   } = useWhatsAppGroups({ userId: user?.id })
+
+  const { notifications } = useGroupNotifications()
+
+  // Processar notificações por grupo
+  const groupNotifications = notifications.reduce((acc, notification) => {
+    if (!notification.read && notification.group_id) {
+      acc[notification.group_id] = (acc[notification.group_id] || 0) + 1
+    }
+    return acc
+  }, {} as Record<string, number>)
+
+  const [activeInstanceId, setActiveInstanceId] = useState<string | undefined>()
+
+  // Buscar instância Z-API ativa do usuário
+  useEffect(() => {
+    const fetchActiveInstance = async () => {
+      if (!user?.id) return
+
+      try {
+        const { data: instance } = await supabase
+          .from('z_api_instances')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .single()
+
+        if (instance) {
+          setActiveInstanceId(instance.id)
+        }
+      } catch (error) {
+        console.error('Erro ao buscar instância ativa:', error)
+      }
+    }
+
+    fetchActiveInstance()
+  }, [user?.id, supabase])
 
   const { syncing, syncError, syncGroupsFromWhatsApp, syncGroupParticipants } =
     useGroupSync({
       userId: user?.id,
-      instanceId: 'default', // TODO: Get from user's active instance
+      instanceId: activeInstanceId,
     })
 
   // Reset error when component mounts
@@ -57,96 +100,202 @@ export default function GroupsPage() {
     setActionError(null)
   }, [])
 
-  // Show loading while auth is loading
-  if (authLoading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      </div>
-    )
-  }
-
-  // Show error if no user
-  if (!user) {
-    return (
-      <div className="container mx-auto p-6">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Você precisa estar logado para acessar esta página.
-          </AlertDescription>
-        </Alert>
-      </div>
-    )
-  }
-
-  const handleCreateGroup = async (
-    data: Partial<Database['public']['Tables']['whatsapp_groups']['Insert']>
+  // Memoize all callback functions before any conditional returns
+  const handleCreateGroup = useCallback(async (
+    data: Partial<Database['public']['Tables']['whatsapp_groups']['Insert']> & { settings?: any }
   ) => {
     setActionLoading(true)
     setActionError(null)
     try {
-      // Ensure required fields are present
-      if (!data.name) {
-        throw new Error('Nome é obrigatório')
+      // Garantir que o nome seja uma string válida
+      if (!data.name || typeof data.name !== 'string') {
+        throw new Error('Nome do grupo é obrigatório')
       }
-
-      // Get current user ID
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        throw new Error('Usuário não autenticado')
+      
+      // Criar objeto com tipos corretos
+      const createData: Database['public']['Tables']['whatsapp_groups']['Insert'] = {
+        name: data.name,
+        whatsapp_id: data.whatsapp_id || '',
+        description: data.description || null,
+        participants: data.participants || [],
+        image_url: data.image_url || null,
+        // Incluir configurações diretamente
+        admin_only_message: data.admin_only_message || false,
+        admin_only_settings: data.admin_only_settings || false,
+        require_admin_approval: data.require_admin_approval || false,
+        admin_only_add_member: data.admin_only_add_member || false,
+        user_id: user?.id || '',
       }
-
-      const groupData: Database['public']['Tables']['whatsapp_groups']['Insert'] =
-        {
-          name: data.name,
-          whatsapp_id: data.whatsapp_id || `temp_${Date.now()}`, // Temporary ID if not provided
-          description: data.description || null,
-          participants: data.participants || [],
-          user_id: user.id,
+      
+      const result = await createGroup(createData)
+      
+      if (result.success) {
+        setShowGroupForm(false)
+        
+        // Grupo criado com sucesso
+        
+        // Aviso se houver
+        if (result.warning) {
+          console.warn('Aviso:', result.warning)
         }
-
-      await createGroup(groupData)
-      setShowGroupForm(false)
+      } else {
+        setActionError(result.error || 'Erro ao criar grupo')
+      }
+      
+      // Retornar o resultado para o GroupForm
+      return result
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Erro ao criar grupo')
+      // Retornar erro para o GroupForm
+      return { success: false, error: err instanceof Error ? err.message : 'Erro ao criar grupo' }
     } finally {
       setActionLoading(false)
     }
-  }
+  }, [createGroup, toast, user?.id])
 
-  const handleUpdateGroup = async (
-    data: Partial<Database['public']['Tables']['whatsapp_groups']['Update']>
+  const handleUpdateGroup = useCallback(async (
+    data: Partial<Database['public']['Tables']['whatsapp_groups']['Update']> & { settings?: any }
   ) => {
-    if (!selectedGroup) return
+    console.log('🔧 DEBUG: handleUpdateGroup chamado com data:', data)
+    console.log('🔧 DEBUG: selectedGroup:', selectedGroup)
+    
+    if (!selectedGroup) return { success: false, error: 'Nenhum grupo selecionado' }
 
     setActionLoading(true)
     setActionError(null)
     try {
+      console.log('🔧 DEBUG: Verificando condições de atualização...')
+      console.log('🔧 DEBUG: data.name:', data.name, 'tipo:', typeof data.name)
+      console.log('🔧 DEBUG: data.description:', data.description)
+      console.log('🔧 DEBUG: Object.keys(data).length:', Object.keys(data).length)
+      
+      // Se apenas o nome está sendo atualizado, usar a API específica
+      if (data.name && typeof data.name === 'string' && data.description === undefined) {
+        console.log('🔄 Atualizando apenas o nome do grupo via API específica')
+        const result = await updateGroup(selectedGroup.id, { name: data.name })
+        
+        if (result.success) {
+          setShowGroupForm(false)
+          setSelectedGroup(null)
+          
+          // Nome do grupo atualizado com sucesso
+        }
+        
+        return result
+      }
+
+      // Se apenas a descrição está sendo atualizada, usar a API específica
+      if (data.description !== undefined && !data.name) {
+        console.log('🔄 Atualizando apenas a descrição do grupo via API específica')
+        const result = await updateGroup(selectedGroup.id, { description: data.description })
+        
+        if (result.success) {
+          setShowGroupForm(false)
+          setSelectedGroup(null)
+          
+          // Descrição do grupo atualizada com sucesso
+        }
+        
+        return result
+      }
+
+      // Se nome e descrição estão sendo atualizados, usar APIs específicas
+      if (data.name && data.description !== undefined) {
+        console.log('🔄 Atualizando nome e descrição do grupo via APIs específicas')
+        
+        // Atualizar nome primeiro
+        const nameResult = await updateGroup(selectedGroup.id, { name: data.name })
+        if (!nameResult.success) {
+          return nameResult
+        }
+        
+        // Atualizar descrição
+        const descResult = await updateGroup(selectedGroup.id, { description: data.description })
+        if (!descResult.success) {
+          return descResult
+        }
+        
+        setShowGroupForm(false)
+        setSelectedGroup(null)
+        
+        // Grupo atualizado com sucesso
+        
+        return { success: true, data: descResult.data }
+      }
+      
+      // Para outras atualizações, usar o método completo
       const updateData: Database['public']['Tables']['whatsapp_groups']['Update'] =
         {
-          name: data.name,
-          description: data.description,
-          participants: data.participants,
-          whatsapp_id: data.whatsapp_id,
+          ...(data.name && { name: data.name }),
+          ...(data.description !== undefined && { description: data.description }),
+          ...(data.participants && { participants: data.participants }),
+          ...(data.whatsapp_id && { whatsapp_id: data.whatsapp_id }),
+          // Incluir configurações diretamente do objeto data
+          ...(data.admin_only_message !== undefined && { admin_only_message: data.admin_only_message }),
+          ...(data.admin_only_settings !== undefined && { admin_only_settings: data.admin_only_settings }),
+          ...(data.require_admin_approval !== undefined && { require_admin_approval: data.require_admin_approval }),
+          ...(data.admin_only_add_member !== undefined && { admin_only_add_member: data.admin_only_add_member }),
           updated_at: new Date().toISOString(),
         }
 
-      await updateGroup(selectedGroup.id, updateData)
-      setShowGroupForm(false)
-      setSelectedGroup(null)
+      const result = await updateGroup(selectedGroup.id, updateData)
+      
+      if (result.success) {
+        // Aplicar configurações do grupo se fornecidas
+        if ((data.admin_only_message !== undefined || data.admin_only_settings !== undefined || 
+             data.require_admin_approval !== undefined || data.admin_only_add_member !== undefined) 
+            && selectedGroup.whatsapp_id) {
+          try {
+            console.log('⚙️ Aplicando configurações do grupo:', {
+              admin_only_message: data.admin_only_message,
+              admin_only_settings: data.admin_only_settings,
+              require_admin_approval: data.require_admin_approval,
+              admin_only_add_member: data.admin_only_add_member,
+            })
+            
+            // Usar a nova API route para atualizar configurações
+            const settingsResponse = await fetch(`/api/groups/${selectedGroup.id}/settings`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                admin_only_message: data.admin_only_message,
+                admin_only_settings: data.admin_only_settings,
+                require_admin_approval: data.require_admin_approval,
+                admin_only_add_member: data.admin_only_add_member,
+              })
+            })
+
+            const settingsResult = await settingsResponse.json()
+            
+            if (settingsResponse.ok) {
+              console.log('✅ Configurações do grupo aplicadas com sucesso via API')
+            } else {
+              console.warn('⚠️ Erro ao aplicar configurações do grupo via API:', settingsResult.error)
+            }
+          } catch (error) {
+            console.error('❌ Erro ao aplicar configurações do grupo:', error)
+          }
+        }
+        
+        setShowGroupForm(false)
+        setSelectedGroup(null)
+        
+        // Grupo atualizado com sucesso
+      }
+      
+      // Retornar o resultado para o GroupForm
+      return result
     } catch (err) {
-      setActionError(
-        err instanceof Error ? err.message : 'Erro ao atualizar grupo'
-      )
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar grupo'
+      setActionError(errorMessage)
+      // Retornar erro para o GroupForm
+      return { success: false, error: errorMessage }
     } finally {
       setActionLoading(false)
     }
-  }
+  }, [selectedGroup, updateGroup, toast])
 
   const handleDeleteGroup = async (groupId: string) => {
     setActionLoading(true)
@@ -157,6 +306,42 @@ export default function GroupsPage() {
       setActionError(
         err instanceof Error ? err.message : 'Erro ao excluir grupo'
       )
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleLeaveGroup = async (groupId: string) => {
+    setActionLoading(true)
+    setActionError(null)
+    try {
+      console.log('🚪 Saindo do grupo:', groupId)
+      
+      const response = await fetch(`/api/groups/${groupId}/leave`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao sair do grupo')
+      }
+
+      if (result.success) {
+        // Usuário saiu do grupo com sucesso
+        
+        // Remover o grupo da lista local
+        // A lista será atualizada automaticamente pelo hook useWhatsAppGroups
+      } else {
+        throw new Error(result.error || 'Erro ao sair do grupo')
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao sair do grupo'
+      setActionError(errorMessage)
+      // Erro ao sair do grupo
     } finally {
       setActionLoading(false)
     }
@@ -214,7 +399,14 @@ export default function GroupsPage() {
     setActionLoading(true)
     setActionError(null)
     try {
-      await syncGroupsFromWhatsApp()
+      const result = await syncGroupsFromWhatsApp()
+      
+      if (result.success) {
+        // Recarregar grupos após sincronização
+        await refreshGroups()
+      } else {
+        setActionError(result.error || 'Erro ao sincronizar grupos')
+      }
     } catch (err) {
       setActionError(
         err instanceof Error ? err.message : 'Erro ao sincronizar grupos'
@@ -225,6 +417,7 @@ export default function GroupsPage() {
   }
 
   const handleEditGroup = (group: Group) => {
+    console.log('🔧 DEBUG: handleEditGroup chamado com group:', group)
     setSelectedGroup(group)
     setShowGroupForm(true)
   }
@@ -237,9 +430,22 @@ export default function GroupsPage() {
     }
   }
 
+  const handleManageGroup = (groupId: string) => {
+    const group = groups.find((g) => g.id === groupId)
+    if (group) {
+      setSelectedGroup(group)
+      setShowGroupManagement(true)
+    }
+  }
+
   const handleViewMessages = (groupId: string) => {
     // Navigate to group chat
     window.location.href = `/dashboard/groups/${groupId}/chat`
+  }
+
+  const handleViewNotifications = (groupId: string) => {
+    // Navigate to notifications page filtered by group
+    window.location.href = `/dashboard/notifications?group=${groupId}`
   }
 
   const getTotalParticipants = () => {
@@ -255,6 +461,37 @@ export default function GroupsPage() {
     ).length
   }
 
+  // Memoize the onOpenChange callback for GroupForm
+  const handleGroupFormOpenChange = useCallback((open: boolean) => {
+    setShowGroupForm(open)
+    if (!open) setSelectedGroup(null)
+  }, [])
+
+  // Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error if no user
+  if (!user) {
+    return (
+      <div className="container mx-auto p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Você precisa estar logado para acessar esta página.
+          </AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Header */}
@@ -266,6 +503,14 @@ export default function GroupsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={refreshGroups}
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
           <Button
             variant="outline"
             onClick={handleSyncAll}
@@ -365,12 +610,13 @@ export default function GroupsPage() {
             error={error}
             onEdit={handleEditGroup}
             onDelete={handleDeleteGroup}
-            onAddParticipant={handleManageParticipants}
-            onRemoveParticipant={handleRemoveParticipant}
             onSync={handleSyncGroup}
             onSyncAll={handleSyncAll}
             onViewMessages={handleViewMessages}
+            onLeave={handleLeaveGroup}
             onCreateGroup={() => setShowGroupForm(true)}
+            groupNotifications={groupNotifications}
+            onViewNotifications={handleViewNotifications}
           />
         </TabsContent>
         
@@ -386,15 +632,17 @@ export default function GroupsPage() {
       {/* Group Form Dialog */}
       <GroupForm
         open={showGroupForm}
-        onOpenChange={(open) => {
-          setShowGroupForm(open)
-          if (!open) setSelectedGroup(null)
-        }}
+        onOpenChange={handleGroupFormOpenChange}
         group={selectedGroup}
-        onSubmit={selectedGroup ? handleUpdateGroup : handleCreateGroup}
+        onSubmit={(data) => {
+          console.log('🔧 DEBUG: onSubmit chamado, selectedGroup:', selectedGroup)
+          console.log('🔧 DEBUG: Usando função:', selectedGroup ? 'handleUpdateGroup' : 'handleCreateGroup')
+          return selectedGroup ? handleUpdateGroup(data) : handleCreateGroup(data)
+        }}
         loading={actionLoading}
         error={actionError}
       />
+      
 
       {/* Participant Manager Dialog */}
       <ParticipantManager
@@ -409,6 +657,24 @@ export default function GroupsPage() {
         loading={actionLoading}
         error={actionError}
       />
+
+      {/* Group Management Dialog */}
+      {selectedGroup && showGroupManagement && (
+        <GroupManagement
+          groupId={selectedGroup.whatsapp_id || selectedGroup.id}
+          groupName={selectedGroup.name}
+          participants={selectedGroup.participants?.map(phone => ({
+            phone,
+            isAdmin: false, // Será atualizado quando os metadados forem carregados
+            isSuperAdmin: false // Será atualizado quando os metadados forem carregados
+          })) || []}
+          onUpdate={() => {
+            refreshGroups()
+            setShowGroupManagement(false)
+            setSelectedGroup(null)
+          }}
+        />
+      )}
     </div>
   )
 }

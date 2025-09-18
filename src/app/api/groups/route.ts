@@ -1,18 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { ZApiClient } from '@/lib/z-api/client'
 import { z } from 'zod'
 
 const CreateGroupSchema = z.object({
   name: z.string().min(1, 'Nome é obrigatório'),
-  description: z.string().optional(),
-  participants: z.array(z.string()).default([]),
-  whatsapp_id: z.string().optional(),
+  description: z.string().optional().or(z.literal('')).or(z.null()),
+  participants: z.array(z.string()).optional().default([]),
+  whatsapp_id: z.string().optional().or(z.literal('')),
+  image_url: z.string().nullable().optional().or(z.literal('')),
+  // Configurações do grupo
+  admin_only_message: z.boolean().optional(),
+  admin_only_settings: z.boolean().optional(),
+  require_admin_approval: z.boolean().optional(),
+  admin_only_add_member: z.boolean().optional(),
 })
 
 const UpdateGroupSchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   participants: z.array(z.string()).optional(),
+  image_url: z.string().optional(),
 })
 
 // GET /api/groups - Listar grupos do usuário
@@ -46,9 +54,16 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ groups })
   } catch (error) {
-    console.error('Erro na API de grupos:', error)
+    console.error('=== ERRO NA API DE GRUPOS ===')
+    console.error('Tipo do erro:', typeof error)
+    console.error('Erro completo:', error)
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A')
+    
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
       { status: 500 }
     )
   }
@@ -57,39 +72,314 @@ export async function GET(request: NextRequest) {
 // POST /api/groups - Criar novo grupo
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== INÍCIO DA CRIAÇÃO DE GRUPO ===')
+    
     const supabase = await createClient()
+    console.log('Supabase client criado com sucesso')
 
     // Verificar autenticação
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser()
+
+    console.log('Resultado da autenticação:', { user: user?.id, authError })
+
     if (authError || !user) {
+      console.log('Erro de autenticação:', authError)
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
     const body = await request.json()
-    const validatedData = CreateGroupSchema.parse(body)
+    console.log('Body recebido:', body)
+    console.log('🔧 Configurações no body:', {
+      admin_only_message: body.admin_only_message,
+      admin_only_settings: body.admin_only_settings,
+      require_admin_approval: body.require_admin_approval,
+      admin_only_add_member: body.admin_only_add_member,
+    })
+    console.log('🔍 Tipos dos dados no body:', {
+      name: typeof body.name,
+      description: typeof body.description,
+      participants: Array.isArray(body.participants) ? 'array' : typeof body.participants,
+      whatsapp_id: typeof body.whatsapp_id,
+      image_url: typeof body.image_url,
+      admin_only_message: typeof body.admin_only_message,
+      admin_only_settings: typeof body.admin_only_settings,
+      require_admin_approval: typeof body.require_admin_approval,
+      admin_only_add_member: typeof body.admin_only_add_member,
+    })
+    
+    let validatedData
+    try {
+      validatedData = CreateGroupSchema.parse(body)
+      console.log('Dados validados:', validatedData)
+      console.log('🔧 Configurações validadas:', {
+        admin_only_message: validatedData.admin_only_message,
+        admin_only_settings: validatedData.admin_only_settings,
+        require_admin_approval: validatedData.require_admin_approval,
+        admin_only_add_member: validatedData.admin_only_add_member,
+      })
+    } catch (validationError) {
+      console.error('❌ Erro de validação:', validationError)
+      return NextResponse.json(
+        { error: 'Dados inválidos', details: validationError },
+        { status: 400 }
+      )
+    }
 
-    // Criar grupo
-    const { data: group, error } = await supabase
+    // Verificar se o usuário tem uma instância Z-API ativa
+    console.log('Buscando instância Z-API ativa...')
+    const { data: userInstanceData, error: instanceError } = await supabase
+      .from('z_api_instances')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single()
+
+    console.log('Resultado da busca de instância:', { userInstanceData, instanceError })
+
+    let userInstance = userInstanceData
+    if (instanceError) {
+      console.log('Erro ao buscar instância, definindo como null')
+      userInstance = null
+    }
+
+    let whatsappGroupId: string | null = null
+    let zApiError: string | null = null
+    let zApiClient: ZApiClient | null = null
+
+    // Tentar criar grupo no WhatsApp via Z-API se houver instância ativa
+    if (userInstance) {
+      console.log('Tentando criar grupo no WhatsApp via Z-API...')
+      console.log('Dados da instância:', {
+        instance_id: userInstance.instance_id,
+        instance_token: userInstance.instance_token.substring(0, 10) + '...'
+      })
+      
+      try {
+        zApiClient = new ZApiClient(userInstance.instance_id, userInstance.instance_token, userInstance.client_token)
+        console.log('ZApiClient criado com sucesso')
+        
+        // Validar se há participantes suficientes para criar o grupo
+        if (validatedData.participants.length === 0) {
+          console.log('Erro: Nenhum participante fornecido')
+          return NextResponse.json(
+            { error: 'É necessário pelo menos um participante para criar o grupo' },
+            { status: 400 }
+          )
+        }
+
+        console.log('Dados para criação no WhatsApp:', {
+          name: validatedData.name,
+          description: validatedData.description,
+          participants: validatedData.participants
+        })
+
+        const createGroupResponse = await zApiClient.createGroup({
+          name: validatedData.name,
+          description: validatedData.description,
+          participants: validatedData.participants,
+        })
+
+        console.log('Resposta da Z-API:', createGroupResponse)
+
+        // Verificar se a resposta da Z-API indica sucesso
+        if (createGroupResponse.success) {
+          // Verificar se a resposta contém dados de sucesso
+          if (createGroupResponse.data && typeof createGroupResponse.data === 'object') {
+            // Se a resposta tem success: false, é um erro
+            if ('success' in createGroupResponse.data && createGroupResponse.data.success === false) {
+              zApiError = createGroupResponse.data.message || 'Erro ao criar grupo no WhatsApp'
+              console.log('Erro ao criar grupo no WhatsApp:', zApiError)
+            } else if ('phone' in createGroupResponse.data) {
+              // A Z-API retorna o ID do grupo no campo 'phone'
+              whatsappGroupId = createGroupResponse.data.phone as string
+              console.log('Grupo criado com sucesso no WhatsApp! ID:', whatsappGroupId)
+            } else if ('id' in createGroupResponse.data) {
+              whatsappGroupId = createGroupResponse.data.id as string
+              console.log('Grupo criado com sucesso no WhatsApp! ID:', whatsappGroupId)
+            } else {
+              // Se não tem ID mas também não tem erro explícito, assumir sucesso
+              whatsappGroupId = `zapi_${Date.now()}`
+              console.log('Grupo criado no WhatsApp (sem ID específico):', whatsappGroupId)
+            }
+          } else {
+            // Resposta sem dados estruturados, assumir sucesso
+            whatsappGroupId = `zapi_${Date.now()}`
+            console.log('Grupo criado no WhatsApp (resposta simples):', whatsappGroupId)
+          }
+        } else {
+          zApiError = createGroupResponse.error || 'Erro desconhecido ao criar grupo no WhatsApp'
+          console.log('Erro ao criar grupo no WhatsApp:', zApiError)
+        }
+      } catch (error) {
+        console.error('Erro ao criar grupo no WhatsApp:', error)
+        zApiError = error instanceof Error ? error.message : 'Erro ao conectar com Z-API'
+      }
+    } else {
+      zApiError = 'Nenhuma instância Z-API ativa. Grupo será criado localmente.'
+      console.log('Nenhuma instância Z-API ativa encontrada')
+    }
+
+    // Criar grupo no banco de dados
+    console.log('Criando grupo no banco de dados...')
+    
+    // Incluir automaticamente o número do usuário conectado na Z-API na lista de participantes
+    let finalParticipants = [...validatedData.participants]
+    if (userInstance && zApiClient) {
+      try {
+        // Obter o número de telefone real da instância
+        const instanceInfo = await zApiClient.getInstanceInfo()
+        let userPhone = userInstance.instance_id // fallback
+        
+        if (instanceInfo.success && instanceInfo.data) {
+          // Tentar diferentes campos que podem conter o número de telefone
+          userPhone = instanceInfo.data.phone || instanceInfo.data.phoneNumber || instanceInfo.data.number
+          console.log(`📱 Dados da instância obtidos:`, instanceInfo.data)
+          console.log(`📱 Número de telefone real obtido da instância: ${userPhone}`)
+        } else {
+          console.log(`⚠️ Não foi possível obter o número real, usando instance_id: ${userPhone}`)
+        }
+        
+        // Se ainda não temos o número real, vamos usar uma lógica baseada no owner do grupo
+        // Como sabemos que o owner é 554598228660, vamos assumir que é o número do usuário conectado
+        if (!userPhone || userPhone === userInstance.instance_id) {
+          console.log('🔄 Tentando obter número de telefone baseado no owner do grupo...')
+          // Vamos buscar os metadados do grupo primeiro para obter o owner
+          const tempMetadataResult = await zApiClient.getGroupMetadata(whatsappGroupId)
+          if (tempMetadataResult.success && tempMetadataResult.data && tempMetadataResult.data.owner) {
+            userPhone = tempMetadataResult.data.owner
+            console.log(`📱 Número de telefone inferido do owner do grupo: ${userPhone}`)
+          }
+        }
+        
+        if (!finalParticipants.includes(userPhone)) {
+          finalParticipants.unshift(userPhone) // Adicionar no início da lista
+          console.log(`✅ Adicionando número do usuário conectado (${userPhone}) à lista de participantes`)
+        }
+      } catch (error) {
+        console.error('❌ Erro ao obter número de telefone da instância:', error)
+        // Usar instance_id como fallback
+        const userPhone = userInstance.instance_id
+        if (!finalParticipants.includes(userPhone)) {
+          finalParticipants.unshift(userPhone)
+          console.log(`✅ Adicionando instance_id como fallback (${userPhone}) à lista de participantes`)
+        }
+      }
+    }
+    
+    console.log('Dados para inserção:', {
+      name: validatedData.name,
+      description: validatedData.description,
+      participants: finalParticipants,
+      whatsapp_id: whatsappGroupId || validatedData.whatsapp_id || `local_${Date.now()}`,
+      image_url: validatedData.image_url ? 'BASE64_IMAGE_DATA' : null,
+      user_id: user.id,
+    })
+    
+    console.log('🔧 Configurações para inserção:', {
+      admin_only_message: validatedData.admin_only_message || false,
+      admin_only_settings: validatedData.admin_only_settings || false,
+      require_admin_approval: validatedData.require_admin_approval || false,
+      admin_only_add_member: validatedData.admin_only_add_member || false,
+    })
+
+    // Se o grupo foi criado no WhatsApp mas não tem descrição, tentar atualizar a descrição
+    if (whatsappGroupId && validatedData.description && zApiClient) {
+      try {
+        console.log('🔄 Tentando atualizar descrição do grupo recém-criado no WhatsApp')
+        const descResult = await zApiClient.updateGroupDescription(whatsappGroupId, validatedData.description)
+        if (descResult.success) {
+          console.log('✅ Descrição do grupo atualizada no WhatsApp após criação')
+        } else {
+          console.log('⚠️ Não foi possível atualizar descrição no WhatsApp:', descResult.error)
+        }
+      } catch (descError) {
+        console.log('⚠️ Erro ao atualizar descrição no WhatsApp:', descError)
+      }
+    }
+    
+    const { data: group, error: dbError } = await supabase
       .from('whatsapp_groups')
       .insert({
-        ...validatedData,
+        name: validatedData.name,
+        description: validatedData.description || null,
+        participants: finalParticipants,
+        whatsapp_id: whatsappGroupId || validatedData.whatsapp_id || `local_${Date.now()}`,
+        image_url: validatedData.image_url || null,
+        // Configurações do grupo
+        admin_only_message: validatedData.admin_only_message || false,
+        admin_only_settings: validatedData.admin_only_settings || false,
+        require_admin_approval: validatedData.require_admin_approval || false,
+        admin_only_add_member: validatedData.admin_only_add_member || false,
         user_id: user.id,
       })
       .select()
       .single()
 
-    if (error) {
-      console.error('Erro ao criar grupo:', error)
+    console.log('Resultado da criação no banco:', { group, dbError })
+
+    if (dbError) {
       return NextResponse.json(
-        { error: 'Erro ao criar grupo' },
+        { error: 'Erro ao salvar grupo no banco de dados', details: dbError.message },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({ group }, { status: 201 })
+    // Atualizar foto do grupo se fornecida e grupo foi criado no WhatsApp
+    if (validatedData.image_url && whatsappGroupId && zApiClient) {
+      console.log('📸 Atualizando foto do grupo após criação:', { whatsappGroupId })
+      try {
+        const photoResult = await zApiClient.updateGroupPhoto(whatsappGroupId, validatedData.image_url)
+        if (!photoResult.success) {
+          console.warn('⚠️ Grupo criado mas foto não foi atualizada:', photoResult.error)
+        } else {
+          console.log('✅ Foto do grupo atualizada com sucesso')
+        }
+      } catch (error) {
+        console.warn('⚠️ Erro ao atualizar foto do grupo:', error)
+      }
+    }
+
+    // Atualizar configurações do grupo no WhatsApp se grupo foi criado no WhatsApp
+    if (whatsappGroupId && zApiClient) {
+      console.log('⚙️ Atualizando configurações do grupo no WhatsApp:', { whatsappGroupId })
+      try {
+        const settingsResult = await zApiClient.updateGroupSettings(whatsappGroupId, {
+          adminOnlyMessage: validatedData.admin_only_message || false,
+          adminOnlySettings: validatedData.admin_only_settings || false,
+          requireAdminApproval: validatedData.require_admin_approval || false,
+          adminOnlyAddMember: validatedData.admin_only_add_member || false,
+        })
+        
+        if (settingsResult.success) {
+          console.log('✅ Configurações do grupo atualizadas no WhatsApp com sucesso')
+        } else {
+          console.warn('⚠️ Grupo criado mas configurações não foram atualizadas:', settingsResult.error)
+        }
+      } catch (error) {
+        console.warn('⚠️ Erro ao atualizar configurações do grupo:', error)
+      }
+    }
+
+    // Retornar resposta baseada no resultado
+    if (whatsappGroupId) {
+      return NextResponse.json({ 
+        success: true,
+        data: group,
+        message: 'Grupo criado com sucesso no WhatsApp',
+        whatsapp_id: whatsappGroupId
+      }, { status: 201 })
+    } else {
+      return NextResponse.json({ 
+        success: true,
+        data: group,
+        message: 'Grupo criado localmente. Será sincronizado com o WhatsApp quando a conexão for restabelecida.',
+        warning: zApiError
+      }, { status: 201 })
+    }
+
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -98,9 +388,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.error('Erro na API de grupos:', error)
+    console.error('=== ERRO NA API DE CRIAÇÃO DE GRUPOS ===')
+    console.error('Tipo do erro:', typeof error)
+    console.error('Erro completo:', error)
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'N/A')
+    
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
       { status: 500 }
     )
   }

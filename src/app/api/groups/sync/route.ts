@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { SyncServiceServer } from '@/lib/sync/sync-service-server'
+import { ZApiClient } from '@/lib/z-api/client'
 
 const SyncGroupsSchema = z.object({
   instanceId: z.string().min(1, 'Instance ID é obrigatório'),
+  direction: z.enum(['from_whatsapp', 'to_whatsapp', 'bidirectional']).default('from_whatsapp'),
+  options: z.object({
+    forceUpdate: z.boolean().default(false),
+    includeParticipants: z.boolean().default(true),
+    includeAdmins: z.boolean().default(true),
+    includeMessages: z.boolean().default(false),
+    batchSize: z.number().min(1).max(100).default(50),
+  }).optional(),
 })
 
 // POST /api/groups/sync - Sincronizar grupos do WhatsApp
@@ -21,97 +31,94 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { instanceId } = SyncGroupsSchema.parse(body)
+    const { instanceId, direction, options } = SyncGroupsSchema.parse(body)
 
-    // TODO: Implementar sincronização real com Z-API
-    // Por enquanto, vamos simular a sincronização
-    const mockGroups = [
-      {
-        name: 'Grupo de Trabalho',
-        whatsapp_id: '120363123456789012@g.us',
-        description: 'Grupo para discussões de trabalho',
-        participants: ['5511999999999', '5511888888888'],
-      },
-      {
-        name: 'Família',
-        whatsapp_id: '120363123456789013@g.us',
-        description: 'Grupo da família',
-        participants: ['5511777777777', '5511666666666'],
-      },
-      {
-        name: 'Amigos',
-        whatsapp_id: '120363123456789014@g.us',
-        description: 'Grupo dos amigos',
-        participants: ['5511555555555', '5511444444444', '5511333333333'],
-      },
-    ]
+    // Obter instância Z-API
+    const { data: instance, error: instanceError } = await supabase
+      .from('z_api_instances')
+      .select('*')
+      .eq('id', instanceId)
+      .eq('user_id', user.id)
+      .single()
 
-    const syncedGroups = []
-    let createdCount = 0
-    let updatedCount = 0
 
-    for (const groupData of mockGroups) {
-      // Verificar se o grupo já existe
-      const { data: existingGroup } = await supabase
-        .from('whatsapp_groups')
-        .select('*')
-        .eq('whatsapp_id', groupData.whatsapp_id)
-        .eq('user_id', user.id)
-        .single()
+    if (instanceError) {
+      return NextResponse.json(
+        { error: 'Erro ao buscar instância Z-API', details: instanceError.message },
+        { status: 500 }
+      )
+    }
 
-      if (existingGroup) {
-        // Atualizar grupo existente
-        const { data: updatedGroup, error: updateError } = await supabase
-          .from('whatsapp_groups')
-          .update({
-            name: groupData.name,
-            description: groupData.description,
-            participants: groupData.participants,
-          })
-          .eq('id', existingGroup.id)
-          .eq('user_id', user.id)
-          .select()
-          .single()
+    if (!instance) {
+      return NextResponse.json(
+        { error: 'Instância Z-API não encontrada' },
+        { status: 404 }
+      )
+    }
 
-        if (updateError) {
-          console.error('Erro ao atualizar grupo:', updateError)
-          continue
+    // Criar cliente Z-API
+    
+    const zApiClient = new ZApiClient(
+      instance.instance_id,
+      instance.instance_token,
+      instance.client_token
+    )
+
+    // Criar serviço de sincronização
+    const syncService = new SyncServiceServer(zApiClient, user.id)
+
+    let result
+
+    // Executar sincronização baseada na direção
+    switch (direction) {
+      case 'from_whatsapp':
+        result = await syncService.syncGroupsFromWhatsApp(options)
+        break
+      case 'to_whatsapp':
+        result = await syncService.syncGroupsToWhatsApp(options)
+        break
+      case 'bidirectional':
+        // Executar ambas as direções
+        const [fromResult, toResult] = await Promise.all([
+          syncService.syncGroupsFromWhatsApp(options),
+          syncService.syncGroupsToWhatsApp(options)
+        ])
+
+        result = {
+          success: fromResult.success && toResult.success,
+          data: {
+            fromWhatsApp: fromResult.data,
+            toWhatsApp: toResult.data
+          },
+          stats: {
+            created: (fromResult.stats?.created || 0) + (toResult.stats?.created || 0),
+            updated: (fromResult.stats?.updated || 0) + (toResult.stats?.updated || 0),
+            deleted: (fromResult.stats?.deleted || 0) + (toResult.stats?.deleted || 0),
+            errors: (fromResult.stats?.errors || 0) + (toResult.stats?.errors || 0)
+          },
+          error: !fromResult.success ? fromResult.error : !toResult.success ? toResult.error : undefined
         }
+        break
+      default:
+        return NextResponse.json(
+          { error: 'Direção de sincronização inválida' },
+          { status: 400 }
+        )
+    }
 
-        syncedGroups.push(updatedGroup)
-        updatedCount++
-      } else {
-        // Criar novo grupo
-        const { data: newGroup, error: createError } = await supabase
-          .from('whatsapp_groups')
-          .insert({
-            name: groupData.name,
-            whatsapp_id: groupData.whatsapp_id,
-            description: groupData.description,
-            participants: groupData.participants,
-            user_id: user.id,
-          })
-          .select()
-          .single()
-
-        if (createError) {
-          console.error('Erro ao criar grupo:', createError)
-          continue
-        }
-
-        syncedGroups.push(newGroup)
-        createdCount++
-      }
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error || 'Erro na sincronização' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({
       success: true,
-      data: syncedGroups,
-      stats: {
-        syncedCount: syncedGroups.length,
-        createdCount,
-        updatedCount,
-      },
+      data: result.data,
+      stats: result.stats,
+      direction,
+      timestamp: new Date().toISOString(),
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

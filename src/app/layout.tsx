@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/providers/auth-provider'
 import { RealtimeProvider } from '@/providers/realtime-provider'
 import { WebVitalsProvider } from '@/components/monitoring/web-vitals-provider'
+import { Toaster } from '@/components/ui/toaster'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -34,6 +35,7 @@ export default function RootLayout({
           <RealtimeProvider>
             <WebVitalsProvider>
               {children}
+              <Toaster />
             </WebVitalsProvider>
           </RealtimeProvider>
         </AuthProvider>

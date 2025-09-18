@@ -104,6 +104,11 @@ export interface Database {
           whatsapp_id: string
           description: string | null
           participants: string[]
+          image_url: string | null
+          admin_only_message: boolean
+          admin_only_settings: boolean
+          require_admin_approval: boolean
+          admin_only_add_member: boolean
           user_id: string
           created_at: string
           updated_at: string
@@ -114,6 +119,11 @@ export interface Database {
           whatsapp_id: string
           description?: string | null
           participants?: string[]
+          image_url?: string | null
+          admin_only_message?: boolean
+          admin_only_settings?: boolean
+          require_admin_approval?: boolean
+          admin_only_add_member?: boolean
           user_id: string
           created_at?: string
           updated_at?: string
@@ -124,6 +134,11 @@ export interface Database {
           whatsapp_id?: string
           description?: string | null
           participants?: string[]
+          image_url?: string | null
+          admin_only_message?: boolean
+          admin_only_settings?: boolean
+          require_admin_approval?: boolean
+          admin_only_add_member?: boolean
           user_id?: string
           created_at?: string
           updated_at?: string
@@ -293,6 +308,44 @@ export interface Database {
     }
     Views: {
       [_ in never]: never
+    }
+    group_notifications: {
+      Row: {
+        id: string
+        group_id: string
+        user_id: string
+        type: 'join_request' | 'admin_promotion' | 'member_added' | 'member_removed' | 'group_updated'
+        title: string
+        message: string
+        data: any
+        read: boolean
+        created_at: string
+        updated_at: string
+      }
+      Insert: {
+        id?: string
+        group_id: string
+        user_id: string
+        type: 'join_request' | 'admin_promotion' | 'member_added' | 'member_removed' | 'group_updated'
+        title: string
+        message: string
+        data?: any
+        read?: boolean
+        created_at?: string
+        updated_at?: string
+      }
+      Update: {
+        id?: string
+        group_id?: string
+        user_id?: string
+        type?: 'join_request' | 'admin_promotion' | 'member_added' | 'member_removed' | 'group_updated'
+        title?: string
+        message?: string
+        data?: any
+        read?: boolean
+        created_at?: string
+        updated_at?: string
+      }
     }
     Functions: {
       [_ in never]: never

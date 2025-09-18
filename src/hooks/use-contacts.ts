@@ -41,11 +41,6 @@ export function useContacts() {
         throw error
       }
 
-      console.log(
-        'Contacts fetched successfully:',
-        data?.length || 0,
-        'contacts'
-      )
       setContacts(data)
     } catch (err) {
       console.error('Error fetching contacts:', err)
@@ -54,7 +49,7 @@ export function useContacts() {
     } finally {
       setIsLoading(false)
     }
-  }, [supabase])
+  }, [])
 
   const addContact = async (
     contactData: Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'user_id'>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Database } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,16 +15,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Switch } from '@/components/ui/switch'
+// Removido imports não utilizados
 import {
-  X,
-  Plus,
   Users,
   MessageCircle,
   AlertCircle,
   CheckCircle,
 } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { ContactSearch } from '@/components/contacts/contact-search'
+import { ImageUpload } from '@/components/ui/image-upload'
+import { GroupManagement } from '@/components/groups/GroupManagement'
+import { Separator } from '@/components/ui/separator'
 
 type Group = Database['public']['Tables']['whatsapp_groups']['Row']
 type GroupInsert = Database['public']['Tables']['whatsapp_groups']['Insert']
@@ -34,7 +37,14 @@ interface GroupFormProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   group?: Group | null
-  onSubmit: (data: Partial<GroupInsert> | Partial<GroupUpdate>) => Promise<void>
+  onSubmit: (data: (Partial<GroupInsert> | Partial<GroupUpdate>) & { settings?: GroupSettings }) => Promise<{
+    success: boolean
+    data?: Group | null
+    message?: string
+    warning?: string
+    whatsapp_id?: string
+    error?: string
+  }>
   loading?: boolean
   error?: string | null
 }
@@ -44,7 +54,22 @@ interface FormData {
   description: string
   participants: string[]
   whatsapp_id: string
+  image_url: string | null
+  // Configurações do grupo
+  adminOnlyMessage: boolean
+  adminOnlySettings: boolean
+  requireAdminApproval: boolean
+  adminOnlyAddMember: boolean
 }
+
+interface GroupSettings {
+  adminOnlyMessage: boolean
+  adminOnlySettings: boolean
+  requireAdminApproval: boolean
+  adminOnlyAddMember: boolean
+}
+
+type Contact = Database['public']['Tables']['contacts']['Row']
 
 export function GroupForm({
   open,
@@ -59,9 +84,17 @@ export function GroupForm({
     description: '',
     participants: [],
     whatsapp_id: '',
+    image_url: null,
+    // Configurações padrão do grupo
+    adminOnlyMessage: false,
+    adminOnlySettings: false,
+    requireAdminApproval: false,
+    adminOnlyAddMember: false,
   })
-  const [newParticipant, setNewParticipant] = useState('')
-  const [participantError, setParticipantError] = useState<string | null>(null)
+  const [selectedContacts, setSelectedContacts] = useState<Contact[]>([])
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [warningMessage, setWarningMessage] = useState<string | null>(null)
 
   // Reset form when dialog opens/closes or group changes
   useEffect(() => {
@@ -72,6 +105,12 @@ export function GroupForm({
           description: group.description || '',
           participants: group.participants || [],
           whatsapp_id: group.whatsapp_id || '',
+          image_url: group.image_url || null,
+          // Carregar configurações existentes do grupo
+          adminOnlyMessage: group.admin_only_message || false,
+          adminOnlySettings: group.admin_only_settings || false,
+          requireAdminApproval: group.require_admin_approval || false,
+          adminOnlyAddMember: group.admin_only_add_member || false,
         })
       } else {
         setFormData({
@@ -79,62 +118,51 @@ export function GroupForm({
           description: '',
           participants: [],
           whatsapp_id: '',
+          image_url: null,
+          // Configurações padrão do grupo
+          adminOnlyMessage: false,
+          adminOnlySettings: false,
+          requireAdminApproval: false,
+          adminOnlyAddMember: false,
         })
       }
-      setNewParticipant('')
-      setParticipantError(null)
+      setSelectedContacts([])
+      setImageFile(null)
+      setSuccessMessage(null)
+      setWarningMessage(null)
     }
   }, [open, group])
 
-  const validatePhoneNumber = (phone: string): boolean => {
-    // Remove all non-digit characters
-    const cleanPhone = phone.replace(/\D/g, '')
-    // Check if it's a valid Brazilian phone number (10-11 digits)
-    return cleanPhone.length >= 10 && cleanPhone.length <= 11
-  }
 
-  const formatPhoneNumber = (phone: string): string => {
-    const cleanPhone = phone.replace(/\D/g, '')
-    if (cleanPhone.length === 11) {
-      return `+55${cleanPhone}`
-    } else if (cleanPhone.length === 10) {
-      return `+55${cleanPhone}`
-    }
-    return phone
-  }
-
-  const handleAddParticipant = () => {
-    if (!newParticipant.trim()) {
-      setParticipantError('Telefone é obrigatório')
-      return
-    }
-
-    const formattedPhone = formatPhoneNumber(newParticipant)
-
-    if (!validatePhoneNumber(newParticipant)) {
-      setParticipantError('Telefone inválido. Use o formato: (11) 99999-9999')
-      return
-    }
-
-    if (formData.participants.includes(formattedPhone)) {
-      setParticipantError('Participante já está na lista')
-      return
-    }
-
+  // Lidar com mudança de seleção de contatos
+  const handleContactSelectionChange = useCallback((contacts: Contact[]) => {
+    setSelectedContacts(contacts)
+    // Converter contatos para telefones
+    const phoneNumbers = contacts.map(contact => {
+      // Formatar telefone para o formato esperado
+      const cleanPhone = contact.phone.replace(/\D/g, '')
+      if (cleanPhone.length === 11) {
+        return `+55${cleanPhone}`
+      } else if (cleanPhone.length === 10) {
+        return `+55${cleanPhone}`
+      }
+      return contact.phone
+    })
+    
     setFormData((prev) => ({
       ...prev,
-      participants: [...prev.participants, formattedPhone],
+      participants: phoneNumbers,
     }))
-    setNewParticipant('')
-    setParticipantError(null)
-  }
+  }, [])
 
-  const handleRemoveParticipant = (participant: string) => {
+  // Lidar com mudança de imagem
+  const handleImageChange = useCallback((file: File | null, previewUrl: string | null) => {
+    setImageFile(file)
     setFormData((prev) => ({
       ...prev,
-      participants: prev.participants.filter((p) => p !== participant),
+      image_url: previewUrl,
     }))
-  }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -143,27 +171,107 @@ export function GroupForm({
       return
     }
 
-    const submitData = {
-      name: formData.name.trim(),
-      description: formData.description.trim() || undefined,
-      participants: formData.participants,
-      whatsapp_id: formData.whatsapp_id.trim() || undefined,
+    // Se estivermos editando um grupo existente, passar apenas os campos que mudaram
+    let submitData: Partial<GroupInsert> | Partial<GroupUpdate> = {}
+    
+    if (group) {
+      // Para edição, incluir apenas campos que mudaram
+      if (formData.name.trim() !== group.name) {
+        submitData.name = formData.name.trim()
+      }
+      if (formData.description.trim() !== (group.description || '')) {
+        submitData.description = formData.description.trim() || undefined
+      }
+      if (JSON.stringify(formData.participants) !== JSON.stringify(group.participants || [])) {
+        submitData.participants = formData.participants
+      }
+      if (formData.whatsapp_id.trim() !== (group.whatsapp_id || '')) {
+        submitData.whatsapp_id = formData.whatsapp_id.trim() || undefined
+      }
+      if (formData.image_url !== (group.image_url || '')) {
+        submitData.image_url = formData.image_url || undefined
+      }
+    } else {
+      // Para criação, incluir todos os campos
+      submitData = {
+        name: formData.name.trim(),
+        description: formData.description.trim() || undefined,
+        participants: formData.participants || [],
+        whatsapp_id: formData.whatsapp_id.trim() || '',
+        image_url: formData.image_url || null,
+      }
     }
 
     try {
-      await onSubmit(submitData)
-      onOpenChange(false)
+      console.log('📝 GroupForm: Dados sendo enviados:', submitData)
+      console.log('📝 GroupForm: Configurações do formulário:', {
+        adminOnlyMessage: formData.adminOnlyMessage,
+        adminOnlySettings: formData.adminOnlySettings,
+        requireAdminApproval: formData.requireAdminApproval,
+        adminOnlyAddMember: formData.adminOnlyAddMember,
+      })
+      
+      // Incluir configurações diretamente nos dados do grupo
+      const finalData = {
+        ...submitData,
+        admin_only_message: formData.adminOnlyMessage,
+        admin_only_settings: formData.adminOnlySettings,
+        require_admin_approval: formData.requireAdminApproval,
+        admin_only_add_member: formData.adminOnlyAddMember,
+      }
+      
+      console.log('📝 GroupForm: Dados finais sendo enviados:', finalData)
+      console.log('📝 GroupForm: Tipos dos dados finais:', {
+        name: typeof finalData.name,
+        description: typeof finalData.description,
+        participants: Array.isArray(finalData.participants) ? 'array' : typeof finalData.participants,
+        whatsapp_id: typeof finalData.whatsapp_id,
+        image_url: typeof finalData.image_url,
+        admin_only_message: typeof finalData.admin_only_message,
+        admin_only_settings: typeof finalData.admin_only_settings,
+        require_admin_approval: typeof finalData.require_admin_approval,
+        admin_only_add_member: typeof finalData.admin_only_add_member,
+      })
+      
+      const result = await onSubmit(finalData)
+      
+      if (result.success) {
+        // Se há uma imagem para fazer upload e o grupo foi criado com sucesso
+        if (imageFile && result.data?.id) {
+          try {
+            const formData = new FormData()
+            formData.append('image', imageFile)
+            
+            const uploadResponse = await fetch(`/api/groups/${result.data.id}/image`, {
+              method: 'PATCH',
+              body: formData,
+            })
+            
+            if (!uploadResponse.ok) {
+              console.warn('Grupo criado, mas falha ao fazer upload da imagem')
+            }
+          } catch (uploadError) {
+            console.warn('Grupo criado, mas falha ao fazer upload da imagem:', uploadError)
+          }
+        }
+        
+        setSuccessMessage(result.message || 'Grupo criado com sucesso!')
+        if (result.warning) {
+          setWarningMessage(result.warning)
+        }
+        
+        // Fechar o modal após um pequeno delay para mostrar a mensagem
+        setTimeout(() => {
+          onOpenChange(false)
+        }, 2000)
+      } else {
+        console.error('Erro ao salvar grupo:', result.error)
+      }
     } catch (err) {
       console.error('Erro ao salvar grupo:', err)
     }
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault()
-      handleAddParticipant()
-    }
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -184,6 +292,24 @@ export function GroupForm({
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {successMessage && (
+            <Alert className="border-green-200 bg-green-50">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-green-800">
+                {successMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {warningMessage && (
+            <Alert className="border-yellow-200 bg-yellow-50">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="text-yellow-800">
+                {warningMessage}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -238,87 +364,142 @@ export function GroupForm({
             </div>
           </div>
 
-          {/* Participantes */}
+          {/* Foto do Grupo */}
+          <ImageUpload
+            value={formData.image_url}
+            onChange={handleImageChange}
+            disabled={loading}
+            maxSize={5 * 1024 * 1024} // 5MB
+            acceptedTypes={['image/jpeg', 'image/png', 'image/gif', 'image/webp']}
+          />
+
+          {/* Configurações do Grupo */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              <Label className="text-base font-semibold">Configurações do Grupo</Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Configure as permissões e comportamentos do grupo no WhatsApp
+            </p>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="adminOnlyMessage">Somente admins podem enviar mensagens</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Apenas administradores poderão enviar mensagens no grupo
+                  </p>
+                </div>
+                <Switch
+                  id="adminOnlyMessage"
+                  checked={formData.adminOnlyMessage}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, adminOnlyMessage: checked }))
+                  }
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="adminOnlySettings">Somente admins podem alterar configurações</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Apenas administradores poderão modificar as configurações do grupo
+                  </p>
+                </div>
+                <Switch
+                  id="adminOnlySettings"
+                  checked={formData.adminOnlySettings}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, adminOnlySettings: checked }))
+                  }
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="requireAdminApproval">Aprovação de admin para entrar</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Novos membros precisam ser aprovados por um administrador
+                  </p>
+                </div>
+                <Switch
+                  id="requireAdminApproval"
+                  checked={formData.requireAdminApproval}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, requireAdminApproval: checked }))
+                  }
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="adminOnlyAddMember">Somente admins podem adicionar membros</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Apenas administradores poderão adicionar novos participantes
+                  </p>
+                </div>
+                <Switch
+                  id="adminOnlyAddMember"
+                  checked={formData.adminOnlyAddMember}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({ ...prev, adminOnlyAddMember: checked }))
+                  }
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Participantes - apenas para criação de grupo */}
+          {!group && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5" />
               <Label className="text-base font-semibold">Participantes</Label>
-              <Badge variant="secondary">{formData.participants.length}</Badge>
+              <Badge variant="secondary">{selectedContacts.length}</Badge>
             </div>
 
-            {/* Adicionar participante */}
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Input
-                  value={newParticipant}
-                  onChange={(e) => {
-                    setNewParticipant(e.target.value)
-                    setParticipantError(null)
-                  }}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Digite o telefone (11) 99999-9999"
-                  className={participantError ? 'border-destructive' : ''}
-                />
-                {participantError && (
-                  <p className="text-xs text-destructive mt-1">
-                    {participantError}
-                  </p>
-                )}
-              </div>
-              <Button
-                type="button"
-                onClick={handleAddParticipant}
-                disabled={!newParticipant.trim()}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {/* Lista de participantes */}
-            {formData.participants.length > 0 && (
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">
-                    Participantes Adicionados
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-2">
-                    {formData.participants.map((participant, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between bg-muted rounded-lg p-3"
-                      >
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                          <span className="font-mono text-sm">
-                            {participant}
-                          </span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveParticipant(participant)}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {formData.participants.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground">
-                <Users className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p>Nenhum participante adicionado</p>
-                <p className="text-xs">Adicione telefones para criar o grupo</p>
-              </div>
-            )}
+            <ContactSearch
+              selectedContacts={selectedContacts}
+              onSelectionChange={handleContactSelectionChange}
+              maxSelections={256} // Limite do WhatsApp
+            />
           </div>
+          )}
+
+          {/* Gerenciamento de Grupo - apenas para edição */}
+          {group && group.whatsapp_id && (
+            <>
+              <Separator />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  <Label className="text-base font-semibold">Gerenciamento do Grupo</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Gerencie participantes, administradores e links de convite do grupo no WhatsApp
+                </p>
+                
+                <GroupManagement
+                  groupId={group.whatsapp_id}
+                  groupName={group.name}
+                  participants={group.participants?.map(phone => ({
+                    phone,
+                    isAdmin: false,
+                    isSuperAdmin: false
+                  })) || []}
+                  onUpdate={() => {
+                    // Recarregar dados do grupo se necessário
+                    console.log('Grupo atualizado, recarregando dados...')
+                  }}
+                />
+              </div>
+            </>
+          )}
 
           <DialogFooter>
             <Button

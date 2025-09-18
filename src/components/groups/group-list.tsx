@@ -25,12 +25,13 @@ interface GroupListProps {
   error?: string | null
   onEdit?: (group: Group) => void
   onDelete?: (groupId: string) => void
-  onAddParticipant?: (groupId: string) => void
-  onRemoveParticipant?: (groupId: string, participantPhone: string) => void
   onSync?: (groupId: string) => void
   onSyncAll?: () => void
   onViewMessages?: (groupId: string) => void
+  onLeave?: (groupId: string) => void
   onCreateGroup?: () => void
+  groupNotifications?: Record<string, number>
+  onViewNotifications?: (groupId: string) => void
 }
 
 type ViewMode = 'grid' | 'list'
@@ -43,12 +44,13 @@ export function GroupList({
   error = null,
   onEdit,
   onDelete,
-  onAddParticipant,
-  onRemoveParticipant,
   onSync,
   onSyncAll,
   onViewMessages,
+  onLeave,
   onCreateGroup,
+  groupNotifications = {},
+  onViewNotifications,
 }: GroupListProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
@@ -298,10 +300,11 @@ export function GroupList({
               group={group}
               onEdit={onEdit}
               onDelete={onDelete}
-              onAddParticipant={onAddParticipant}
-              onRemoveParticipant={onRemoveParticipant}
               onSync={onSync}
               onViewMessages={onViewMessages}
+              onLeave={onLeave}
+              pendingNotifications={groupNotifications[group.id] || 0}
+              onViewNotifications={onViewNotifications}
             />
           ))}
         </div>

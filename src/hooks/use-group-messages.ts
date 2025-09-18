@@ -1,164 +1,137 @@
-'use client'
+import { useState, useCallback } from 'react'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useRealtime } from '@/providers/realtime-provider'
-import { Database } from '@/types/database'
+export interface SendMessageParams {
+  groupId: string
+  content: string
+  type?: 'text' | 'image' | 'document' | 'audio'
+  mentions?: string[]
+  reply_to_message_id?: string
+}
 
-type GroupMessage = Database['public']['Tables']['whatsapp_messages']['Row']
+export interface SendMessageResult {
+  message: string
+  message_data: any
+  mentions: {
+    valid: string[]
+    invalid: string[]
+  }
+  group: {
+    id: string
+    name: string
+    participants_count: number
+  }
+}
 
-export function useGroupMessages(groupId?: string) {
-  const [messages, setMessages] = useState<GroupMessage[]>([])
-  const [loading, setLoading] = useState(true)
+export interface GetMessagesParams {
+  groupId: string
+  page?: number
+  limit?: number
+}
+
+export interface GetMessagesResult {
+  messages: any[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+    hasNextPage: boolean
+    hasPreviousPage: boolean
+  }
+  group: {
+    id: string
+    name: string
+    participants_count: number
+  }
+}
+
+export interface UseGroupMessagesReturn {
+  sendMessage: (params: SendMessageParams) => Promise<SendMessageResult>
+  getMessages: (params: GetMessagesParams) => Promise<GetMessagesResult>
+  isLoading: boolean
+  error: string | null
+  clearError: () => void
+}
+
+export function useGroupMessages(): UseGroupMessagesReturn {
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const supabase = createClient()
-  const { isConnected, subscribe, unsubscribe } = useRealtime()
 
-  useEffect(() => {
-    if (!isConnected || !groupId) {
-      setLoading(false)
-      return
-    }
-
-    const fetchMessages = async () => {
-      setLoading(true)
+  const sendMessage = useCallback(async (params: SendMessageParams): Promise<SendMessageResult> => {
+    try {
+      setIsLoading(true)
       setError(null)
-      try {
-        const { data, error } = await supabase
-          .from('whatsapp_messages')
-          .select('*')
-          .eq('group_id', groupId)
-          .order('created_at', { ascending: true })
 
-        if (error) {
-          throw error
-        }
-        setMessages(data || [])
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Erro ao carregar mensagens'
-        )
-      } finally {
-        setLoading(false)
-      }
-    }
+      const response = await fetch(`/api/groups/${params.groupId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          content: params.content,
+          type: params.type || 'text',
+          mentions: params.mentions || [],
+          reply_to_message_id: params.reply_to_message_id,
+        }),
+      })
 
-    fetchMessages()
-
-    const channel = subscribe('whatsapp_messages', (payload) => {
-      if (payload.eventType === 'INSERT') {
-        const newMessage = payload.new as GroupMessage
-
-        // Verificar se a mensagem é do grupo atual
-        if (newMessage.group_id === groupId) {
-          setMessages((prev) => [...prev, newMessage])
-        }
-      } else if (payload.eventType === 'UPDATE') {
-        const updatedMessage = payload.new as GroupMessage
-
-        if (updatedMessage.group_id === groupId) {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === updatedMessage.id ? updatedMessage : msg
-            )
-          )
-        }
-      } else if (payload.eventType === 'DELETE') {
-        const deletedMessage = payload.old as GroupMessage
-
-        if (deletedMessage.group_id === groupId) {
-          setMessages((prev) =>
-            prev.filter((msg) => msg.id !== deletedMessage.id)
-          )
-        }
-      }
-    })
-
-    return () => {
-      unsubscribe(channel)
-    }
-  }, [isConnected, groupId, subscribe, unsubscribe, supabase])
-
-  const sendMessage = async (
-    content: string,
-    type: 'text' | 'image' | 'document' | 'audio' = 'text',
-    mediaUrl?: string
-  ) => {
-    if (!groupId) {
-      throw new Error('ID do grupo é obrigatório')
-    }
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        throw new Error('Usuário não autenticado')
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao enviar mensagem')
       }
 
-      const { data, error } = await supabase
-        .from('whatsapp_messages')
-        .insert({
-          content: mediaUrl && type !== 'text' ? mediaUrl : content,
-          direction: 'outbound',
-          type,
-          status: 'sent',
-          user_id: user.id,
-          group_id: groupId,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        throw error
-      }
-
-      return data
+      const result: SendMessageResult = await response.json()
+      return result
     } catch (err) {
-      console.error('Erro ao enviar mensagem:', err)
-      setError(err instanceof Error ? err.message : 'Erro desconhecido')
-      return null
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setIsLoading(false)
     }
-  }
+  }, [])
 
-  const markAsRead = async (messageId: string) => {
+  const getMessages = useCallback(async (params: GetMessagesParams): Promise<GetMessagesResult> => {
     try {
-      const { error } = await supabase
-        .from('whatsapp_messages')
-        .update({ status: 'read' })
-        .eq('id', messageId)
+      setIsLoading(true)
+      setError(null)
 
-      if (error) {
-        throw error
+      const searchParams = new URLSearchParams()
+      if (params.page) searchParams.set('page', params.page.toString())
+      if (params.limit) searchParams.set('limit', params.limit.toString())
+
+      const response = await fetch(`/api/groups/${params.groupId}/messages?${searchParams.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao buscar mensagens')
       }
-    } catch (err) {
-      console.error('Erro ao marcar mensagem como lida:', err)
-    }
-  }
 
-  const deleteMessage = async (messageId: string) => {
-    try {
-      const { error } = await supabase
-        .from('whatsapp_messages')
-        .delete()
-        .eq('id', messageId)
-
-      if (error) {
-        throw error
-      }
+      const result: GetMessagesResult = await response.json()
+      return result
     } catch (err) {
-      console.error('Erro ao excluir mensagem:', err)
-      setError(err instanceof Error ? err.message : 'Erro ao excluir mensagem')
+      const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido'
+      setError(errorMessage)
+      throw err
+    } finally {
+      setIsLoading(false)
     }
-  }
+  }, [])
+
+  const clearError = useCallback(() => {
+    setError(null)
+  }, [])
 
   return {
-    messages,
-    loading,
-    error,
     sendMessage,
-    markAsRead,
-    deleteMessage,
+    getMessages,
+    isLoading,
+    error,
+    clearError,
   }
 }

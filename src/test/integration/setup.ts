@@ -22,6 +22,20 @@ export const cleanupTestData = async () => {
     await testSupabase.from('teams').delete().like('name', 'TEST_%')
     await testSupabase.from('campaigns').delete().like('name', 'TEST_%')
     await testSupabase.from('contacts').delete().like('name', 'TEST_%')
+    
+    // Clean up new test data for groups and communities
+    await testSupabase.from('group_reports').delete().like('description', 'TEST_%')
+    await testSupabase.from('group_messages').delete().like('content', 'TEST_%')
+    await testSupabase.from('whatsapp_messages').delete().like('content', 'TEST_%')
+    await testSupabase.from('whatsapp_groups').delete().like('name', 'TEST_%')
+    await testSupabase.from('whatsapp_communities').delete().like('name', 'TEST_%')
+    await testSupabase.from('community_groups').delete()
+    await testSupabase.from('community_members').delete()
+    await testSupabase.from('community_announcements').delete().like('content', 'TEST_%')
+    await testSupabase.from('sync_logs').delete()
+    await testSupabase.from('sync_history').delete()
+    
+    // Legacy cleanup
     await testSupabase.from('groups').delete().like('name', 'TEST_%')
     await testSupabase.from('messages').delete().like('content', 'TEST_%')
   } catch (error) {
@@ -130,6 +144,97 @@ export const createTestCampaign = async (
 
   if (error) {
     console.warn('Error creating test campaign:', error)
+  }
+
+  return data
+}
+
+// Helper function to create test group
+export const createTestGroup = async (
+  userId: string,
+  groupName: string = 'TEST Group'
+) => {
+  const { data, error } = await testSupabase
+    .from('whatsapp_groups')
+    .insert({
+      name: groupName,
+      description: 'Test group for integration tests',
+      participants: ['+1234567890'],
+      admins: ['+1234567890'],
+      user_id: userId,
+      whatsapp_id: `120363123456789012@g.us`,
+      max_participants: 256,
+      is_community_group: false,
+      settings: {
+        allow_member_invites: true,
+        allow_member_messages: true,
+        allow_member_media: true,
+        allow_member_polls: true,
+        require_admin_approval: false,
+        mute_notifications: false,
+      },
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.warn('Error creating test group:', error)
+  }
+
+  return data
+}
+
+// Helper function to create test community
+export const createTestCommunity = async (
+  userId: string,
+  communityName: string = 'TEST Community'
+) => {
+  const { data, error } = await testSupabase
+    .from('whatsapp_communities')
+    .insert({
+      name: communityName,
+      description: 'Test community for integration tests',
+      image_url: 'https://example.com/test-image.jpg',
+      whatsapp_community_id: 'whatsapp-community-test',
+      announcement_group_id: 'announcement-group-test',
+      max_groups: 10,
+      user_id: userId,
+      settings: {
+        allow_member_invites: true,
+        require_admin_approval: false,
+        max_groups: 10,
+        allow_announcements: true,
+      },
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.warn('Error creating test community:', error)
+  }
+
+  return data
+}
+
+// Helper function to create test message
+export const createTestMessage = async (
+  groupId: string,
+  content: string = 'TEST message content'
+) => {
+  const { data, error } = await testSupabase
+    .from('whatsapp_messages')
+    .insert({
+      group_id: groupId,
+      content: content,
+      type: 'text',
+      sender_phone: '+1234567890',
+      is_deleted: false,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.warn('Error creating test message:', error)
   }
 
   return data

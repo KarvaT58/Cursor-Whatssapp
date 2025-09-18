@@ -29,10 +29,10 @@ import {
   MoreVertical,
   Edit,
   Trash2,
-  UserPlus,
-  UserMinus,
   RefreshCw,
   ExternalLink,
+  Bell,
+  LogOut,
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -43,24 +43,25 @@ interface GroupCardProps {
   group: Group
   onEdit?: (group: Group) => void
   onDelete?: (groupId: string) => void
-  onAddParticipant?: (groupId: string) => void
-  onRemoveParticipant?: (groupId: string, participantPhone: string) => void
   onSync?: (groupId: string) => void
   onViewMessages?: (groupId: string) => void
+  onLeave?: (groupId: string) => void
+  pendingNotifications?: number
+  onViewNotifications?: (groupId: string) => void
 }
 
 export function GroupCard({
   group,
   onEdit,
   onDelete,
-  onAddParticipant,
-  onRemoveParticipant,
   onSync,
   onViewMessages,
+  onLeave,
+  pendingNotifications = 0,
+  onViewNotifications,
 }: GroupCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [showRemoveParticipantDialog, setShowRemoveParticipantDialog] =
-    useState<string | null>(null)
+  const [showLeaveDialog, setShowLeaveDialog] = useState(false)
 
   const formatLastUpdate = (dateString: string) => {
     try {
@@ -91,18 +92,14 @@ export function GroupCard({
     setShowDeleteDialog(false)
   }
 
-  const handleRemoveParticipant = (participantPhone: string) => {
-    onRemoveParticipant?.(group.id, participantPhone)
-    setShowRemoveParticipantDialog(null)
-  }
 
   return (
     <>
       <Card className="hover:shadow-md transition-shadow">
         <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="w-12 h-12">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Avatar className="w-12 h-12 flex-shrink-0">
                 <AvatarImage
                   src={`https://api.whatsapp.com/img/${group.whatsapp_id}`}
                   alt={group?.name || 'Grupo'}
@@ -111,10 +108,24 @@ export function GroupCard({
                   {getGroupInitials(group?.name || 'Grupo')}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1 min-w-0">
-                <CardTitle className="text-lg truncate">{group?.name || 'Grupo'}</CardTitle>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-lg truncate">{group?.name || 'Grupo'}</CardTitle>
+                  {pendingNotifications > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Bell className="h-4 w-4 text-orange-500" />
+                      <Badge 
+                        variant="destructive" 
+                        className="h-5 w-5 flex items-center justify-center p-0 text-xs cursor-pointer hover:bg-red-600"
+                        onClick={() => onViewNotifications?.(group.id)}
+                      >
+                        {pendingNotifications > 99 ? '99+' : pendingNotifications}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
                 {group.description && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2 break-words">
                     {group.description}
                   </p>
                 )}
@@ -135,15 +146,24 @@ export function GroupCard({
                   <Edit className="h-4 w-4 mr-2" />
                   Editar
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onAddParticipant?.(group.id)}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Adicionar Participante
-                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onSync?.(group.id)}>
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Sincronizar
                 </DropdownMenuItem>
+                {pendingNotifications > 0 && (
+                  <DropdownMenuItem onClick={() => onViewNotifications?.(group.id)}>
+                    <Bell className="h-4 w-4 mr-2" />
+                    Ver Notificações ({pendingNotifications})
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => setShowLeaveDialog(true)}
+                  className="text-orange-600"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair do Grupo
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => setShowDeleteDialog(true)}
                   className="text-destructive"
@@ -170,42 +190,6 @@ export function GroupCard({
               </div>
             </div>
 
-            {/* Participantes */}
-            {group.participants && group.participants.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Participantes</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {group.participants.length}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {group.participants.slice(0, 5).map((participant, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-1 bg-muted rounded-full px-2 py-1 text-xs"
-                    >
-                      <span className="truncate max-w-20">{participant}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={() =>
-                          setShowRemoveParticipantDialog(participant)
-                        }
-                      >
-                        <UserMinus className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                  {group.participants.length > 5 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{group.participants.length - 5} mais
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
 
             {/* Informações adicionais */}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -231,6 +215,32 @@ export function GroupCard({
         </CardContent>
       </Card>
 
+      {/* Dialog de confirmação de saída do grupo */}
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sair do Grupo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja sair do grupo &quot;{group?.name || 'Grupo'}&quot;?
+              Você não receberá mais mensagens deste grupo e não poderá voltar
+              a menos que seja adicionado novamente por um administrador.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                onLeave?.(group.id)
+                setShowLeaveDialog(false)
+              }}
+              className="bg-orange-600 text-white hover:bg-orange-700"
+            >
+              Sair do Grupo
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Dialog de confirmação de exclusão */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
@@ -254,34 +264,6 @@ export function GroupCard({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Dialog de confirmação de remoção de participante */}
-      <AlertDialog
-        open={showRemoveParticipantDialog !== null}
-        onOpenChange={() => setShowRemoveParticipantDialog(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remover Participante</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja remover o participante &quot;
-              {showRemoveParticipantDialog}&quot; do grupo &quot;{group?.name || 'Grupo'}
-              &quot;?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() =>
-                showRemoveParticipantDialog &&
-                handleRemoveParticipant(showRemoveParticipantDialog)
-              }
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Remover
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }

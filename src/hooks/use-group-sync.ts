@@ -30,58 +30,32 @@ export function useGroupSync({ userId, instanceId }: UseGroupSyncProps) {
       setSyncing(true)
       setSyncError(null)
 
-      // TODO: Implementar endpoint para obter grupos do WhatsApp via Z-API
-      // Por enquanto, vamos simular a sincronização
-      const mockGroups = [
-        {
-          name: 'Grupo de Trabalho',
-          whatsapp_id: '120363123456789012@g.us',
-          description: 'Grupo para discussões de trabalho',
-          participants: ['5511999999999', '5511888888888'],
+      // Chamar a API de sincronização real
+      const response = await fetch('/api/groups/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          name: 'Família',
-          whatsapp_id: '120363123456789013@g.us',
-          description: 'Grupo da família',
-          participants: ['5511777777777', '5511666666666'],
-        },
-      ]
+        body: JSON.stringify({
+          instanceId,
+          direction: 'from_whatsapp',
+          options: {
+            forceUpdate: false,
+            includeParticipants: true,
+            includeAdmins: true,
+            includeMessages: false,
+            batchSize: 50,
+          },
+        }),
+      })
 
-      const syncedGroups = []
+      const result = await response.json()
 
-      for (const groupData of mockGroups) {
-        // Verificar se o grupo já existe
-        const existingGroup = groups.find(
-          (g) => g.whatsapp_id === groupData.whatsapp_id
-        )
-
-        if (existingGroup) {
-          // Atualizar grupo existente
-          const result = await updateGroup(existingGroup.id, {
-            name: groupData.name,
-            description: groupData.description,
-            participants: groupData.participants,
-          })
-
-          if (result.success) {
-            syncedGroups.push(result.data)
-          }
-        } else {
-          // Criar novo grupo
-          const result = await createGroup({
-            name: groupData.name,
-            whatsapp_id: groupData.whatsapp_id,
-            description: groupData.description,
-            participants: groupData.participants,
-          })
-
-          if (result.success) {
-            syncedGroups.push(result.data)
-          }
-        }
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao sincronizar grupos')
       }
 
-      return { success: true, data: syncedGroups }
+      return { success: true, data: result.data, stats: result.stats }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Erro ao sincronizar grupos'
@@ -90,7 +64,7 @@ export function useGroupSync({ userId, instanceId }: UseGroupSyncProps) {
     } finally {
       setSyncing(false)
     }
-  }, [instanceId, groups, createGroup, updateGroup])
+  }, [instanceId])
 
   // Sincronizar participantes de um grupo específico
   const syncGroupParticipants = useCallback(
@@ -104,29 +78,29 @@ export function useGroupSync({ userId, instanceId }: UseGroupSyncProps) {
         setSyncing(true)
         setSyncError(null)
 
-        const group = groups.find((g) => g.id === groupId)
-        if (!group) {
-          throw new Error('Grupo não encontrado')
-        }
-
-        // TODO: Implementar endpoint para obter participantes do grupo via Z-API
-        // Por enquanto, vamos simular a sincronização
-        const mockParticipants = [
-          '5511999999999',
-          '5511888888888',
-          '5511777777777',
-          '5511666666666',
-        ]
-
-        const result = await updateGroup(groupId, {
-          participants: mockParticipants,
+        // Chamar a API de sincronização de participantes
+        const response = await fetch(`/api/groups/${groupId}/sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            instanceId,
+            syncType: 'participants',
+            options: {
+              forceUpdate: false,
+              includeMetadata: true,
+            },
+          }),
         })
 
-        if (result.success) {
-          return { success: true, data: result.data }
-        } else {
-          throw new Error(result.error || 'Erro ao atualizar participantes')
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.error || 'Erro ao sincronizar participantes')
         }
+
+        return { success: true, data: result.data, stats: result.stats }
       } catch (err) {
         const errorMessage =
           err instanceof Error
@@ -138,7 +112,7 @@ export function useGroupSync({ userId, instanceId }: UseGroupSyncProps) {
         setSyncing(false)
       }
     },
-    [instanceId, groups, updateGroup]
+    [instanceId]
   )
 
   // Enviar mensagem para grupo
