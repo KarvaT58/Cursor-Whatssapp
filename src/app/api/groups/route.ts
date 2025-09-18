@@ -15,17 +15,20 @@ const CreateGroupSchema = z.object({
   admin_only_settings: z.boolean().optional(),
   require_admin_approval: z.boolean().optional(),
   admin_only_add_member: z.boolean().optional(),
+  // Sistema de Links Universais
+  enable_universal_link: z.boolean().optional(),
+  system_phone: z.string().optional(),
 })
 
-const UpdateGroupSchema = z.object({
-  name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  participants: z.array(z.string()).optional(),
-  image_url: z.string().optional(),
-})
+// const UpdateGroupSchema = z.object({
+//   name: z.string().min(1).optional(),
+//   description: z.string().optional(),
+//   participants: z.array(z.string()).optional(),
+//   image_url: z.string().optional(),
+// })
 
 // GET /api/groups - Listar grupos do usuário
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
 
@@ -364,24 +367,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Criar sistema de links universais para o grupo
-    console.log('🔗 Criando sistema de links universais para o grupo...')
-    try {
-      const groupLinkSystem = new GroupLinkSystem()
-      const linkResult = await groupLinkSystem.createUniversalLinkSystem(
-        group.id,
-        validatedData.name,
-        user.id
-      )
-      
-      if (linkResult.success) {
-        console.log('✅ Sistema de links universais criado com sucesso')
-        console.log('Link universal:', linkResult.data?.universal_link)
-      } else {
-        console.warn('⚠️ Grupo criado mas sistema de links não foi criado:', linkResult.error)
+    // Criar sistema de links universais para o grupo (apenas se solicitado)
+    if (validatedData.enable_universal_link) {
+      console.log('🔗 Criando sistema de links universais para o grupo...')
+      try {
+        const groupLinkSystem = new GroupLinkSystem()
+        const linkResult = await groupLinkSystem.createUniversalLinkSystem(
+          group.id,
+          validatedData.name,
+          user.id,
+          validatedData.system_phone // Passar o número do sistema
+        )
+        
+        if (linkResult.success) {
+          console.log('✅ Sistema de links universais criado com sucesso')
+          console.log('Link universal:', linkResult.data?.universal_link)
+        } else {
+          console.warn('⚠️ Grupo criado mas sistema de links não foi criado:', linkResult.error)
+        }
+      } catch (linkError) {
+        console.warn('⚠️ Erro ao criar sistema de links universais:', linkError)
       }
-    } catch (linkError) {
-      console.warn('⚠️ Erro ao criar sistema de links universais:', linkError)
+    } else {
+      console.log('ℹ️ Sistema de links universais não foi solicitado para este grupo')
     }
 
     // Retornar resposta baseada no resultado

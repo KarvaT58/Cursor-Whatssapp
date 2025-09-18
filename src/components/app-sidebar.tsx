@@ -9,7 +9,7 @@ import {
   IconSettings,
   IconHelp,
   IconSearch,
-  IconLink,
+  // IconLink,
   IconShield,
 } from '@tabler/icons-react'
 
@@ -38,9 +38,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     },
     navMain: [
       {
-        title: 'Contatos',
-        url: '/dashboard/contacts',
-        icon: IconUsers,
+        title: 'Chat WhatsApp',
+        url: '/dashboard/whatsapp',
+        icon: IconMessageCircle,
       },
       {
         title: 'Grupos',
@@ -48,24 +48,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         icon: IconMessageDots,
       },
       {
-        title: 'Links Universais',
-        url: '/dashboard/links',
-        icon: IconLink,
-      },
-      {
-        title: 'Blacklist',
-        url: '/dashboard/blacklist',
-        icon: IconShield,
-      },
-      {
         title: 'Campanhas',
         url: '/dashboard/campaigns',
         icon: IconSpeakerphone,
       },
       {
-        title: 'Chat WhatsApp',
-        url: '/dashboard/whatsapp',
-        icon: IconMessageCircle,
+        title: 'Contatos',
+        url: '/dashboard/contacts',
+        icon: IconUsers,
+      },
+      {
+        title: 'Blacklist',
+        url: '/dashboard/blacklist',
+        icon: IconShield,
       },
       {
         title: 'Equipe',

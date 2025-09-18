@@ -35,12 +35,35 @@ export async function POST(
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     const fullUniversalLink = `${baseUrl}/join/${universalLink}`
 
+    // Buscar informações do link para obter o número do sistema
+    const { createClient } = await import('@/lib/supabase/server')
+    const supabase = await createClient()
+    
+    const { data: groupLink, error: linkError } = await supabase
+      .from('group_links')
+      .select(`
+        *,
+        group_families (
+          system_phone
+        )
+      `)
+      .like('universal_link', `%/join/${universalLink}`)
+      .single()
+
+    if (linkError || !groupLink) {
+      return NextResponse.json({
+        success: false,
+        error: 'Link universal não encontrado'
+      }, { status: 404 })
+    }
+
     // Processar entrada via sistema de links
     const groupLinkSystem = new GroupLinkSystem()
     const result = await groupLinkSystem.processUniversalLinkEntry(
       fullUniversalLink,
       validatedData.phone,
-      validatedData.name
+      validatedData.name,
+      groupLink.group_families.system_phone
     )
 
     if (result.success) {
@@ -128,10 +151,10 @@ export async function GET(
         baseName: groupLink.group_families.base_name,
         totalParticipants: groupLink.group_families.total_participants,
         activeGroups: groupLink.group_families.whatsapp_groups.length,
-        availableSpots: groupLink.group_families.whatsapp_groups.reduce(
-          (total: number, group: any) => total + (2 - group.participants.length), 
-          0
-        )
+            availableSpots: groupLink.group_families.whatsapp_groups.reduce(
+              (total: number, group: any) => total + (2 - group.participants.length), // eslint-disable-line @typescript-eslint/no-explicit-any
+              0
+            )
       }
     })
 

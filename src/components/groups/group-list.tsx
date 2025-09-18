@@ -175,16 +175,6 @@ export function GroupList({
             {sortedGroups.length} grupo{sortedGroups.length !== 1 ? 's' : ''}
           </Badge>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onSyncAll}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Sincronizar
-          </Button>
-          <Button onClick={onCreateGroup}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Grupo
-          </Button>
-        </div>
       </div>
 
       {/* Filtros e busca */}

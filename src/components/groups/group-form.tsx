@@ -47,6 +47,7 @@ interface GroupFormProps {
   }>
   loading?: boolean
   error?: string | null
+  disableUniversalLink?: boolean // Nova propriedade para desabilitar link universal
 }
 
 interface FormData {
@@ -60,6 +61,9 @@ interface FormData {
   adminOnlySettings: boolean
   requireAdminApproval: boolean
   adminOnlyAddMember: boolean
+  // Sistema de Links Universais
+  enableUniversalLink: boolean
+  systemPhone: string
 }
 
 interface GroupSettings {
@@ -78,6 +82,7 @@ export function GroupForm({
   onSubmit,
   loading = false,
   error = null,
+  disableUniversalLink = false,
 }: GroupFormProps) {
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -90,6 +95,9 @@ export function GroupForm({
     adminOnlySettings: false,
     requireAdminApproval: false,
     adminOnlyAddMember: false,
+    // Sistema de Links Universais
+    enableUniversalLink: false,
+    systemPhone: '554584154115', // Número padrão do sistema
   })
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([])
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -111,6 +119,9 @@ export function GroupForm({
           adminOnlySettings: group.admin_only_settings || false,
           requireAdminApproval: group.require_admin_approval || false,
           adminOnlyAddMember: group.admin_only_add_member || false,
+          // Sistema de Links Universais (não editável para grupos existentes)
+          enableUniversalLink: false,
+          systemPhone: '554584154115',
         })
       } else {
         setFormData({
@@ -124,6 +135,9 @@ export function GroupForm({
           adminOnlySettings: false,
           requireAdminApproval: false,
           adminOnlyAddMember: false,
+          // Sistema de Links Universais
+          enableUniversalLink: !disableUniversalLink, // Se não está desabilitado, ativar por padrão
+          systemPhone: '554584154115',
         })
       }
       setSelectedContacts([])
@@ -193,10 +207,23 @@ export function GroupForm({
       }
     } else {
       // Para criação, incluir todos os campos
+      let participants = formData.participants || []
+      
+      // Se o link universal está ativado, incluir o número do sistema
+      if (formData.enableUniversalLink && formData.systemPhone) {
+        const systemPhone = formData.systemPhone.trim()
+        if (systemPhone && !participants.includes(systemPhone)) {
+          participants = [...participants, systemPhone]
+          console.log('🔧 GroupForm: Número do sistema adicionado aos participantes:', systemPhone)
+        }
+      }
+      
+      console.log('🔧 GroupForm: Participantes finais:', participants)
+      
       submitData = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        participants: formData.participants || [],
+        participants: participants,
         whatsapp_id: formData.whatsapp_id.trim() || '',
         image_url: formData.image_url || null,
       }
@@ -218,6 +245,9 @@ export function GroupForm({
         admin_only_settings: formData.adminOnlySettings,
         require_admin_approval: formData.requireAdminApproval,
         admin_only_add_member: formData.adminOnlyAddMember,
+        // Sistema de Links Universais
+        enable_universal_link: formData.enableUniversalLink,
+        system_phone: formData.systemPhone,
       }
       
       console.log('📝 GroupForm: Dados finais sendo enviados:', finalData)
@@ -231,6 +261,8 @@ export function GroupForm({
         admin_only_settings: typeof finalData.admin_only_settings,
         require_admin_approval: typeof finalData.require_admin_approval,
         admin_only_add_member: typeof finalData.admin_only_add_member,
+        enable_universal_link: typeof finalData.enable_universal_link,
+        system_phone: typeof finalData.system_phone,
       })
       
       const result = await onSubmit(finalData)
@@ -453,6 +485,56 @@ export function GroupForm({
               </div>
             </div>
           </div>
+
+          {/* Sistema de Links Universais - apenas para criação de grupo e se não estiver desabilitado */}
+          {!group && !disableUniversalLink && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <MessageCircle className="h-5 w-5" />
+                <Label className="text-base font-semibold">Sistema de Links Universais</Label>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Configure se este grupo deve ter um link universal para entrada automática
+              </p>
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="enableUniversalLink">Ativar Link Universal</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Permite que pessoas entrem automaticamente no grupo via link universal
+                    </p>
+                  </div>
+                  <Switch
+                    id="enableUniversalLink"
+                    checked={formData.enableUniversalLink}
+                    onCheckedChange={(checked) =>
+                      setFormData((prev) => ({ ...prev, enableUniversalLink: checked }))
+                    }
+                    disabled={loading}
+                  />
+                </div>
+
+                {formData.enableUniversalLink && (
+                  <div className="space-y-2">
+                    <Label htmlFor="systemPhone">Número Fixo do Sistema *</Label>
+                    <Input
+                      id="systemPhone"
+                      value={formData.systemPhone}
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, systemPhone: e.target.value }))
+                      }
+                      placeholder="Ex: 554584154115"
+                      required
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Número que será usado para criar grupos automaticamente quando necessário
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Participantes - apenas para criação de grupo */}
           {!group && (

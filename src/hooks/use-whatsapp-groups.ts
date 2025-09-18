@@ -10,9 +10,10 @@ type GroupUpdate = Database['public']['Tables']['whatsapp_groups']['Update']
 
 interface UseWhatsAppGroupsProps {
   userId?: string
+  excludeUniversal?: boolean // Novo parâmetro para excluir grupos universais
 }
 
-export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
+export function useWhatsAppGroups({ userId, excludeUniversal = false }: UseWhatsAppGroupsProps) {
   const [groups, setGroups] = useState<Group[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -26,11 +27,17 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
       setLoading(true)
       setError(null)
 
-      const { data, error: fetchError } = await supabase
+      let query = supabase
         .from('whatsapp_groups')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false })
+
+      // Se excludeUniversal for true, filtrar apenas grupos sem group_family
+      if (excludeUniversal) {
+        query = query.is('group_family', null)
+      }
+
+      const { data, error: fetchError } = await query.order('created_at', { ascending: false })
 
       if (fetchError) {
         throw fetchError
@@ -42,7 +49,7 @@ export function useWhatsAppGroups({ userId }: UseWhatsAppGroupsProps) {
     } finally {
       setLoading(false)
     }
-  }, [userId])
+  }, [userId, excludeUniversal])
 
   // Carregar grupos inicialmente
   useEffect(() => {

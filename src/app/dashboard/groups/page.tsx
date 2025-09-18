@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/providers/auth-provider'
 import { useWhatsAppGroups } from '@/hooks/use-whatsapp-groups'
 import { useGroupNotifications } from '@/hooks/use-group-notifications'
-import { ZApiClient } from '@/lib/z-api/client'
+// import { ZApiClient } from '@/lib/z-api/client'
 import { useGroupSync } from '@/hooks/use-group-sync'
 import { useToast } from '@/hooks/use-toast'
 import { GroupList } from '@/components/groups/group-list'
@@ -26,6 +26,7 @@ import {
   CheckCircle,
   Plus,
   Search,
+  Link,
 } from 'lucide-react'
 
 type Group = Database['public']['Tables']['whatsapp_groups']['Row']
@@ -40,6 +41,12 @@ export default function GroupsPage() {
   const [showGroupManagement, setShowGroupManagement] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  
+  // Estados para grupos universais
+  const [universalGroups, setUniversalGroups] = useState<Group[]>([])
+  const [universalLoading, setUniversalLoading] = useState(false)
+  const [universalError, setUniversalError] = useState<string | null>(null)
+  const [isCreatingUniversal, setIsCreatingUniversal] = useState(false)
 
   const {
     groups,
@@ -51,7 +58,7 @@ export default function GroupsPage() {
     addParticipant,
     removeParticipant,
     refreshGroups,
-  } = useWhatsAppGroups({ userId: user?.id })
+  } = useWhatsAppGroups({ userId: user?.id, excludeUniversal: true })
 
   const { notifications } = useGroupNotifications()
 
@@ -100,9 +107,65 @@ export default function GroupsPage() {
     setActionError(null)
   }, [])
 
+  // Função para buscar grupos universais
+  const fetchUniversalGroups = async () => {
+    if (!user?.id) return
+
+    try {
+      setUniversalLoading(true)
+      setUniversalError(null)
+
+      const { data, error: fetchError } = await supabase
+        .from('whatsapp_groups')
+        .select('*')
+        .eq('user_id', user.id)
+        .not('group_family', 'is', null) // Apenas grupos com group_family
+        .order('created_at', { ascending: false })
+
+      if (fetchError) {
+        throw fetchError
+      }
+
+      setUniversalGroups(data || [])
+    } catch (err) {
+      setUniversalError(err instanceof Error ? err.message : 'Erro ao carregar grupos universais')
+    } finally {
+      setUniversalLoading(false)
+    }
+  }
+
+  // Carregar grupos universais quando o usuário estiver disponível
+  useEffect(() => {
+    if (user) {
+      fetchUniversalGroups()
+      // Executar correção automática em background
+      autoFixUniversalGroups()
+    }
+  }, [user])
+
+  // Função para correção automática de grupos universais
+  const autoFixUniversalGroups = async () => {
+    try {
+      console.log('🔧 Executando correção automática de grupos universais...')
+      const response = await fetch('/api/groups/auto-fix-universal-groups', {
+        method: 'POST'
+      })
+      const result = await response.json()
+      
+      if (result.success && result.fixedCount > 0) {
+        console.log(`✅ Correção automática concluída: ${result.fixedCount} grupos corrigidos`)
+        // Recarregar grupos universais após correção
+        await fetchUniversalGroups()
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro na correção automática:', error)
+      // Não mostrar erro para o usuário, é um processo em background
+    }
+  }
+
   // Memoize all callback functions before any conditional returns
   const handleCreateGroup = useCallback(async (
-    data: Partial<Database['public']['Tables']['whatsapp_groups']['Insert']> & { settings?: any }
+    data: Partial<Database['public']['Tables']['whatsapp_groups']['Insert']> & { settings?: any } // eslint-disable-line @typescript-eslint/no-explicit-any
   ) => {
     setActionLoading(true)
     setActionError(null)
@@ -127,10 +190,27 @@ export default function GroupsPage() {
         user_id: user?.id || '',
       }
       
-      const result = await createGroup(createData)
+      // Incluir campos do sistema de links universais se estiverem presentes
+      const requestData = {
+        ...createData,
+        enable_universal_link: data.enable_universal_link,
+        system_phone: data.system_phone,
+      }
+      
+      console.log('🔧 DEBUG: Dados sendo enviados para createGroup:', requestData)
+      console.log('🔧 DEBUG: enable_universal_link:', data.enable_universal_link)
+      console.log('🔧 DEBUG: system_phone:', data.system_phone)
+      
+      const result = await createGroup(requestData)
       
       if (result.success) {
         setShowGroupForm(false)
+        setIsCreatingUniversal(false)
+        
+        // Recarregar grupos universais se foi criado um grupo universal
+        if (isCreatingUniversal) {
+          await fetchUniversalGroups()
+        }
         
         // Grupo criado com sucesso
         
@@ -154,7 +234,7 @@ export default function GroupsPage() {
   }, [createGroup, toast, user?.id])
 
   const handleUpdateGroup = useCallback(async (
-    data: Partial<Database['public']['Tables']['whatsapp_groups']['Update']> & { settings?: any }
+    data: Partial<Database['public']['Tables']['whatsapp_groups']['Update']> & { settings?: any } // eslint-disable-line @typescript-eslint/no-explicit-any
   ) => {
     console.log('🔧 DEBUG: handleUpdateGroup chamado com data:', data)
     console.log('🔧 DEBUG: selectedGroup:', selectedGroup)
@@ -464,7 +544,10 @@ export default function GroupsPage() {
   // Memoize the onOpenChange callback for GroupForm
   const handleGroupFormOpenChange = useCallback((open: boolean) => {
     setShowGroupForm(open)
-    if (!open) setSelectedGroup(null)
+    if (!open) {
+      setSelectedGroup(null)
+      setIsCreatingUniversal(false)
+    }
   }, [])
 
   // Show loading while auth is loading
@@ -601,6 +684,10 @@ export default function GroupsPage() {
             <Search className="h-4 w-4" />
             Buscar Grupos
           </TabsTrigger>
+          <TabsTrigger value="universal" className="flex items-center gap-2">
+            <Link className="h-4 w-4" />
+            Grupos WhatsApp Universal
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="list">
@@ -627,6 +714,130 @@ export default function GroupsPage() {
             onGroupDelete={handleDeleteGroup}
           />
         </TabsContent>
+
+        <TabsContent value="universal">
+          <div className="space-y-4">
+            {/* Estatísticas dos Grupos Universais */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total de Grupos</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{universalGroups.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Grupos com link universal
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total de Participantes</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {universalGroups.reduce((total, group) => total + (group.participants?.length || 0), 0)}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Em todos os grupos universais
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Famílias Ativas</CardTitle>
+                  <Link className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {new Set(universalGroups.map(g => g.group_family).filter(Boolean)).size}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Famílias de grupos universais
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Botão para criar grupo universal */}
+            <div className="flex justify-end">
+              <Button 
+                onClick={() => {
+                  setSelectedGroup(null)
+                  setIsCreatingUniversal(true)
+                  setShowGroupForm(true)
+                }}
+                className="flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Criar Grupo Universal
+              </Button>
+            </div>
+
+            {/* Lista de Grupos Universais */}
+            {universalError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{universalError}</AlertDescription>
+              </Alert>
+            )}
+
+            {universalLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <div className="text-center">
+                  <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2" />
+                  <p className="text-gray-600">Carregando grupos universais...</p>
+                </div>
+              </div>
+            ) : universalGroups.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <Link className="h-12 w-12 text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    Nenhum grupo universal encontrado
+                  </h3>
+                  <p className="text-gray-600 text-center mb-4">
+                    Você ainda não criou nenhum grupo com link universal.
+                  </p>
+                  <Button 
+                    onClick={() => {
+                      setSelectedGroup(null)
+                      setIsCreatingUniversal(true)
+                      setShowGroupForm(true)
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Criar Primeiro Grupo Universal
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <GroupList
+                groups={universalGroups}
+                loading={universalLoading}
+                error={universalError}
+                onEdit={handleEditGroup}
+                onDelete={handleDeleteGroup}
+                onSync={handleSyncGroup}
+                onSyncAll={handleSyncAll}
+                onViewMessages={handleViewMessages}
+                onLeave={handleLeaveGroup}
+                onCreateGroup={() => {
+                  setSelectedGroup(null)
+                  setIsCreatingUniversal(true)
+                  setShowGroupForm(true)
+                }}
+                groupNotifications={groupNotifications}
+                onViewNotifications={handleViewNotifications}
+              />
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* Group Form Dialog */}
@@ -641,6 +852,7 @@ export default function GroupsPage() {
         }}
         loading={actionLoading}
         error={actionError}
+        disableUniversalLink={!isCreatingUniversal}
       />
       
 

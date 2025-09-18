@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS group_families (
   current_groups TEXT[] DEFAULT '{}',
   max_participants_per_group INTEGER DEFAULT 1024,
   total_participants INTEGER DEFAULT 0,
+  system_phone TEXT DEFAULT '554584154115',
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

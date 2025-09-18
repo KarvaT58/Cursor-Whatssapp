@@ -31,7 +31,7 @@ export interface ParticipantFilter {
 }
 
 export class GroupLinkSystem {
-  private supabase: any
+  private supabase: any // eslint-disable-line @typescript-eslint/no-explicit-any
   private zApiClient: ZApiClient
 
   constructor() {
@@ -76,12 +76,14 @@ export class GroupLinkSystem {
   async createUniversalLinkSystem(
     groupId: string,
     groupName: string,
-    userId: string
+    userId: string,
+    systemPhone?: string
   ): Promise<{ success: boolean; data?: GroupLink; error?: string }> {
     try {
       console.log('🔗 CRIANDO SISTEMA DE LINKS UNIVERSAIS ===')
       console.log('Group ID:', groupId)
       console.log('Group Name:', groupName)
+      console.log('System Phone:', systemPhone || 'Não fornecido')
 
       // 1. Extrair nome base (ex: "faculdade 01" -> "faculdade")
       const baseName = this.extractBaseName(groupName)
@@ -90,7 +92,7 @@ export class GroupLinkSystem {
       // 2. Verificar se já existe uma família de grupos
       const { createClient } = await import('@/lib/supabase/server')
       const supabase = await createClient()
-      const { data: existingFamily, error: familyError } = await supabase
+      const { data: existingFamily } = await supabase
         .from('group_families')
         .select('*')
         .eq('base_name', baseName)
@@ -123,6 +125,7 @@ export class GroupLinkSystem {
             current_groups: [groupId],
             max_participants_per_group: 1024,
             total_participants: 0,
+            system_phone: systemPhone || '554584154115',
             user_id: userId
           })
           .select()
@@ -178,12 +181,14 @@ export class GroupLinkSystem {
   async processUniversalLinkEntry(
     universalLink: string,
     participantPhone: string,
-    participantName?: string
-  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    participantName?: string, // eslint-disable-line @typescript-eslint/no-unused-vars
+    systemPhone?: string
+  ): Promise<{ success: boolean; data?: any; error?: string }> { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
       console.log('🔗 PROCESSANDO ENTRADA VIA LINK UNIVERSAL ===')
       console.log('Universal Link:', universalLink)
       console.log('Participant Phone:', participantPhone)
+      console.log('System Phone:', systemPhone || 'Não fornecido')
 
       const { createClient } = await import('@/lib/supabase/server')
       const supabase = await createClient()
@@ -254,7 +259,7 @@ export class GroupLinkSystem {
       // Se não há grupo disponível, criar um novo
       if (!targetGroup) {
         console.log('🆕 Nenhum grupo disponível, criando novo grupo...')
-        const newGroupResult = await this.createNewGroupInFamily(groupLink.group_families)
+        const newGroupResult = await this.createNewGroupInFamily(groupLink.group_families, systemPhone)
         
         if (!newGroupResult.success) {
           return { success: false, error: newGroupResult.error }
@@ -359,7 +364,7 @@ export class GroupLinkSystem {
   /**
    * Cria novo grupo automaticamente na família
    */
-  private async createNewGroupInFamily(family: any): Promise<{ success: boolean; data?: any; error?: string }> {
+  private async createNewGroupInFamily(family: any, systemPhone?: string): Promise<{ success: boolean; data?: any; error?: string }> { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
       console.log('🆕 CRIANDO NOVO GRUPO NA FAMÍLIA ===')
       console.log('Family:', family.name)
@@ -373,7 +378,7 @@ export class GroupLinkSystem {
       console.log('New Group Name:', newGroupName)
 
       // 2. Buscar configurações do primeiro grupo da família para replicar
-      const firstGroup = family.whatsapp_groups?.[0]
+        const firstGroup = family.whatsapp_groups?.[0] // eslint-disable-line @typescript-eslint/no-explicit-any
       if (!firstGroup) {
         return { success: false, error: 'Não foi possível encontrar grupo base para replicar configurações' }
       }
@@ -382,9 +387,10 @@ export class GroupLinkSystem {
       const zApiClient = await this.getZApiClient()
       
       // Incluir AMBOS os números: o fixo do sistema e o conectado no Z-API
-      const systemPhone = '554584154115' // Número fixo do sistema
+      const defaultSystemPhone = '554584154115' // Número padrão do sistema
+      const finalSystemPhone = systemPhone || defaultSystemPhone
       const zApiPhone = '554598228660'   // Número conectado no Z-API
-      const initialParticipants = [systemPhone, zApiPhone]
+      const initialParticipants = [finalSystemPhone, zApiPhone]
       
       const createResult = await zApiClient.createGroup({
         name: newGroupName,
@@ -399,7 +405,18 @@ export class GroupLinkSystem {
 
       console.log('✅ Grupo criado no WhatsApp:', createResult.data)
 
-      // 4. Salvar grupo no banco replicando configurações
+      // 4. Buscar o link universal da família para associar ao novo grupo
+      const { data: familyLink, error: linkError } = await supabase
+        .from('group_links')
+        .select('universal_link')
+        .eq('group_family', family.id)
+        .single()
+
+      if (linkError) {
+        console.warn('⚠️ Erro ao buscar link da família:', linkError)
+      }
+
+      // 5. Salvar grupo no banco replicando configurações
       const { data: newGroup, error: groupError } = await supabase
         .from('whatsapp_groups')
         .insert({
@@ -412,14 +429,16 @@ export class GroupLinkSystem {
           admin_only_message: firstGroup.admin_only_message || false,
           admin_only_settings: firstGroup.admin_only_settings || false,
           require_admin_approval: firstGroup.require_admin_approval || false,
-          admin_only_add_member: firstGroup.admin_only_add_member || false
+          admin_only_add_member: firstGroup.admin_only_add_member || false,
+          group_family: family.id, // ✅ ASSOCIAR À FAMÍLIA!
+          universal_link: familyLink?.universal_link || null // ✅ ASSOCIAR LINK UNIVERSAL!
         })
         .select()
         .single()
 
       if (groupError) throw groupError
 
-      // 5. Aplicar configurações do grupo (replicar do primeiro grupo)
+      // 6. Aplicar configurações do grupo (replicar do primeiro grupo)
       if (firstGroup.admin_only_message !== undefined || 
           firstGroup.admin_only_settings !== undefined || 
           firstGroup.require_admin_approval !== undefined || 
@@ -437,7 +456,7 @@ export class GroupLinkSystem {
         }
       }
 
-      // 6. Atualizar família com novo grupo
+      // 7. Atualizar família com novo grupo
       const updatedGroups = [...family.current_groups, newGroup.id]
       const { error: updateError } = await supabase
         .from('group_families')
@@ -449,7 +468,7 @@ export class GroupLinkSystem {
 
       if (updateError) throw updateError
 
-      // 7. Atualizar link universal com novo grupo
+      // 8. Atualizar link universal com novo grupo
       const { error: linkUpdateError } = await supabase
         .from('group_links')
         .update({
@@ -526,7 +545,7 @@ export class GroupLinkSystem {
     }
   }
 
-  private async checkDuplicateInFamily(phone: string, groups: any[]): Promise<boolean> {
+  private async checkDuplicateInFamily(phone: string, groups: any[]): Promise<boolean> { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
       console.log('🔍 Verificando duplicatas em', groups.length, 'grupos')
       
@@ -546,7 +565,7 @@ export class GroupLinkSystem {
     }
   }
 
-  private async findAvailableGroup(groups: any[]): Promise<any> {
+  private async findAvailableGroup(groups: any[]): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
     try {
       console.log('🔍 BUSCANDO GRUPO COM VAGA DISPONÍVEL ===')
       console.log('Total de grupos na família:', groups.length)
@@ -624,7 +643,7 @@ export class GroupLinkSystem {
     }
   }
 
-  private async updateParticipantCounters(linkId: string, groupId: string): Promise<void> {
+  private async updateParticipantCounters(linkId: string, groupId: string): Promise<void> { // eslint-disable-line @typescript-eslint/no-unused-vars
     try {
       // TODO: Implementar contadores de participantes
       console.log('Contadores de participantes não implementados ainda')

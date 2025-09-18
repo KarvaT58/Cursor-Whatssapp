@@ -305,6 +305,59 @@ export interface Database {
           updated_at?: string
         }
       }
+      whatsapp_groups: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          participants: string[]
+          whatsapp_id: string
+          image_url: string | null
+          user_id: string
+          created_at: string
+          updated_at: string
+          admin_only_message: boolean
+          admin_only_settings: boolean
+          require_admin_approval: boolean
+          admin_only_add_member: boolean
+          universal_link: string | null
+          group_family: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          participants?: string[]
+          whatsapp_id?: string
+          image_url?: string | null
+          user_id: string
+          created_at?: string
+          updated_at?: string
+          admin_only_message?: boolean
+          admin_only_settings?: boolean
+          require_admin_approval?: boolean
+          admin_only_add_member?: boolean
+          universal_link?: string | null
+          group_family?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          participants?: string[]
+          whatsapp_id?: string
+          image_url?: string | null
+          user_id?: string
+          created_at?: string
+          updated_at?: string
+          admin_only_message?: boolean
+          admin_only_settings?: boolean
+          require_admin_approval?: boolean
+          admin_only_add_member?: boolean
+          universal_link?: string | null
+          group_family?: string | null
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -317,7 +370,7 @@ export interface Database {
         type: 'join_request' | 'admin_promotion' | 'member_added' | 'member_removed' | 'group_updated'
         title: string
         message: string
-        data: any
+        data: any // eslint-disable-line @typescript-eslint/no-explicit-any
         read: boolean
         created_at: string
         updated_at: string
@@ -329,7 +382,7 @@ export interface Database {
         type: 'join_request' | 'admin_promotion' | 'member_added' | 'member_removed' | 'group_updated'
         title: string
         message: string
-        data?: any
+        data?: any // eslint-disable-line @typescript-eslint/no-explicit-any
         read?: boolean
         created_at?: string
         updated_at?: string
@@ -341,7 +394,7 @@ export interface Database {
         type?: 'join_request' | 'admin_promotion' | 'member_added' | 'member_removed' | 'group_updated'
         title?: string
         message?: string
-        data?: any
+        data?: any // eslint-disable-line @typescript-eslint/no-explicit-any
         read?: boolean
         created_at?: string
         updated_at?: string
