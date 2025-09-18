@@ -36,6 +36,7 @@ import {
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { toast } from 'sonner'
 
 type Group = Database['public']['Tables']['whatsapp_groups']['Row']
 
@@ -190,6 +191,30 @@ export function GroupCard({
               </div>
             </div>
 
+
+            {/* Link Universal */}
+            {group.universal_link && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-blue-800 mb-1">Link Universal</p>
+                    <p className="text-xs text-blue-600 truncate">{group.universal_link}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs ml-2"
+                    onClick={() => {
+                      navigator.clipboard.writeText(group.universal_link!)
+                      toast.success('Link universal copiado para a área de transferência!')
+                    }}
+                  >
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Copiar
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Informações adicionais */}
             <div className="flex items-center justify-between text-xs text-muted-foreground">

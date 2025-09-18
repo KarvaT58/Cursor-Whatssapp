@@ -9,6 +9,8 @@ import {
   IconSettings,
   IconHelp,
   IconSearch,
+  IconLink,
+  IconShield,
 } from '@tabler/icons-react'
 
 import { NavMain } from '@/components/nav-main'
@@ -44,6 +46,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: 'Grupos',
         url: '/dashboard/groups',
         icon: IconMessageDots,
+      },
+      {
+        title: 'Links Universais',
+        url: '/dashboard/links',
+        icon: IconLink,
+      },
+      {
+        title: 'Blacklist',
+        url: '/dashboard/blacklist',
+        icon: IconShield,
       },
       {
         title: 'Campanhas',

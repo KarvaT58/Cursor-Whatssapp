@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ZApiClient } from '@/lib/z-api/client'
+import { GroupLinkSystem } from '@/lib/group-link-system'
 import { z } from 'zod'
 
 const CreateGroupSchema = z.object({
@@ -361,6 +362,26 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.warn('⚠️ Erro ao atualizar configurações do grupo:', error)
       }
+    }
+
+    // Criar sistema de links universais para o grupo
+    console.log('🔗 Criando sistema de links universais para o grupo...')
+    try {
+      const groupLinkSystem = new GroupLinkSystem()
+      const linkResult = await groupLinkSystem.createUniversalLinkSystem(
+        group.id,
+        validatedData.name,
+        user.id
+      )
+      
+      if (linkResult.success) {
+        console.log('✅ Sistema de links universais criado com sucesso')
+        console.log('Link universal:', linkResult.data?.universal_link)
+      } else {
+        console.warn('⚠️ Grupo criado mas sistema de links não foi criado:', linkResult.error)
+      }
+    } catch (linkError) {
+      console.warn('⚠️ Erro ao criar sistema de links universais:', linkError)
     }
 
     // Retornar resposta baseada no resultado
