@@ -50,6 +50,18 @@ export default function GroupsPage() {
   const [universalError, setUniversalError] = useState<string | null>(null)
   const [isCreatingUniversal, setIsCreatingUniversal] = useState(false)
 
+  const {
+    groups,
+    loading,
+    error,
+    createGroup,
+    updateGroup,
+    deleteGroup,
+    addParticipant,
+    removeParticipant,
+    refreshGroups,
+  } = useWhatsAppGroups({ userId: user?.id, excludeUniversal: true })
+
   // Configuração da paginação
   const ITEMS_PER_PAGE = 50
   
@@ -76,18 +88,6 @@ export default function GroupsPage() {
     universalGroupsPagination.startIndex,
     universalGroupsPagination.endIndex
   )
-
-  const {
-    groups,
-    loading,
-    error,
-    createGroup,
-    updateGroup,
-    deleteGroup,
-    addParticipant,
-    removeParticipant,
-    refreshGroups,
-  } = useWhatsAppGroups({ userId: user?.id, excludeUniversal: true })
 
   const { notifications } = useGroupNotifications()
 
