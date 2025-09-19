@@ -45,8 +45,28 @@ export function GroupChat({ group, onClose }: GroupChatProps) {
   const [sending, setSending] = useState(false)
   const [, setShowParticipants] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const { messages, loading, error, sendMessage } = useGroupMessages(group.id)
+  const { sendMessage, getMessages, isLoading, error, clearError } = useGroupMessages()
+  const [messages, setMessages] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
   const { sendGroupMessage } = useZApi()
+
+  // Load messages when component mounts
+  useEffect(() => {
+    const loadMessages = async () => {
+      try {
+        setLoading(true)
+        const result = await getMessages({ groupId: group.id })
+        setMessages(result.messages || [])
+      } catch (err) {
+        console.error('Erro ao carregar mensagens:', err)
+        setMessages([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadMessages()
+  }, [group.id, getMessages])
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -60,7 +80,16 @@ export function GroupChat({ group, onClose }: GroupChatProps) {
     setSending(true)
     try {
       // Send to database first
-      await sendMessage(message.trim())
+      const result = await sendMessage({
+        groupId: group.id,
+        content: message.trim(),
+        type: 'text'
+      })
+
+      // Add the new message to local state
+      if (result.message_data) {
+        setMessages(prev => [...prev, result.message_data])
+      }
 
       // Then send via Z-API if group has whatsapp_id
       if (group.whatsapp_id) {
@@ -196,7 +225,12 @@ export function GroupChat({ group, onClose }: GroupChatProps) {
       <CardContent className="flex-1 p-0 overflow-hidden">
         <ScrollArea className="h-full p-4">
           <div className="space-y-4">
-            {messages.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Carregando mensagens...</p>
+              </div>
+            ) : !messages || messages.length === 0 ? (
               <div className="text-center py-8">
                 <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">
@@ -207,7 +241,7 @@ export function GroupChat({ group, onClose }: GroupChatProps) {
                 </p>
               </div>
             ) : (
-              messages.map((msg) => (
+              messages?.map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex ${
@@ -243,6 +277,23 @@ export function GroupChat({ group, onClose }: GroupChatProps) {
       </CardContent>
 
       <Separator />
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-4 bg-destructive/10 border-t">
+          <div className="text-sm text-destructive">
+            Erro: {error}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearError}
+              className="ml-2 h-auto p-0 text-destructive hover:text-destructive/80"
+            >
+              ✕
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Message Input */}
       <div className="p-4">

@@ -1201,6 +1201,45 @@ export class ZApiClient {
     }
   }
 
+  // Adicionar participantes ao grupo
+  async addParticipants(groupId: string, phones: string[]): Promise<ZApiResponse> {
+    console.log('➕ Adicionando participantes ao grupo:', { groupId, phones })
+    
+    try {
+      const requestData = {
+        groupId,
+        phones,
+        autoInvite: true // Permitir convite automático para números não salvos
+      }
+
+      const url = `${this.baseUrl}/instances/${this.instanceId}/token/${this.instanceToken}/add-participant`
+      
+      console.log('📤 Enviando requisição para adicionar participantes:', {
+        url,
+        data: requestData
+      })
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(requestData)
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('❌ Erro na resposta da Z-API ao adicionar participantes:', errorData)
+        return { success: false, error: errorData.message || 'Erro desconhecido da Z-API' }
+      }
+      
+      const responseData = await response.json()
+      console.log('✅ Resposta da Z-API ao adicionar participantes:', responseData)
+      return { success: true, data: responseData }
+    } catch (error: any) {
+      console.error('❌ Erro ao chamar Z-API para adicionar participantes:', error)
+      return { success: false, error: error.message || 'Erro de rede ou interno' }
+    }
+  }
+
   // Adicionar administradores ao grupo
   async addAdmins(groupId: string, phones: string[]): Promise<ZApiResponse> {
     console.log('👑 Adicionando administradores ao grupo:', { groupId, phones })

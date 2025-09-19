@@ -80,7 +80,7 @@ export async function POST(
         console.log('🔍 DEBUG API: Iniciando adição de participantes')
         const addData = addParticipantsSchema.parse(body)
         console.log('🔍 DEBUG API: Dados validados:', addData)
-        result = await zApiClient.addGroupParticipants(groupId, addData.phones)
+        result = await zApiClient.addParticipants(groupId, addData.phones)
         console.log('🔍 DEBUG API: Resultado da Z-API:', result)
         break
 
