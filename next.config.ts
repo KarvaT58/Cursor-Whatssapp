@@ -26,9 +26,11 @@ const nextConfig: NextConfig = {
 
   // Configurações experimentais otimizadas
   experimental: {
-    serverComponentsExternalPackages: ['@supabase/supabase-js'],
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
   },
+  
+  // Configurações de pacotes externos
+  serverExternalPackages: ['@supabase/supabase-js'],
 
   // Configurações de headers para segurança e performance
   async headers() {
