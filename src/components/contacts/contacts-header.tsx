@@ -14,6 +14,9 @@ interface ContactsHeaderProps {
   importComponent?: React.ReactNode
   syncing?: boolean
   canSync?: boolean
+  currentPage?: number
+  totalPages?: number
+  itemsPerPage?: number
 }
 
 export function ContactsHeader({
@@ -26,6 +29,9 @@ export function ContactsHeader({
   importComponent,
   syncing = false,
   canSync = true,
+  currentPage,
+  totalPages,
+  itemsPerPage = 50,
 }: ContactsHeaderProps) {
   return (
     <div className="border-b bg-background p-4">
@@ -38,6 +44,11 @@ export function ContactsHeader({
               {filteredCount === totalContacts
                 ? `${totalContacts} contatos`
                 : `${filteredCount} de ${totalContacts} contatos`}
+              {totalPages && totalPages > 1 && (
+                <span className="ml-2 text-xs">
+                  (Página {currentPage} de {totalPages})
+                </span>
+              )}
             </span>
           </div>
         </div>

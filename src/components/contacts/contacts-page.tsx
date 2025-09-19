@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react'
 import { useContacts } from '@/hooks/use-contacts'
 import { useRealtimeContacts } from '@/hooks/use-realtime-contacts'
 import { useSettings } from '@/hooks/use-settings'
+import { usePagination } from '@/hooks/use-pagination'
 import { ContactsList } from './contacts-list'
 import { ContactForm } from './contact-form'
 import { ContactsHeader } from './contacts-header'
 import { ContactsImport } from './contacts-import'
+import { ContactsPagination } from './contacts-pagination'
 
 export function ContactsPage() {
   const [showForm, setShowForm] = useState(false)
@@ -86,6 +88,19 @@ export function ContactsPage() {
         contact.email.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
+  // Configuração da paginação
+  const ITEMS_PER_PAGE = 50
+  const pagination = usePagination({
+    totalItems: filteredContacts.length,
+    itemsPerPage: ITEMS_PER_PAGE,
+  })
+
+  // Contatos da página atual
+  const currentPageContacts = filteredContacts.slice(
+    pagination.startIndex,
+    pagination.endIndex
+  )
+
   const handleEditContact = (contactId: string) => {
     setEditingContact(contactId)
     setShowForm(true)
@@ -140,6 +155,9 @@ export function ContactsPage() {
         filteredCount={filteredContacts.length}
         syncing={syncing}
         canSync={!!zApiInstances?.find((instance) => instance.is_active)}
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        itemsPerPage={ITEMS_PER_PAGE}
         importComponent={
           <ContactsImport onImportCompleted={handleImportCompleted} />
         }
@@ -156,13 +174,22 @@ export function ContactsPage() {
             updateContact={updateContact}
           />
         ) : (
-          <ContactsList
-            contacts={filteredContacts}
-            loading={loading}
-            error={error}
-            onEditContact={handleEditContact}
-            onDeleteContact={deleteContact}
-          />
+          <>
+            <ContactsList
+              contacts={currentPageContacts}
+              loading={loading}
+              error={error}
+              onEditContact={handleEditContact}
+              onDeleteContact={deleteContact}
+            />
+            {filteredContacts.length > ITEMS_PER_PAGE && (
+              <ContactsPagination
+                pagination={pagination}
+                totalItems={filteredContacts.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+              />
+            )}
+          </>
         )}
       </div>
     </div>

@@ -39,7 +39,7 @@ export async function POST(
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
     
-    const { data: groupLink, error: linkError } = await supabase
+    const { data: groupLinks, error: linkError } = await supabase
       .from('group_links')
       .select(`
         *,
@@ -48,7 +48,8 @@ export async function POST(
         )
       `)
       .like('universal_link', `%/join/${universalLink}`)
-      .single()
+
+    const groupLink = groupLinks?.[0] // Pega o primeiro resultado
 
     if (linkError || !groupLink) {
       return NextResponse.json({
@@ -88,7 +89,7 @@ export async function POST(
       return NextResponse.json({
         success: false,
         error: 'Dados inválidos',
-        details: error.errors
+        details: error.issues
       }, { status: 400 })
     }
 
@@ -118,7 +119,7 @@ export async function GET(
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
 
-    const { data: groupLink, error: linkError } = await supabase
+    const { data: groupLinks, error: linkError } = await supabase
       .from('group_links')
       .select(`
         *,
@@ -134,7 +135,8 @@ export async function GET(
         )
       `)
       .like('universal_link', `%/join/${universalLink}`)
-      .single()
+
+    const groupLink = groupLinks?.[0] // Pega o primeiro resultado
 
     if (linkError || !groupLink) {
       return NextResponse.json({ 
