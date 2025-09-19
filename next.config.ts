@@ -12,24 +12,24 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   // Configurações otimizadas para Vercel
-  output: 'standalone',
+  // output: 'standalone', // Comentado para Vercel
   poweredByHeader: false,
   compress: true,
   generateEtags: false,
-  
+
   // Configurações de imagem para otimização
   images: {
     domains: ['via.placeholder.com', 'localhost'],
     formats: ['image/webp', 'image/avif'],
     minimumCacheTTL: 60,
   },
-  
+
   // Configurações experimentais otimizadas
   experimental: {
     serverComponentsExternalPackages: ['@supabase/supabase-js'],
     optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react'],
   },
-  
+
   // Configurações de headers para segurança e performance
   async headers() {
     return [
@@ -61,7 +61,7 @@ const nextConfig: NextConfig = {
       },
     ]
   },
-  
+
   // Configurações de redirecionamento
   async redirects() {
     return [
