@@ -75,3 +75,5 @@ Se houver problemas:
 ---
 
 **🎯 Com essas configurações, sua aplicação estará 100% funcional no Vercel!**
+
+
