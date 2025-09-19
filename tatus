@@ -1,0 +1,184 @@
+[1mdiff --git a/.env.example b/.env.example[m
+[1mindex 5ea0114..d61542f 100644[m
+[1m--- a/.env.example[m
+[1m+++ b/.env.example[m
+[36m@@ -1,36 +1,33 @@[m
+[31m-# Database[m
+[31m-NEXT_PUBLIC_SUPABASE_URL=https://umdzvfpnsfkmswaejavr.supabase.co[m
+[32m+[m[32m# Configurações do Supabase[m
+[32m+[m[32mNEXT_PUBLIC_SUPABASE_URL=your_supabase_url[m
+ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key[m
+ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key[m
+ [m
+[31m-# Z-API[m
+[31m-Z_API_URL=https://api.z-api.io[m
+[31m-Z_API_TOKEN=your_z_api_token[m
+[32m+[m[32m# Configurações da aplicação[m
+[32m+[m[32mNEXT_PUBLIC_APP_URL=https://your-app.vercel.app[m
+[32m+[m[32mNODE_ENV=production[m
+ [m
+[31m-# Redis (for BullMQ) - Currently disabled for development[m
+[31m-# REDIS_URL=your_redis_url[m
+[31m-# UPSTASH_REDIS_REST_URL=your_upstash_redis_url[m
+[32m+[m[32m# Configurações do Z-API (opcional - pode ser configurado via interface)[m
+[32m+[m[32mZ_API_BASE_URL=https://api.z-api.io/instances[m
+ [m
+[31m-# Sentry (for error monitoring)[m
+[31m-NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn[m
+[31m-SENTRY_ORG=your_sentry_org[m
+[31m-SENTRY_PROJECT=your_sentry_project[m
+[31m-SENTRY_AUTH_TOKEN=your_sentry_auth_token[m
+[32m+[m[32m# Configurações de timezone[m
+[32m+[m[32mTZ=America/Sao_Paulo[m
+ [m
+[31m-# App Configuration[m
+[31m-NEXT_PUBLIC_APP_URL=http://localhost:3000[m
+[31m-NEXT_PUBLIC_APP_VERSION=${VERCEL_GIT_COMMIT_SHA}[m
+[31m-NEXT_PUBLIC_APP_ENV=development[m
+[32m+[m[32m# Configurações do Vercel[m
+[32m+[m[32mVERCEL_URL=your-app.vercel.app[m
+[32m+[m[32mVERCEL_ENV=production[m
+ [m
+[31m-# Logging[m
+[31m-LOG_LEVEL=info[m
+[31m-LOG_FILE_PATH=./logs[m
+[32m+[m[32m# Configurações de Redis (se usando)[m
+[32m+[m[32mREDIS_URL=your_redis_url[m
+ [m
+[31m-# Vercel Configuration[m
+[31m-VERCEL_URL=[m
+[31m-VERCEL_ENV=development[m
+[31m-VERCEL_REGION=[m
+[32m+[m[32m# Configurações de email (se usando)[m
+[32m+[m[32mSMTP_HOST=your_smtp_host[m
+[32m+[m[32mSMTP_PORT=587[m
+[32m+[m[32mSMTP_USER=your_smtp_user[m
+[32m+[m[32mSMTP_PASS=your_smtp_password[m
+ [m
+[31m-# Igniter.js Configuration[m
+[31m-NEXT_PUBLIC_IGNITER_API_URL=http://localhost:3000[m
+[31m-NEXT_PUBLIC_IGNITER_API_BASE_PATH=/api/v1[m
+\ No newline at end of file[m
+[32m+[m[32m# Configurações de Sentry (opcional)[m
+[32m+[m[32mSENTRY_DSN=your_sentry_dsn[m
+[32m+[m[32mSENTRY_ORG=your_sentry_org[m
+[32m+[m[32mSENTRY_PROJECT=your_sentry_project[m
+[32m+[m[32mSENTRY_AUTH_TOKEN=your_sentry_auth_token[m
+\ No newline at end of file[m
+[1mdiff --git a/CALENDAR-SYSTEM.md b/CALENDAR-SYSTEM.md[m
+[1mnew file mode 100644[m
+[1mindex 0000000..1786f5d[m
+[1m--- /dev/null[m
+[1m+++ b/CALENDAR-SYSTEM.md[m
+[36m@@ -0,0 +1,163 @@[m
+[32m+[m[32m# 📅 Sistema de Calendário de Bloqueios[m
+[32m+[m
+[32m+[m[32m## 🎯 Visão Geral[m
+[32m+[m
+[32m+[m[32mO sistema de calendário permite **bloquear datas específicas** para que campanhas não executem automaticamente, mantendo-as ativas para outros dias.[m
+[32m+[m
+[32m+[m[32m## ✨ Funcionalidades[m
+[32m+[m
+[32m+[m[32m- ✅ **Bloqueio de datas individuais** ou períodos[m
+[32m+[m[32m- ✅ **Motivo do bloqueio** (opcional)[m
+[32m+[m[32m- ✅ **Interface visual** com calendário interativo[m
+[32m+[m[32m- ✅ **Lista de datas bloqueadas** com opção de remoção[m
+[32m+[m[32m- ✅ **Integração com scheduler** automático[m
+[32m+[m[32m- ✅ **Campanha permanece ativa** nos dias não bloqueados[m
+[32m+[m
+[32m+[m[32m## 🚀 Como Usar[m
+[32m+[m
+[32m+[m[32m### **1. Acessar o Calendário**[m
+[32m+[m[32m- Vá para **"Editar Campanha"**[m
+[32m+[m[32m- O calendário aparece no topo da página[m
+[32m+[m[32m- Selecione as datas que deseja bloquear[m
+[32m+[m
+[32m+[m[32m### **2. Bloquear Datas**[m
+[32m+[m[32m- **Data única**: Clique em uma data[m
+[32m+[m[32m- **Período**: Clique e arraste para selecionar múltiplas datas[m
+[32m+[m[32m- **Motivo**: Adicione um motivo (opcional)[m
+[32m+[m[32m- **Confirmar**: Clique em "Bloquear X data(s) selecionada(s)"[m
+[32m+[m
+[32m+[m[32m### **3. Gerenciar Bloqueios**[m
+[32m+[m[32m- **Visualizar**: Datas bloqueadas aparecem em vermelho[m
+[32m+[m[32m- **Remover**: Clique no ícone de lixeira para desbloquear[m
+[32m+[m[32m- **Lista**: Veja todas as datas bloqueadas com motivos[m
+[32m+[m
+[32m+[m[32m## 📊 Exemplo Prático[m
+[32m+[m
+[32m+[m[32m### **Cenário: Campanha de Segunda a Sexta**[m
+[32m+[m[32m```[m
+[32m+[m[32mCampanha: "Promoção Semanal"[m
+[32m+[m[32mHorário: 09:00 (todos os dias)[m
+[32m+[m[32mBloqueios: Sábados e domingos[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m**Resultado:**[m
+[32m+[m[32m- ✅ **Segunda 09:00** → Executa automaticamente[m
+[32m+[m[32m- ✅ **Terça 09:00** → Executa automaticamente[m[41m  [m
+[32m+[m[32m- ✅ **Quarta 09:00** → Executa automaticamente[m
+[32m+[m[32m- ✅ **Quinta 09:00** → Executa automaticamente[m
+[32m+[m[32m- ✅ **Sexta 09:00** → Executa automaticamente[m
+[32m+[m[32m- 🚫 **Sábado 09:00** → NÃO executa (bloqueado)[m
+[32m+[m[32m- 🚫 **Domingo 09:00** → NÃO executa (bloqueado)[m
+[32m+[m
+[32m+[m[32m### **Cenário: Bloqueio de Feriados**[m
+[32m+[m[32m```[m
+[32m+[m[32mCampanha: "Ofertas Diárias"[m
+[32m+[m[32mHorário: 14:00 (todos os dias)[m
+[32m+[m[32mBloqueios: 25/12, 01/01, 15/11[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m**Resultado:**[m
+[32m+[m[32m- ✅ **Dias normais 14:00** → Executa automaticamente[m
+[32m+[m[32m- 🚫 **25/12 14:00** → NÃO executa (Natal)[m
+[32m+[m[32m- 🚫 **01/01 14:00** → NÃO executa (Ano Novo)[m
+[32m+[m[32m- 🚫 **15/11 14:00** → NÃO executa (Proclamação da República)[m
+[32m+[m
+[32m+[m[32m## 🔧 Estrutura Técnica[m
+[32m+[m
+[32m+[m[32m### **Tabela `campaign_blocked_dates`**[m
+[32m+[m[32m```sql[m
+[32m+[m[32m- id: UUID (chave primária)[m
+[32m+[m[32m- campaign_id: UUID (referência à campanha)[m
+[32m+[m[32m- blocked_date: DATE (data bloqueada)[m
+[32m+[m[32m- reason: TEXT (motivo do bloqueio)[m
+[32m+[m[32m- created_at: TIMESTAMP (data de criação)[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### **APIs Disponíveis**[m
+[32m+[m[32m- `GET /api/campaigns/[id]/blocked-dates` - Listar datas bloqueadas[m
+[32m+[m[32m- `POST /api/campaigns/[id]/blocked-dates` - Bloquear datas[m
+[32m+[m[32m- `DELETE /api/campaigns/[id]/blocked-dates?date=YYYY-MM-DD` - Desbloquear data[m
+[32m+[m
+[32m+[m[32m### **Integração com Scheduler**[m
+[32m+[m[32mO scheduler verifica automaticamente:[m
+[32m+[m[32m1. **Horário correto** ✅[m
+[32m+[m[32m2. **Dia da semana válido** ✅[m
+[32m+[m[32m3. **Data não bloqueada** ✅ (NOVO)[m
+[32m+[m[32m4. **Não executada hoje** ✅[m
+[32m+[m
+[32m+[m[32m## 🎨 Interface Visual[m
+[32m+[m
+[32m+[m[32m### **Calendário**[m
+[32m+[m[32m- **Verde**: Datas normais (campanha executa)[m
+[32m+[m[32m- **Vermelho**: Datas bloqueadas (campanha não executa)[m
+[32m+[m[32m- **Seleção**: Clique e arraste para múltiplas datas[m
+[32m+[m
+[32m+[m[32m### **Lista de Bloqueios**[m
+[32m+[m[32m- **Data formatada**: "quinta-feira, 19 de setembro de 2025"[m
+[32m+[m[32m- **Motivo**: Exibido se fornecido[m
+[32m+[m[32m- **Ação**: Botão para remover bloqueio[m
+[32m+[m
+[32m+[m[32m## 🚨 Regras de Negócio[m
+[32m+[m
+[32m+[m[32m### **Bloqueios**[m
+[32m+[m[32m- ✅ **Múltiplas datas** podem ser bloqueadas de uma vez[m
+[32m+[m[32m- ✅ **Períodos** podem ser bloqueados (ex: 1 semana)[m
+[32m+[m[32m- ✅ **Motivos** são opcionais mas recomendados[m
+[32m+[m[32m- ✅ **Datas passadas** podem ser bloqueadas (para histórico)[m
+[32m+[m
+[32m+[m[32m### **Execução**[m
+[32m+[m[32m- 🚫 **Datas bloqueadas** nunca executam[m
+[32m+[m[32m- ✅ **Datas não bloqueadas** executam normalmente[m
+[32m+[m[32m- ✅ **Campanha permanece ativa** mesmo com b
