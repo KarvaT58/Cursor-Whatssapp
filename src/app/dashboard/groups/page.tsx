@@ -7,11 +7,13 @@ import { useGroupNotifications } from '@/hooks/use-group-notifications'
 // import { ZApiClient } from '@/lib/z-api/client'
 import { useGroupSync } from '@/hooks/use-group-sync'
 import { useToast } from '@/hooks/use-toast'
+import { usePagination } from '@/hooks/use-pagination'
 import { GroupList } from '@/components/groups/group-list'
 import { GroupsSearch } from '@/components/groups/groups-search'
 import { GroupForm } from '@/components/groups/group-form'
 import { ParticipantManager } from '@/components/groups/participant-manager'
 import { GroupManagement } from '@/components/groups/GroupManagement'
+import { GroupsPagination } from '@/components/groups/groups-pagination'
 import { Database } from '@/types/database'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -47,6 +49,33 @@ export default function GroupsPage() {
   const [universalLoading, setUniversalLoading] = useState(false)
   const [universalError, setUniversalError] = useState<string | null>(null)
   const [isCreatingUniversal, setIsCreatingUniversal] = useState(false)
+
+  // Configuração da paginação
+  const ITEMS_PER_PAGE = 50
+  
+  // Paginação para grupos normais
+  const groupsPagination = usePagination({
+    totalItems: groups.length,
+    itemsPerPage: ITEMS_PER_PAGE,
+  })
+  
+  // Paginação para grupos universais
+  const universalGroupsPagination = usePagination({
+    totalItems: universalGroups.length,
+    itemsPerPage: ITEMS_PER_PAGE,
+  })
+
+  // Grupos da página atual
+  const currentPageGroups = groups.slice(
+    groupsPagination.startIndex,
+    groupsPagination.endIndex
+  )
+  
+  // Grupos universais da página atual
+  const currentPageUniversalGroups = universalGroups.slice(
+    universalGroupsPagination.startIndex,
+    universalGroupsPagination.endIndex
+  )
 
   const {
     groups,
@@ -692,7 +721,7 @@ export default function GroupsPage() {
         
         <TabsContent value="list">
           <GroupList
-            groups={groups}
+            groups={currentPageGroups}
             loading={loading}
             error={error}
             onEdit={handleEditGroup}
@@ -705,6 +734,13 @@ export default function GroupsPage() {
             groupNotifications={groupNotifications}
             onViewNotifications={handleViewNotifications}
           />
+          {groups.length > ITEMS_PER_PAGE && (
+            <GroupsPagination
+              pagination={groupsPagination}
+              totalItems={groups.length}
+              itemsPerPage={ITEMS_PER_PAGE}
+            />
+          )}
         </TabsContent>
         
         <TabsContent value="search">
@@ -817,24 +853,33 @@ export default function GroupsPage() {
                 </CardContent>
               </Card>
             ) : (
-              <GroupList
-                groups={universalGroups}
-                loading={universalLoading}
-                error={universalError}
-                onEdit={handleEditGroup}
-                onDelete={handleDeleteGroup}
-                onSync={handleSyncGroup}
-                onSyncAll={handleSyncAll}
-                onViewMessages={handleViewMessages}
-                onLeave={handleLeaveGroup}
-                onCreateGroup={() => {
-                  setSelectedGroup(null)
-                  setIsCreatingUniversal(true)
-                  setShowGroupForm(true)
-                }}
-                groupNotifications={groupNotifications}
-                onViewNotifications={handleViewNotifications}
-              />
+              <>
+                <GroupList
+                  groups={currentPageUniversalGroups}
+                  loading={universalLoading}
+                  error={universalError}
+                  onEdit={handleEditGroup}
+                  onDelete={handleDeleteGroup}
+                  onSync={handleSyncGroup}
+                  onSyncAll={handleSyncAll}
+                  onViewMessages={handleViewMessages}
+                  onLeave={handleLeaveGroup}
+                  onCreateGroup={() => {
+                    setSelectedGroup(null)
+                    setIsCreatingUniversal(true)
+                    setShowGroupForm(true)
+                  }}
+                  groupNotifications={groupNotifications}
+                  onViewNotifications={handleViewNotifications}
+                />
+                {universalGroups.length > ITEMS_PER_PAGE && (
+                  <GroupsPagination
+                    pagination={universalGroupsPagination}
+                    totalItems={universalGroups.length}
+                    itemsPerPage={ITEMS_PER_PAGE}
+                  />
+                )}
+              </>
             )}
           </div>
         </TabsContent>
