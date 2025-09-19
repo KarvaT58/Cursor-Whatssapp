@@ -1,0 +1,10 @@
+{
+  "env": {
+    "NEXT_PUBLIC_APP_URL": "https://cursor-whatssapp.vercel.app"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_APP_URL": "https://cursor-whatssapp.vercel.app"
+    }
+  }
+}

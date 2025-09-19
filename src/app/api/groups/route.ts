@@ -402,7 +402,8 @@ export async function POST(request: NextRequest) {
           group.id,
           validatedData.name,
           user.id,
-          validatedData.system_phone // Passar o número do sistema
+          validatedData.system_phone, // Passar o número do sistema
+          request.url // Passar a URL da requisição para detectar o domínio
         )
         
         if (linkResult.success) {

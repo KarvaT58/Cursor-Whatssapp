@@ -77,7 +77,8 @@ export class GroupLinkSystem {
     groupId: string,
     groupName: string,
     userId: string,
-    systemPhone?: string
+    systemPhone?: string,
+    requestUrl?: string
   ): Promise<{ success: boolean; data?: GroupLink; error?: string }> {
     try {
       console.log('🔗 CRIANDO SISTEMA DE LINKS UNIVERSAIS ===')
@@ -136,7 +137,7 @@ export class GroupLinkSystem {
       }
 
       // 3. Gerar link universal
-      const universalLink = this.generateUniversalLink(baseName, familyId)
+      const universalLink = this.generateUniversalLink(baseName, familyId, requestUrl)
       console.log('Universal Link:', universalLink)
 
       // 4. Criar registro do link universal
@@ -501,11 +502,31 @@ export class GroupLinkSystem {
     }
   }
 
-  private generateUniversalLink(baseName: string, familyId: string): string {
+  private generateUniversalLink(baseName: string, familyId: string, requestUrl?: string): string {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
+      let baseUrl = process.env.NEXT_PUBLIC_APP_URL
+      
+      // Se não tiver a variável de ambiente, tentar detectar da requisição
+      if (!baseUrl && requestUrl) {
+        try {
+          const url = new URL(requestUrl)
+          baseUrl = `${url.protocol}//${url.host}`
+        } catch (urlError) {
+          console.warn('Erro ao extrair URL base da requisição:', urlError)
+        }
+      }
+      
+      // Fallback para localhost se não conseguir detectar
+      if (!baseUrl) {
+        baseUrl = 'http://localhost:3000'
+        console.warn('⚠️ Usando localhost como fallback. Configure NEXT_PUBLIC_APP_URL no Vercel.')
+      }
+      
       const encodedName = encodeURIComponent(baseName.toLowerCase().replace(/\s+/g, '-'))
-      return `${baseUrl}/join/${encodedName}-${familyId}`
+      const universalLink = `${baseUrl}/join/${encodedName}-${familyId}`
+      
+      console.log('🔗 Link universal gerado:', universalLink)
+      return universalLink
     } catch (error) {
       console.error('Erro ao gerar link universal:', error)
       return `http://localhost:3000/join/${baseName}-${familyId}`
