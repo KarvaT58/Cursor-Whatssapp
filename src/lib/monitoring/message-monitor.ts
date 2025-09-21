@@ -112,6 +112,75 @@ class MessageMonitor {
     /débito/i
   ]
 
+  // Padrões de links sexuais/pornográficos
+  private readonly ADULT_LINK_PATTERNS = [
+    // Sites pornográficos conhecidos
+    /pornhub\.com/i,
+    /xvideos\.com/i,
+    /xhamster\.com/i,
+    /redtube\.com/i,
+    /youporn\.com/i,
+    /tube8\.com/i,
+    /beeg\.com/i,
+    /xhamster\.live/i,
+    /nuvid\.com/i,
+    /xtube\.com/i,
+    
+    // Sites brasileiros
+    /sexo\.com/i,
+    /bucetas\.com/i,
+    /putaria\.com/i,
+    /pornografia\.com/i,
+    /nude\.com/i,
+    /xvideo\.com/i,
+    /pornbrazil\.com/i,
+    /sexo\.br/i,
+    
+    // Sites de webcam/anúncios
+    /onlyfans\.com/i,
+    /webcam\.com/i,
+    /chaturbate\.com/i,
+    /cam4\.com/i,
+    /myfreecams\.com/i,
+    /stripchat\.com/i,
+    /livejasmin\.com/i,
+    /camsoda\.com/i,
+    
+    // Sites de imagens pornográficas
+    /4chan\.org/i,
+    /8chan\.net/i,
+    /reddit\.com\/r\/(porn|nsfw|gonewild)/i,
+    /imgur\.com\/a\/[a-zA-Z0-9]+/i,
+    
+    // Domínios suspeitos
+    /\.xxx/i,
+    /\.porn/i,
+    /\.adult/i,
+    /\.sex/i,
+    
+    // Links do Telegram com conteúdo adulto
+    /t\.me\/[a-zA-Z0-9_]*sex/i,
+    /t\.me\/[a-zA-Z0-9_]*porn/i,
+    /t\.me\/[a-zA-Z0-9_]*nude/i,
+    /t\.me\/[a-zA-Z0-9_]*putaria/i,
+    
+    // Links do Discord
+    /discord\.gg\/[a-zA-Z0-9_]*sex/i,
+    /discord\.gg\/[a-zA-Z0-9_]*porn/i,
+    /discord\.gg\/[a-zA-Z0-9_]*nude/i,
+    
+    // Links do WhatsApp
+    /wa\.me\/[0-9]+.*sex/i,
+    /wa\.me\/[0-9]+.*porn/i,
+    /wa\.me\/[0-9]+.*nude/i,
+    
+    // Links suspeitos genéricos
+    /[a-zA-Z0-9]*porn[a-zA-Z0-9]*\.com/i,
+    /[a-zA-Z0-9]*sex[a-zA-Z0-9]*\.com/i,
+    /[a-zA-Z0-9]*nude[a-zA-Z0-9]*\.com/i,
+    /[a-zA-Z0-9]*putaria[a-zA-Z0-9]*\.com/i
+  ]
+
   constructor() {
     this.supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -158,6 +227,14 @@ class MessageMonitor {
       if (hasPaymentLink) {
         console.log('🚫 MESSAGE MONITOR: Link de pagamento detectado!')
         await this.banUser(data, 'payment_link')
+        return true
+      }
+
+      // Verificar links sexuais/pornográficos
+      const hasAdultLink = this.checkAdultLinks(data.message)
+      if (hasAdultLink) {
+        console.log('🚫 MESSAGE MONITOR: Link sexual/pornográfico detectado!')
+        await this.banUser(data, 'adult_link')
         return true
       }
 
@@ -281,6 +358,20 @@ class MessageMonitor {
     for (const pattern of this.PAYMENT_PATTERNS) {
       if (pattern.test(message)) {
         console.log(`🚫 MESSAGE MONITOR: Link de pagamento detectado: ${pattern}`)
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
+   * Verifica se a mensagem contém links sexuais/pornográficos
+   */
+  private checkAdultLinks(message: string): boolean {
+    for (const pattern of this.ADULT_LINK_PATTERNS) {
+      if (pattern.test(message)) {
+        console.log(`🚫 MESSAGE MONITOR: Link sexual/pornográfico detectado: ${pattern}`)
         return true
       }
     }
