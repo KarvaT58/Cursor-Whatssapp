@@ -363,6 +363,59 @@ async function handleParticipantAdded(
       return
     }
 
+    // 🔍 VERIFICAR BLACKLIST ANTES DE ADICIONAR
+    console.log('🔍 Verificando blacklist para:', data.participantPhone)
+    const { data: blacklistEntry, error: blacklistError } = await supabase
+      .from('blacklist')
+      .select('*')
+      .eq('phone', data.participantPhone)
+      .eq('user_id', userId)
+      .single()
+
+    if (blacklistError && blacklistError.code !== 'PGRST116') {
+      console.error('❌ Erro ao verificar blacklist:', blacklistError)
+    }
+
+    // Se o participante está na blacklist, remover imediatamente
+    if (blacklistEntry) {
+      console.log('🚫 PARTICIPANTE ENCONTRADO NA BLACKLIST - REMOVENDO AUTOMATICAMENTE')
+      
+      // Remover do grupo via Z-API
+      await removeParticipantFromGroup(data.phone, data.participantPhone, userId, supabase)
+      
+      // Enviar mensagem de banimento
+      await sendBanMessage(data.participantPhone, userId, supabase)
+      
+      // Criar notificação de remoção por blacklist
+      const { error: notificationError } = await supabase
+        .from('group_notifications')
+        .insert({
+          group_id: group.id,
+          user_id: userId,
+          type: 'member_banned',
+          title: 'Participante removido por blacklist',
+          message: `O usuário ${data.participantPhone} foi removido automaticamente do grupo "${group.name}" por estar na blacklist.`,
+          data: {
+            participant_phone: data.participantPhone,
+            group_whatsapp_id: data.phone,
+            group_name: group.name,
+            timestamp: data.momment || Date.now(),
+            source: 'webhook_blacklist_check',
+            reason: 'blacklist'
+          }
+        })
+
+      if (notificationError) {
+        console.error('❌ Erro ao criar notificação de banimento:', notificationError)
+      } else {
+        console.log('✅ Notificação de banimento criada para:', data.participantPhone)
+      }
+
+      return // Não adicionar à lista de participantes
+    }
+
+    console.log('✅ Participante não está na blacklist - permitindo entrada')
+
     // Atualizar lista de participantes no banco
     const currentParticipants = group.participants || []
     if (!currentParticipants.includes(data.participantPhone)) {
@@ -637,5 +690,109 @@ async function handleGroupUpdated(
     }
   } catch (error) {
     console.error('❌ Erro ao processar grupo atualizado:', error)
+  }
+}
+
+// Remover participante do grupo via Z-API
+async function removeParticipantFromGroup(
+  groupId: string,
+  participantPhone: string,
+  userId: string,
+  supabase: any
+) {
+  try {
+    console.log('🚫 Removendo participante do grupo:', { groupId, participantPhone })
+
+    // Buscar instância Z-API ativa
+    const { data: zApiInstance, error: instanceError } = await supabase
+      .from('z_api_instances')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single()
+
+    if (instanceError || !zApiInstance) {
+      console.error('❌ Instância Z-API não encontrada para remoção:', instanceError)
+      return
+    }
+
+    // Fazer requisição para remover participante
+    const response = await fetch(
+      `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/remove-participant`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          groupId: groupId,
+          phone: participantPhone
+        })
+      }
+    )
+
+    const result = await response.json()
+    
+    if (response.ok && result.value) {
+      console.log('✅ Participante removido com sucesso do grupo:', participantPhone)
+    } else {
+      console.error('❌ Erro ao remover participante:', result)
+    }
+
+  } catch (error) {
+    console.error('❌ Erro ao remover participante do grupo:', error)
+  }
+}
+
+// Enviar mensagem de banimento para o contato
+async function sendBanMessage(
+  participantPhone: string,
+  userId: string,
+  supabase: any
+) {
+  try {
+    console.log('📱 Enviando mensagem de banimento para:', participantPhone)
+
+    // Buscar instância Z-API ativa
+    const { data: zApiInstance, error: instanceError } = await supabase
+      .from('z_api_instances')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single()
+
+    if (instanceError || !zApiInstance) {
+      console.error('❌ Instância Z-API não encontrada para envio de mensagem:', instanceError)
+      return
+    }
+
+    // Mensagem de banimento
+    const banMessage = "Você está banido dos grupos do WhatsApp. Contate o administrador para mais informações: (45) 91284-3589"
+
+    // Fazer requisição para enviar mensagem
+    const response = await fetch(
+      `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/send-text`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: participantPhone,
+          message: banMessage
+        })
+      }
+    )
+
+    const result = await response.json()
+    
+    if (response.ok && result.value) {
+      console.log('✅ Mensagem de banimento enviada com sucesso para:', participantPhone)
+    } else {
+      console.error('❌ Erro ao enviar mensagem de banimento:', result)
+    }
+
+  } catch (error) {
+    console.error('❌ Erro ao enviar mensagem de banimento:', error)
   }
 }
