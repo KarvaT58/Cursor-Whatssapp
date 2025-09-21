@@ -1088,7 +1088,38 @@ export class ZApiClient {
 
   // Gerar novo link de convite
   async generateGroupInviteLink(groupId: string, expiresIn?: number): Promise<ZApiResponse> {
-    return this.makeRequest(`/groups/${groupId}/invite-link`, 'POST', { expiresIn })
+    console.log('🔗 Tentando gerar link de convite para o grupo:', { groupId, expiresIn })
+    
+    // Tentar diferentes endpoints possíveis
+    const endpoints = [
+      `/groups/${groupId}/invite-link`,
+      `/group/${groupId}/invite-link`, 
+      `/groups/${groupId}/invite`,
+      `/group/${groupId}/invite`,
+      `/groups/${groupId}/link`,
+      `/group/${groupId}/link`
+    ]
+    
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`🔄 Tentando endpoint: ${endpoint}`)
+        const result = await this.makeRequest(endpoint, 'POST', { expiresIn })
+        
+        if (result.success) {
+          console.log(`✅ Sucesso com endpoint: ${endpoint}`)
+          return result
+        }
+        
+        console.log(`❌ Falhou com endpoint: ${endpoint} - ${result.error}`)
+      } catch (error) {
+        console.log(`❌ Erro com endpoint: ${endpoint} - ${error}`)
+      }
+    }
+    
+    return {
+      success: false,
+      error: 'Nenhum endpoint de geração de link de convite funcionou'
+    }
   }
 
   // Revogar link de convite

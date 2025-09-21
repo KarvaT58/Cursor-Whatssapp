@@ -336,23 +336,62 @@ export class GroupLinkSystem {
       
       const zApiClient = await this.getZApiClient()
       
-      // ✅ USAR O MÉTODO CORRETO: generateGroupInviteLink em vez de getGroupInviteLink
+      // 🔄 TENTAR GERAR LINK DE CONVITE COM MÚLTIPLOS ENDPOINTS
       const inviteLinkResult = await zApiClient.generateGroupInviteLink(targetGroup.whatsapp_id)
       
       if (!inviteLinkResult.success) {
         console.error('❌ Erro ao gerar link de convite:', inviteLinkResult.error)
-        return { success: false, error: 'Erro ao gerar link de convite do grupo' }
+        
+        // 🔄 FALLBACK: Tentar obter metadados do grupo
+        console.log('🔄 Tentando fallback: obter metadados do grupo...')
+        const metadataResult = await zApiClient.getGroupInviteLink(targetGroup.whatsapp_id)
+        
+        if (!metadataResult.success) {
+          return { success: false, error: 'Erro ao obter link de convite do grupo' }
+        }
+        
+        // 🔍 LOG COMPLETO DA RESPOSTA PARA DEBUG
+        console.log('📋 RESPOSTA COMPLETA DA Z-API (metadados):', JSON.stringify(metadataResult.data, null, 2))
+        
+        // ✅ VERIFICAR DIFERENTES POSSÍVEIS CAMPOS NA RESPOSTA
+        const whatsappInviteLink = metadataResult.data?.inviteLink || 
+                                  metadataResult.data?.link || 
+                                  metadataResult.data?.invite_link ||
+                                  metadataResult.data?.groupInviteLink ||
+                                  metadataResult.data?.inviteCode ||
+                                  metadataResult.data?.invite_url ||
+                                  metadataResult.data?.inviteCode ||
+                                  metadataResult.data?.groupInviteCode
+        
+        if (!whatsappInviteLink) {
+          console.error('❌ Link de convite não encontrado na resposta. Estrutura completa:', metadataResult.data)
+          return { success: false, error: 'Link de convite não foi encontrado na resposta da Z-API' }
+        }
+        
+        console.log('✅ Link específico do WhatsApp obtido via metadados:', whatsappInviteLink)
+        return { 
+          success: true, 
+          data: { 
+            groupId: targetGroup.id,
+            groupName: targetGroup.name,
+            whatsappId: targetGroup.whatsapp_id,
+            whatsappInviteLink: whatsappInviteLink,
+            message: `Grupo "${targetGroup.name}" disponível. Use o link específico para entrar.`
+          } 
+        }
       }
 
       // ✅ VERIFICAR DIFERENTES POSSÍVEIS CAMPOS NA RESPOSTA
       const whatsappInviteLink = inviteLinkResult.data?.inviteLink || 
                                 inviteLinkResult.data?.link || 
                                 inviteLinkResult.data?.invite_link ||
-                                inviteLinkResult.data?.groupInviteLink
+                                inviteLinkResult.data?.groupInviteLink ||
+                                inviteLinkResult.data?.inviteCode ||
+                                inviteLinkResult.data?.invite_url
       
       if (!whatsappInviteLink) {
-        console.error('❌ Link de convite não encontrado na resposta:', inviteLinkResult.data)
-        return { success: false, error: 'Link de convite não foi gerado' }
+        console.error('❌ Link de convite não encontrado na resposta. Estrutura completa:', inviteLinkResult.data)
+        return { success: false, error: 'Link de convite não foi encontrado na resposta da Z-API' }
       }
 
       console.log('✅ Link específico do WhatsApp gerado:', whatsappInviteLink)
