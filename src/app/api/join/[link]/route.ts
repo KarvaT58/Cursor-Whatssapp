@@ -125,29 +125,17 @@ export async function GET(
     console.log('✅ Supabase client criado')
 
     console.log('🔍 Buscando link universal no banco...')
+    
+    // Primeira consulta: buscar o group_link
     const { data: groupLinks, error: linkError } = await supabase
       .from('group_links')
-      .select(`
-        *,
-        group_families (
-          name,
-          base_name,
-          total_participants,
-          whatsapp_groups (
-            id,
-            name,
-            participants
-          )
-        )
-      `)
+      .select('*')
       .like('universal_link', `%/join/${universalLink}`)
 
-    console.log('📋 Resultado da consulta:', { groupLinks, linkError })
-
-    const groupLink = groupLinks?.[0] // Pega o primeiro resultado
+    console.log('📋 Resultado da consulta group_links:', { groupLinks, linkError })
 
     if (linkError) {
-      console.error('❌ Erro na consulta ao banco:', linkError)
+      console.error('❌ Erro na consulta group_links:', linkError)
       return NextResponse.json({ 
         success: false, 
         error: 'Erro ao buscar link universal',
@@ -155,7 +143,7 @@ export async function GET(
       }, { status: 500 })
     }
 
-    if (!groupLink) {
+    if (!groupLinks || groupLinks.length === 0) {
       console.log('❌ Link universal não encontrado no banco')
       return NextResponse.json({ 
         success: false, 
@@ -163,25 +151,53 @@ export async function GET(
       }, { status: 404 })
     }
 
-    // Verificar se group_families existe
-    if (!groupLink.group_families) {
-      console.error('❌ group_families é null para o link:', universalLink)
-      console.log('📋 Dados do groupLink:', JSON.stringify(groupLink, null, 2))
+    const groupLink = groupLinks[0]
+    console.log('📋 Group link encontrado:', groupLink)
+
+    // Segunda consulta: buscar a group_family
+    const { data: groupFamilies, error: familyError } = await supabase
+      .from('group_families')
+      .select(`
+        name,
+        base_name,
+        total_participants,
+        whatsapp_groups (
+          id,
+          name,
+          participants
+        )
+      `)
+      .eq('id', groupLink.group_family)
+      .single()
+
+    console.log('📋 Resultado da consulta group_families:', { groupFamilies, familyError })
+
+    if (familyError) {
+      console.error('❌ Erro na consulta group_families:', familyError)
       return NextResponse.json({ 
         success: false, 
-        error: 'Dados do grupo não encontrados' 
+        error: 'Erro ao buscar dados da família do grupo',
+        details: familyError.message
       }, { status: 500 })
     }
 
-    console.log('✅ Link universal encontrado:', groupLink.group_families.name)
+    if (!groupFamilies) {
+      console.error('❌ group_families não encontrada para o ID:', groupLink.group_family)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Família do grupo não encontrada' 
+      }, { status: 404 })
+    }
+
+    console.log('✅ Link universal encontrado:', groupFamilies.name)
     return NextResponse.json({
       success: true,
       data: {
-        familyName: groupLink.group_families.name,
-        baseName: groupLink.group_families.base_name,
-        totalParticipants: groupLink.group_families.total_participants,
-        activeGroups: groupLink.group_families.whatsapp_groups?.length || 0,
-        availableSpots: groupLink.group_families.whatsapp_groups?.reduce(
+        familyName: groupFamilies.name,
+        baseName: groupFamilies.base_name,
+        totalParticipants: groupFamilies.total_participants,
+        activeGroups: groupFamilies.whatsapp_groups?.length || 0,
+        availableSpots: groupFamilies.whatsapp_groups?.reduce(
           (total: number, group: any) => total + (2 - (group.participants?.length || 0)), // eslint-disable-line @typescript-eslint/no-explicit-any
           0
         ) || 0
