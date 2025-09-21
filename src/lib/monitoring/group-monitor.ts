@@ -133,162 +133,28 @@ export class GroupMonitor {
     try {
       console.log(`🔍 Verificando grupo: ${group.name} (${group.whatsapp_id})`)
 
-      // Buscar participantes atuais do grupo via Z-API
-      const currentParticipants = await this.getGroupParticipantsFromZApi(group)
-      
-      if (!currentParticipants) {
-        console.log('⚠️ Não foi possível obter participantes do grupo:', group.name)
+      // Usar participantes salvos no banco (muito mais rápido!)
+      const savedParticipants = group.participants || []
+      console.log(`📋 Participantes salvos no banco: ${savedParticipants.length}`)
+      console.log(`📋 Lista de participantes:`, savedParticipants)
+
+      if (savedParticipants.length === 0) {
+        console.log('ℹ️ Nenhum participante encontrado no grupo:', group.name)
         return
       }
 
-      // Comparar com participantes salvos no banco
-      const savedParticipants = group.participants || []
-      
-      // Encontrar novos participantes
-      const newParticipants = currentParticipants.filter(
-        (participant: string) => !savedParticipants.includes(participant)
-      )
-
-      if (newParticipants.length > 0) {
-        console.log(`🆕 Novos participantes encontrados em ${group.name}:`, newParticipants)
-        
-        // Verificar cada novo participante
-        for (const participant of newParticipants) {
-          await this.checkParticipantBlacklist(participant, group)
-        }
+      // Verificar cada participante contra a blacklist
+      for (const participant of savedParticipants) {
+        await this.checkParticipantBlacklist(participant, group)
       }
 
-      // Atualizar lista de participantes no banco
-      await this.updateGroupParticipants(group.id, currentParticipants)
+      console.log(`✅ Verificação de blacklist concluída para ${group.name}`)
 
     } catch (error) {
       console.error(`❌ Erro ao verificar grupo ${group.name}:`, error)
     }
   }
 
-  /**
-   * Verifica se a instância Z-API está online
-   */
-  private async checkZApiInstanceStatus(zApiInstance: any): Promise<boolean> {
-    try {
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos para status
-
-      const response = await fetch(
-        `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/status`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-Token': zApiInstance.client_token || '',
-          },
-          signal: controller.signal
-        }
-      )
-
-      clearTimeout(timeoutId)
-      const result = await response.json()
-      
-      return response.ok && result.connected === true
-    } catch (error) {
-      console.log('⚠️ Erro ao verificar status da instância Z-API:', error.message)
-      return false
-    }
-  }
-
-  /**
-   * Busca participantes atuais do grupo via Z-API
-   */
-  private async getGroupParticipantsFromZApi(group: any): Promise<string[] | null> {
-    const maxRetries = 2 // Reduzir tentativas
-    const retryDelay = 2000 // 2 segundos
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        // Buscar instância Z-API ativa do usuário
-        const { data: zApiInstance, error: instanceError } = await this.supabase
-          .from('z_api_instances')
-          .select('*')
-          .eq('user_id', group.group_families.user_id)
-          .eq('is_active', true)
-          .single()
-
-        if (instanceError || !zApiInstance) {
-          console.error('❌ Instância Z-API não encontrada para grupo:', group.name)
-          return null
-        }
-
-        // Verificar se a instância está online antes de fazer a requisição
-        console.log(`🔍 Verificando status da instância Z-API para ${group.name}...`)
-        const isOnline = await this.checkZApiInstanceStatus(zApiInstance)
-        
-        if (!isOnline) {
-          console.log(`⚠️ Instância Z-API offline para ${group.name}, pulando verificação`)
-          return null
-        }
-
-        console.log(`✅ Instância Z-API online, buscando participantes do grupo ${group.name}...`)
-
-        // Fazer requisição para obter metadados do grupo com timeout reduzido
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 segundos timeout
-
-        try {
-          const response = await fetch(
-            `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/group-metadata/${group.whatsapp_id}`,
-            {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Client-Token': zApiInstance.client_token || '',
-              },
-              signal: controller.signal
-            }
-          )
-
-          clearTimeout(timeoutId)
-          const result = await response.json()
-          
-          if (response.ok && result.participants) {
-            // Extrair apenas os números de telefone dos participantes
-            const participants = result.participants.map((p: any) => p.phone).filter(Boolean)
-            console.log(`📋 Participantes obtidos do grupo ${group.name}:`, participants.length)
-            console.log(`📋 Lista completa de participantes:`, participants)
-            return participants
-          } else {
-            console.error('❌ Erro ao obter participantes do grupo:', result)
-            return null
-          }
-        } catch (fetchError) {
-          clearTimeout(timeoutId)
-          throw fetchError
-        }
-
-      } catch (error) {
-        const isTimeout = error instanceof Error && error.name === 'AbortError'
-        const errorType = isTimeout ? 'TIMEOUT' : 'NETWORK_ERROR'
-        
-        console.error(`❌ Erro ao buscar participantes via Z-API (tentativa ${attempt}/${maxRetries}) - ${errorType}:`, error.message)
-        
-        if (attempt === maxRetries) {
-          console.error('❌ Falha definitiva ao obter participantes do grupo:', group.name)
-          console.log('⚠️ Usando participantes salvos no banco como fallback')
-          
-          // Fallback: usar participantes salvos no banco
-          const savedParticipants = group.participants || []
-          console.log(`📋 Usando ${savedParticipants.length} participantes salvos no banco`)
-          return savedParticipants
-        }
-        
-        // Aguardar antes da próxima tentativa
-        const waitTime = retryDelay * attempt
-        console.log(`⏳ Aguardando ${waitTime}ms antes da próxima tentativa...`)
-        await new Promise(resolve => setTimeout(resolve, waitTime))
-      }
-    }
-
-    return null
-  }
 
   /**
    * Normaliza número de telefone para comparação
@@ -564,29 +430,6 @@ export class GroupMonitor {
     }
   }
 
-  /**
-   * Atualiza lista de participantes no banco
-   */
-  private async updateGroupParticipants(groupId: string, participants: string[]) {
-    try {
-      const { error: updateError } = await this.supabase
-        .from('whatsapp_groups')
-        .update({
-          participants: participants,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', groupId)
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar participantes:', updateError)
-      } else {
-        console.log('✅ Lista de participantes atualizada no banco')
-      }
-
-    } catch (error) {
-      console.error('❌ Erro ao atualizar participantes:', error)
-    }
-  }
 
   /**
    * Status do monitor
