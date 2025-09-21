@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const { data: groups, error: groupsError } = await supabase
       .from('whatsapp_groups')
       .select('*')
-      .eq('family_id', familyId)
+      .eq('group_family', familyId)
       .eq('is_active', true)
       .order('created_at', { ascending: true })
 
@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
           participants: [zApiInstance.phone_number],
           max_participants: firstGroup.max_participants || 256,
           is_active: true,
-          family_id: familyId,
+          group_family: familyId,
           user_id: firstGroup.user_id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()

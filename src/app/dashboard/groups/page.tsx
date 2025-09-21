@@ -148,7 +148,7 @@ export default function GroupsPage() {
         .from('whatsapp_groups')
         .select('*')
         .eq('user_id', user.id)
-        .not('family_id', 'is', null) // Apenas grupos com family_id
+        .not('group_family', 'is', null) // Apenas grupos com group_family
         .order('created_at', { ascending: false })
 
       if (fetchError) {

@@ -21,7 +21,7 @@ interface Group {
   participants: string[]
   max_participants: number
   is_active: boolean
-  family_id: string
+  group_family: string
 }
 
 export default function JoinGroupPage() {
