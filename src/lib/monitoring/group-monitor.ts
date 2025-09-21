@@ -240,34 +240,60 @@ export class GroupMonitor {
   }
 
   /**
+   * Normaliza número de telefone para comparação
+   */
+  private normalizePhoneNumber(phone: string): string {
+    if (!phone) return ''
+    
+    // Remove todos os caracteres não numéricos
+    let normalized = phone.replace(/\D/g, '')
+    
+    // Se começar com 55 (Brasil), remove
+    if (normalized.startsWith('55')) {
+      normalized = normalized.substring(2)
+    }
+    
+    // Se começar com 0, remove
+    if (normalized.startsWith('0')) {
+      normalized = normalized.substring(1)
+    }
+    
+    return normalized
+  }
+
+  /**
    * Verifica se um participante está na blacklist
    */
   private async checkParticipantBlacklist(participantPhone: string, group: any) {
     try {
-      console.log(`🔍 Verificando blacklist para: ${participantPhone}`)
+      const normalizedParticipantPhone = this.normalizePhoneNumber(participantPhone)
+      console.log(`🔍 Verificando blacklist para: ${participantPhone} (normalizado: ${normalizedParticipantPhone})`)
       console.log(`🔍 User ID do grupo: ${group.group_families.user_id}`)
 
-      // Primeiro, vamos ver todos os contatos da blacklist para debug
+      // Buscar todos os contatos da blacklist
       const { data: allBlacklist, error: allBlacklistError } = await this.supabase
         .from('blacklist')
         .select('*')
         .eq('user_id', group.group_families.user_id)
 
-      console.log(`🔍 Todos os contatos na blacklist para este usuário:`, allBlacklist)
-
-      // Verificar se está na blacklist
-      const { data: blacklistEntry, error: blacklistError } = await this.supabase
-        .from('blacklist')
-        .select('*')
-        .eq('phone', participantPhone)
-        .eq('user_id', group.group_families.user_id)
-        .single()
-
-      console.log(`🔍 Resultado da consulta blacklist para ${participantPhone}:`, { blacklistEntry, blacklistError })
-
-      if (blacklistError && blacklistError.code !== 'PGRST116') {
-        console.error('❌ Erro ao verificar blacklist:', blacklistError)
+      if (allBlacklistError) {
+        console.error('❌ Erro ao buscar blacklist:', allBlacklistError)
         return
+      }
+
+      console.log(`🔍 Todos os contatos na blacklist:`, allBlacklist)
+
+      // Verificar se o participante está na blacklist (comparação normalizada)
+      let blacklistEntry = null
+      for (const entry of allBlacklist || []) {
+        const normalizedBlacklistPhone = this.normalizePhoneNumber(entry.phone)
+        console.log(`🔍 Comparando: ${normalizedParticipantPhone} vs ${normalizedBlacklistPhone} (${entry.phone})`)
+        
+        if (normalizedParticipantPhone === normalizedBlacklistPhone) {
+          blacklistEntry = entry
+          console.log(`🎯 MATCH ENCONTRADO! Participante ${participantPhone} está na blacklist`)
+          break
+        }
       }
 
       // Se está na blacklist, remover imediatamente
