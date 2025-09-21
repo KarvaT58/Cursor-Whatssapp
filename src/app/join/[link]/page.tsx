@@ -114,8 +114,9 @@ export default function JoinGroupPage() {
           console.log('🔗 Link de convite encontrado:', data.data.whatsappInviteLink)
           // Aguardar um pouco para mostrar a mensagem de sucesso
           setTimeout(() => {
-            console.log('🚀 Abrindo link do WhatsApp:', data.data.whatsappInviteLink)
-            window.open(data.data.whatsappInviteLink, '_blank')
+            console.log('🚀 Redirecionando para o WhatsApp:', data.data.whatsappInviteLink)
+            // Usar window.location.href para redirecionamento direto
+            window.location.href = data.data.whatsappInviteLink
           }, 2000)
         } else {
           console.warn('⚠️ Link de convite não encontrado na resposta:', data.data)
