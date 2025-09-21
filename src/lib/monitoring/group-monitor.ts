@@ -212,6 +212,7 @@ export class GroupMonitor {
             // Extrair apenas os números de telefone dos participantes
             const participants = result.participants.map((p: any) => p.phone).filter(Boolean)
             console.log(`📋 Participantes obtidos do grupo ${group.name}:`, participants.length)
+            console.log(`📋 Lista completa de participantes:`, participants)
             return participants
           } else {
             console.error('❌ Erro ao obter participantes do grupo:', result)
@@ -244,6 +245,15 @@ export class GroupMonitor {
   private async checkParticipantBlacklist(participantPhone: string, group: any) {
     try {
       console.log(`🔍 Verificando blacklist para: ${participantPhone}`)
+      console.log(`🔍 User ID do grupo: ${group.group_families.user_id}`)
+
+      // Primeiro, vamos ver todos os contatos da blacklist para debug
+      const { data: allBlacklist, error: allBlacklistError } = await this.supabase
+        .from('blacklist')
+        .select('*')
+        .eq('user_id', group.group_families.user_id)
+
+      console.log(`🔍 Todos os contatos na blacklist para este usuário:`, allBlacklist)
 
       // Verificar se está na blacklist
       const { data: blacklistEntry, error: blacklistError } = await this.supabase
@@ -253,6 +263,8 @@ export class GroupMonitor {
         .eq('user_id', group.group_families.user_id)
         .single()
 
+      console.log(`🔍 Resultado da consulta blacklist para ${participantPhone}:`, { blacklistEntry, blacklistError })
+
       if (blacklistError && blacklistError.code !== 'PGRST116') {
         console.error('❌ Erro ao verificar blacklist:', blacklistError)
         return
@@ -261,6 +273,7 @@ export class GroupMonitor {
       // Se está na blacklist, remover imediatamente
       if (blacklistEntry) {
         console.log(`🚫 PARTICIPANTE ${participantPhone} ENCONTRADO NA BLACKLIST - REMOVENDO`)
+        console.log(`🚫 Dados da blacklist:`, blacklistEntry)
         
         // Remover do grupo
         await this.removeParticipantFromGroup(group.whatsapp_id, participantPhone, group.group_families.user_id)
