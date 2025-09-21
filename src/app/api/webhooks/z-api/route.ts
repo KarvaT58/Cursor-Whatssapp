@@ -2,6 +2,19 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
 
+// Função para normalizar números de telefone
+function normalizePhoneNumber(phone: string): string {
+  if (!phone) return ''
+  let normalized = phone.replace(/\D/g, '')
+  if (normalized.startsWith('55')) {
+    normalized = normalized.substring(2)
+  }
+  if (normalized.startsWith('0')) {
+    normalized = normalized.substring(1)
+  }
+  return normalized
+}
+
 // Interface para os dados do webhook da Z-API
 interface ZApiWebhookData {
   // Para eventos de grupo (estrutura esperada)
@@ -71,6 +84,8 @@ export async function POST(request: NextRequest) {
 
     const body: ZApiWebhookData = await request.json()
     console.log('📨 Webhook Z-API recebido:', body)
+    console.log('🔍 Tipo de evento:', body.notification || body.event || 'unknown')
+    console.log('🔍 Dados do evento:', body.data || body)
 
     // Criar cliente Supabase para webhooks (sem cookies)
     const supabase = createClient(
@@ -363,17 +378,37 @@ async function handleParticipantAdded(
       return
     }
 
-    // 🔍 VERIFICAR BLACKLIST ANTES DE ADICIONAR
+    // 🔍 VERIFICAR BLACKLIST COM NORMALIZAÇÃO
     console.log('🔍 Verificando blacklist para:', data.participantPhone)
-    const { data: blacklistEntry, error: blacklistError } = await supabase
+    
+    // Normalizar número do participante
+    const normalizedParticipantPhone = normalizePhoneNumber(data.participantPhone)
+    console.log('🔍 Número normalizado:', normalizedParticipantPhone)
+    
+    // Buscar TODOS os contatos da blacklist para comparação normalizada
+    const { data: allBlacklist, error: allBlacklistError } = await supabase
       .from('blacklist')
       .select('*')
-      .eq('phone', data.participantPhone)
       .eq('user_id', userId)
-      .single()
 
-    if (blacklistError && blacklistError.code !== 'PGRST116') {
-      console.error('❌ Erro ao verificar blacklist:', blacklistError)
+    if (allBlacklistError) {
+      console.error('❌ Erro ao buscar blacklist:', allBlacklistError)
+      return
+    }
+
+    console.log('🔍 Todos os contatos na blacklist:', allBlacklist)
+
+    // Verificar se o participante está na blacklist (comparação normalizada)
+    let blacklistEntry = null
+    for (const entry of allBlacklist || []) {
+      const normalizedBlacklistPhone = normalizePhoneNumber(entry.phone)
+      console.log(`🔍 Comparando: ${normalizedParticipantPhone} vs ${normalizedBlacklistPhone} (${entry.phone})`)
+      
+      if (normalizedParticipantPhone === normalizedBlacklistPhone) {
+        blacklistEntry = entry
+        console.log(`🎯 MATCH ENCONTRADO! Participante ${data.participantPhone} está na blacklist`)
+        break
+      }
     }
 
     // Se o participante está na blacklist, remover imediatamente

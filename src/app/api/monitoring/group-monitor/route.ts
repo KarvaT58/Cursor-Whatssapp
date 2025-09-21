@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GroupMonitor } from '@/lib/monitoring/group-monitor'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 
 // Instância global do monitor (singleton)
 let groupMonitor: GroupMonitor | null = null
@@ -8,7 +8,10 @@ let groupMonitor: GroupMonitor | null = null
 // Função para verificar e recuperar o monitor se necessário
 async function checkAndRecoverMonitor() {
   try {
-    const supabase = createClient()
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
     
     // Buscar estado do monitor no banco
     const { data: monitorState, error: stateError } = await supabase
