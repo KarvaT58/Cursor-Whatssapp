@@ -1,25 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { z } from 'zod'
+import { blacklistCache } from '@/lib/monitoring/blacklist-cache'
 
-const BlacklistSchema = z.object({
-  phone: z.string().min(10).max(20).transform((val) => {
-    // Remove formatação e mantém apenas números
-    return val.replace(/\D/g, '')
-  }),
-  reason: z.string().optional(),
-})
-
-// GET /api/blacklist - Listar blacklist do usuário
+// GET /api/blacklist - Listar blacklist
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
@@ -31,107 +20,116 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Erro ao buscar blacklist:', error)
-      return NextResponse.json(
-        { error: 'Erro ao buscar blacklist' },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: 'Erro ao buscar blacklist' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, data: blacklist })
 
   } catch (error) {
-    console.error('Erro na API de blacklist:', error)
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    console.error('Erro ao listar blacklist:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
 
-// POST /api/blacklist - Adicionar número à blacklist
+// POST /api/blacklist - Adicionar à blacklist
 export async function POST(request: NextRequest) {
   try {
-    console.log('🚫 ADICIONANDO NÚMERO À BLACKLIST ===')
-    
     const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
     const body = await request.json()
-    console.log('Dados recebidos:', body)
-    
-    const validatedData = BlacklistSchema.parse(body)
-    console.log('Dados validados:', validatedData)
+    const { phone, reason } = body
 
-    // Verificar se o número já está na blacklist
-    const { data: existingEntry, error: checkError } = await supabase
+    if (!phone) {
+      return NextResponse.json({ error: 'Número de telefone é obrigatório' }, { status: 400 })
+    }
+
+    // Verificar se já existe
+    const { data: existing } = await supabase
       .from('blacklist')
       .select('id')
-      .eq('phone', validatedData.phone)
+      .eq('phone', phone)
       .eq('user_id', user.id)
       .single()
 
-    if (existingEntry) {
-      return NextResponse.json({
-        success: false,
-        error: 'Número já está na blacklist'
-      }, { status: 400 })
+    if (existing) {
+      return NextResponse.json({ error: 'Número já está na blacklist' }, { status: 400 })
     }
 
-    const { data: blacklistEntry, error: insertError } = await supabase
+    // Adicionar à blacklist
+    const { data: newEntry, error } = await supabase
       .from('blacklist')
       .insert({
-        phone: validatedData.phone,
-        reason: validatedData.reason || null,
+        phone,
+        reason,
         user_id: user.id
       })
       .select()
       .single()
 
-    if (insertError) {
-      console.error('Erro ao adicionar à blacklist:', insertError)
-      return NextResponse.json(
-        { error: 'Erro ao adicionar à blacklist' },
-        { status: 500 }
-      )
+    if (error) {
+      console.error('Erro ao adicionar à blacklist:', error)
+      return NextResponse.json({ error: 'Erro ao adicionar à blacklist' }, { status: 500 })
     }
 
-    console.log('✅ Número adicionado à blacklist com sucesso')
-    return NextResponse.json({
-      success: true,
-      data: blacklistEntry,
+    // Invalidar cache para forçar atualização
+    blacklistCache.invalidateCache(user.id)
+
+    return NextResponse.json({ 
+      success: true, 
+      data: newEntry,
       message: 'Número adicionado à blacklist com sucesso'
-    }, { status: 201 })
+    })
 
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      console.error('Erro de validação:', error.errors)
-      return NextResponse.json(
-        { 
-          success: false,
-          error: 'Dados inválidos', 
-          details: error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message
-          }))
-        },
-        { status: 400 }
-      )
+    console.error('Erro ao adicionar à blacklist:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
+  }
+}
+
+// DELETE /api/blacklist - Remover da blacklist
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    console.error('Erro na API de blacklist:', error)
-    return NextResponse.json(
-      { 
-        success: false,
-        error: 'Erro interno do servidor' 
-      },
-      { status: 500 }
-    )
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID é obrigatório' }, { status: 400 })
+    }
+
+    // Remover da blacklist
+    const { error } = await supabase
+      .from('blacklist')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
+
+    if (error) {
+      console.error('Erro ao remover da blacklist:', error)
+      return NextResponse.json({ error: 'Erro ao remover da blacklist' }, { status: 500 })
+    }
+
+    // Invalidar cache para forçar atualização
+    blacklistCache.invalidateCache(user.id)
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Número removido da blacklist com sucesso'
+    })
+
+  } catch (error) {
+    console.error('Erro ao remover da blacklist:', error)
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }

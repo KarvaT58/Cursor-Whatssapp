@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { blacklistCache } from './blacklist-cache'
 
 export interface GroupMonitorConfig {
   checkInterval: number // em milissegundos (30000 = 30 segundos)
@@ -269,39 +270,19 @@ export class GroupMonitor {
   }
 
   /**
-   * Verifica se um participante está na blacklist
+   * Verifica se um participante está na blacklist (ULTRA-RÁPIDO)
    */
   private async checkParticipantBlacklist(participantPhone: string, group: any) {
     try {
-      const normalizedParticipantPhone = this.normalizePhoneNumber(participantPhone)
-      console.log(`🔍 Verificando blacklist para: ${participantPhone} (normalizado: ${normalizedParticipantPhone})`)
+      const startTime = Date.now()
+      console.log(`⚡ Verificação instantânea de blacklist para: ${participantPhone}`)
       console.log(`🔍 User ID do grupo: ${group.group_families.user_id}`)
 
-      // Buscar todos os contatos da blacklist
-      const { data: allBlacklist, error: allBlacklistError } = await this.supabase
-        .from('blacklist')
-        .select('*')
-        .eq('user_id', group.group_families.user_id)
-
-      if (allBlacklistError) {
-        console.error('❌ Erro ao buscar blacklist:', allBlacklistError)
-        return
-      }
-
-      console.log(`🔍 Todos os contatos na blacklist:`, allBlacklist)
-
-      // Verificar se o participante está na blacklist (comparação normalizada)
-      let blacklistEntry = null
-      for (const entry of allBlacklist || []) {
-        const normalizedBlacklistPhone = this.normalizePhoneNumber(entry.phone)
-        console.log(`🔍 Comparando: ${normalizedParticipantPhone} vs ${normalizedBlacklistPhone} (${entry.phone})`)
-        
-        if (normalizedParticipantPhone === normalizedBlacklistPhone) {
-          blacklistEntry = entry
-          console.log(`🎯 MATCH ENCONTRADO! Participante ${participantPhone} está na blacklist`)
-          break
-        }
-      }
+      // Usar cache ultra-rápido
+      const blacklistEntry = await blacklistCache.isBlacklisted(participantPhone, group.group_families.user_id)
+      
+      const checkTime = Date.now() - startTime
+      console.log(`⚡ Verificação concluída em ${checkTime}ms`)
 
       // Se está na blacklist, remover imediatamente
       if (blacklistEntry) {
