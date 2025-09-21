@@ -1,5 +1,6 @@
 import { HealthDashboard } from '@/components/monitoring/health-dashboard'
 import { MetricsDashboard } from '@/components/monitoring/metrics-dashboard'
+import { GroupMonitorControl } from '@/components/monitoring/group-monitor-control'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function MonitoringPage() {
@@ -16,6 +17,7 @@ export default function MonitoringPage() {
         <TabsList>
           <TabsTrigger value="health">Health Status</TabsTrigger>
           <TabsTrigger value="metrics">Metrics</TabsTrigger>
+          <TabsTrigger value="groups">Group Monitor</TabsTrigger>
         </TabsList>
 
         <TabsContent value="health" className="space-y-6">
@@ -24,6 +26,10 @@ export default function MonitoringPage() {
 
         <TabsContent value="metrics" className="space-y-6">
           <MetricsDashboard />
+        </TabsContent>
+
+        <TabsContent value="groups" className="space-y-6">
+          <GroupMonitorControl />
         </TabsContent>
       </Tabs>
     </div>
