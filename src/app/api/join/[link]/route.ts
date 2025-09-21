@@ -124,10 +124,18 @@ export async function GET(
     const supabase = await createClient()
     console.log('✅ Supabase client criado')
 
+    // Para consultas públicas, usar cliente anônimo para evitar problemas de RLS
+    const { createClient: createAnonClient } = await import('@supabase/supabase-js')
+    const supabaseAnon = createAnonClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    console.log('✅ Supabase client anônimo criado')
+
     console.log('🔍 Buscando link universal no banco...')
     
-    // Primeira consulta: buscar o group_link
-    const { data: groupLinks, error: linkError } = await supabase
+    // Primeira consulta: buscar o group_link (usar cliente anônimo)
+    const { data: groupLinks, error: linkError } = await supabaseAnon
       .from('group_links')
       .select('*')
       .like('universal_link', `%/join/${universalLink}`)
@@ -154,8 +162,8 @@ export async function GET(
     const groupLink = groupLinks[0]
     console.log('📋 Group link encontrado:', groupLink)
 
-    // Segunda consulta: buscar a group_family (dados básicos primeiro)
-    const { data: groupFamiliesData, error: familyError } = await supabase
+    // Segunda consulta: buscar a group_family (dados básicos primeiro) - usar cliente anônimo
+    const { data: groupFamiliesData, error: familyError } = await supabaseAnon
       .from('group_families')
       .select('name, base_name, total_participants')
       .eq('id', groupLink.group_family)
@@ -181,8 +189,8 @@ export async function GET(
 
     const groupFamilies = groupFamiliesData[0] // Pega o primeiro resultado
 
-    // Terceira consulta: buscar os grupos da família
-    const { data: whatsappGroups, error: groupsError } = await supabase
+    // Terceira consulta: buscar os grupos da família - usar cliente anônimo
+    const { data: whatsappGroups, error: groupsError } = await supabaseAnon
       .from('whatsapp_groups')
       .select('id, name, participants')
       .in('id', groupLink.active_groups || [])
