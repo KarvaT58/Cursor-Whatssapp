@@ -25,6 +25,8 @@ interface JoinResult {
     groupId: string
     groupName: string
     participantPhone: string
+    whatsappInviteLink?: string
+    universalLink?: string
   }
 }
 
@@ -105,6 +107,15 @@ export default function JoinGroupPage() {
         setName('')
         // Atualizar informações do grupo
         fetchGroupInfo()
+        
+        // 🔗 Redirecionar para o link de convite do WhatsApp se disponível
+        if (data.data?.whatsappInviteLink) {
+          console.log('🔗 Redirecionando para o link de convite:', data.data.whatsappInviteLink)
+          // Aguardar um pouco para mostrar a mensagem de sucesso
+          setTimeout(() => {
+            window.open(data.data.whatsappInviteLink, '_blank')
+          }, 2000)
+        }
       }
     } catch (error) {
       console.error('Erro ao entrar no grupo:', error)
@@ -210,8 +221,13 @@ export default function JoinGroupPage() {
                 <AlertDescription className={joinResult.success ? 'text-green-800' : 'text-red-800'}>
                   {joinResult.success ? joinResult.message : joinResult.error}
                   {joinResult.success && joinResult.data && (
-                    <div className="mt-2 text-sm">
+                    <div className="mt-2 text-sm space-y-1">
                       <p>Você foi adicionado ao grupo: <strong>{joinResult.data.groupName}</strong></p>
+                      {joinResult.data.whatsappInviteLink && (
+                        <p className="text-blue-600">
+                          🔗 Redirecionando para o WhatsApp em alguns segundos...
+                        </p>
+                      )}
                     </div>
                   )}
                 </AlertDescription>
