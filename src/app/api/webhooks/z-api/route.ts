@@ -4,9 +4,10 @@ import { headers } from 'next/headers'
 
 // Interface para os dados do webhook da Z-API
 interface ZApiWebhookData {
-  event: string
-  instance: string
-  data: {
+  // Para eventos de grupo (estrutura esperada)
+  event?: string
+  instance?: string
+  data?: {
     phone?: string
     groupId?: string
     groupName?: string
@@ -15,6 +16,34 @@ interface ZApiWebhookData {
     message?: string
     timestamp?: number
     [key: string]: any
+  }
+  
+  // Para mensagens recebidas (estrutura real da Z-API)
+  isStatusReply?: boolean
+  chatLid?: string | null
+  connectedPhone?: string
+  waitingMessage?: boolean
+  isEdit?: boolean
+  isGroup?: boolean
+  isNewsletter?: boolean
+  instanceId?: string
+  messageId?: string
+  phone?: string
+  fromMe?: boolean
+  momment?: number
+  status?: string
+  chatName?: string
+  senderPhoto?: string
+  senderName?: string
+  photo?: string | null
+  broadcast?: boolean
+  participantPhone?: string
+  participantLid?: string
+  forwarded?: boolean
+  type?: string
+  fromApi?: boolean
+  text?: {
+    message?: string
   }
 }
 
@@ -43,52 +72,61 @@ export async function POST(request: NextRequest) {
     const body: ZApiWebhookData = await request.json()
     console.log('📨 Webhook Z-API recebido:', body)
 
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Verificar se a instância existe e está ativa
+    const instanceId = body.instanceId || body.instance
     const { data: instance, error: instanceError } = await supabase
       .from('z_api_instances')
       .select('user_id, instance_id')
-      .eq('instance_id', body.instance)
+      .eq('instance_id', instanceId)
       .eq('is_active', true)
       .single()
 
     if (instanceError || !instance) {
-      console.error('❌ Instância não encontrada ou inativa:', body.instance)
+      console.error('❌ Instância não encontrada ou inativa:', instanceId)
       return NextResponse.json(
         { error: 'Instância não encontrada' },
         { status: 404 }
       )
     }
 
-    // Processar diferentes tipos de eventos
-    switch (body.event) {
-      case 'group.join_request':
-        await handleJoinRequest(supabase, instance.user_id, body.data)
-        break
-      
-      case 'group.participant_added':
-        await handleParticipantAdded(supabase, instance.user_id, body.data)
-        break
-      
-      case 'group.participant_removed':
-        await handleParticipantRemoved(supabase, instance.user_id, body.data)
-        break
-      
-      case 'group.admin_promoted':
-        await handleAdminPromoted(supabase, instance.user_id, body.data)
-        break
-      
-      case 'group.admin_demoted':
-        await handleAdminDemoted(supabase, instance.user_id, body.data)
-        break
-      
-      case 'group.updated':
-        await handleGroupUpdated(supabase, instance.user_id, body.data)
-        break
-      
-      default:
-        console.log('ℹ️ Evento não processado:', body.event)
+    // Processar diferentes tipos de webhooks
+    if (body.type === 'ReceivedCallback') {
+      // Webhook de mensagem recebida
+      await handleReceivedMessage(supabase, instance.user_id, body)
+    } else if (body.event) {
+      // Webhook de evento de grupo
+      switch (body.event) {
+        case 'group.join_request':
+          await handleJoinRequest(supabase, instance.user_id, body.data)
+          break
+        
+        case 'group.participant_added':
+          await handleParticipantAdded(supabase, instance.user_id, body.data)
+          break
+        
+        case 'group.participant_removed':
+          await handleParticipantRemoved(supabase, instance.user_id, body.data)
+          break
+        
+        case 'group.admin_promoted':
+          await handleAdminPromoted(supabase, instance.user_id, body.data)
+          break
+        
+        case 'group.admin_demoted':
+          await handleAdminDemoted(supabase, instance.user_id, body.data)
+          break
+        
+        case 'group.updated':
+          await handleGroupUpdated(supabase, instance.user_id, body.data)
+          break
+        
+        default:
+          console.log('ℹ️ Evento não processado:', body.event)
+      }
+    } else {
+      console.log('ℹ️ Webhook não processado - tipo desconhecido:', body.type || 'sem tipo')
     }
 
     return NextResponse.json({ success: true })
@@ -98,6 +136,56 @@ export async function POST(request: NextRequest) {
       { error: 'Erro interno do servidor' },
       { status: 500 }
     )
+  }
+}
+
+// Processar mensagem recebida
+async function handleReceivedMessage(
+  supabase: any,
+  userId: string,
+  data: ZApiWebhookData
+) {
+  try {
+    console.log('📨 Processando mensagem recebida:', {
+      isGroup: data.isGroup,
+      phone: data.phone,
+      senderName: data.senderName,
+      message: data.text?.message
+    })
+
+    // Se for uma mensagem de grupo, verificar se o grupo existe no nosso sistema
+    if (data.isGroup && data.phone) {
+      const { data: group, error: groupError } = await supabase
+        .from('whatsapp_groups')
+        .select('*')
+        .eq('whatsapp_id', data.phone)
+        .eq('user_id', userId)
+        .single()
+
+      if (groupError || !group) {
+        console.log('ℹ️ Grupo não encontrado no sistema:', data.phone)
+        return
+      }
+
+      console.log('✅ Mensagem de grupo processada:', {
+        groupName: group.name,
+        sender: data.senderName,
+        message: data.text?.message
+      })
+
+      // Aqui você pode adicionar lógica para processar mensagens de grupos
+      // Por exemplo, salvar no banco, enviar notificações, etc.
+    }
+
+    // Para mensagens individuais ou outros tipos
+    console.log('📱 Mensagem processada:', {
+      type: data.isGroup ? 'grupo' : 'individual',
+      sender: data.senderName,
+      message: data.text?.message
+    })
+
+  } catch (error) {
+    console.error('❌ Erro ao processar mensagem recebida:', error)
   }
 }
 
