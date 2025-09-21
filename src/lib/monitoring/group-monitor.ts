@@ -218,14 +218,22 @@ export class GroupMonitor {
         console.log(`🚫 PARTICIPANTE ${participantPhone} ENCONTRADO NA BLACKLIST - REMOVENDO`)
         console.log(`🚫 Dados da blacklist:`, blacklistEntry)
         
-        // Remover do grupo
-        await this.removeParticipantFromGroup(group.whatsapp_id, participantPhone, group.group_families.user_id)
+        // Remover do grupo e aguardar sucesso
+        const removalSuccess = await this.removeParticipantFromGroup(group.whatsapp_id, participantPhone, group.group_families.user_id)
         
-        // Enviar mensagem de banimento
-        await this.sendBanMessage(participantPhone, group.group_families.user_id)
-        
-        // Criar notificação
-        await this.createBanNotification(group, participantPhone)
+        if (removalSuccess) {
+          // Aguardar um pouco antes de enviar a mensagem para garantir que a remoção foi processada
+          console.log('⏳ Aguardando 2 segundos antes de enviar mensagem de banimento...')
+          await new Promise(resolve => setTimeout(resolve, 2000))
+          
+          // Enviar mensagem de banimento
+          await this.sendBanMessage(participantPhone, group.group_families.user_id)
+          
+          // Criar notificação
+          await this.createBanNotification(group, participantPhone)
+        } else {
+          console.log('⚠️ Remoção falhou, não enviando mensagem de banimento')
+        }
       } else {
         console.log(`✅ Participante ${participantPhone} não está na blacklist`)
       }
@@ -238,7 +246,7 @@ export class GroupMonitor {
   /**
    * Remove participante do grupo via Z-API
    */
-  private async removeParticipantFromGroup(groupId: string, participantPhone: string, userId: string) {
+  private async removeParticipantFromGroup(groupId: string, participantPhone: string, userId: string): Promise<boolean> {
     const maxRetries = 3
     const retryDelay = 1000
 
@@ -256,14 +264,24 @@ export class GroupMonitor {
 
         if (instanceError || !zApiInstance) {
           console.error('❌ Instância Z-API não encontrada para remoção:', instanceError)
-          return
+          return false
         }
 
         // Fazer requisição para remover participante com timeout
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 30000)
+        const timeoutId = setTimeout(() => controller.abort(), 15000) // Reduzido para 15s
 
         try {
+          const requestBody = {
+            communityId: groupId,
+            phones: [participantPhone]
+          }
+          
+          console.log('📤 Enviando requisição de remoção:', {
+            url: `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/remove-participant`,
+            body: requestBody
+          })
+
           const response = await fetch(
             `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/remove-participant`,
             {
@@ -272,24 +290,29 @@ export class GroupMonitor {
                 'Content-Type': 'application/json',
                 'Client-Token': zApiInstance.client_token || '',
               },
-              body: JSON.stringify({
-                groupId: groupId,
-                phone: participantPhone
-              }),
+              body: JSON.stringify(requestBody),
               signal: controller.signal
             }
           )
 
           clearTimeout(timeoutId)
+          
+          console.log('📥 Resposta da Z-API (remoção):', {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok
+          })
+          
           const result = await response.json()
+          console.log('📥 Resultado da remoção:', result)
           
           if (response.ok && (result.value || result.success || result.removed)) {
             console.log('✅ Participante removido com sucesso do grupo:', participantPhone)
             console.log('🚫 Detalhes da remoção:', result)
-            return // Sucesso, sair do loop
+            return true // Sucesso, sair do loop
           } else {
             console.error('❌ Erro ao remover participante:', result)
-            if (attempt === maxRetries) return
+            if (attempt === maxRetries) return false
           }
         } catch (fetchError) {
           clearTimeout(timeoutId)
@@ -304,7 +327,7 @@ export class GroupMonitor {
         
         if (attempt === maxRetries) {
           console.error('❌ Falha definitiva ao remover participante:', participantPhone)
-          return
+          return false
         }
         
         // Aguardar antes da próxima tentativa (mais tempo para timeout)
@@ -313,6 +336,8 @@ export class GroupMonitor {
         await new Promise(resolve => setTimeout(resolve, waitTime))
       }
     }
+    
+    return false // Se chegou aqui, todas as tentativas falharam
   }
 
   /**
