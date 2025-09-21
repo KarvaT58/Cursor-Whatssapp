@@ -664,6 +664,7 @@ export class GroupLinkSystem {
       const supabase = await createClient()
 
       // 1. Buscar informações do grupo para identificar a família
+      console.log('🔍 Buscando dados do grupo para exclusão...')
       const { data: group, error: groupError } = await supabase
         .from('whatsapp_groups')
         .select(`
@@ -683,16 +684,24 @@ export class GroupLinkSystem {
         .eq('user_id', userId)
         .single()
 
-      if (groupError || !group) {
-        console.error('❌ Grupo não encontrado:', groupError)
+      if (groupError) {
+        console.error('❌ Erro ao buscar grupo:', groupError)
+        return { success: false, error: `Erro ao buscar grupo: ${groupError.message}` }
+      }
+
+      if (!group) {
+        console.error('❌ Grupo não encontrado')
         return { success: false, error: 'Grupo não encontrado' }
       }
 
       console.log('📋 Dados do grupo encontrado:', {
+        id: group.id,
         name: group.name,
         group_family: group.group_family,
         universal_link: group.universal_link,
-        family_groups: group.group_families?.current_groups
+        has_group_families: !!group.group_families,
+        family_groups: group.group_families?.current_groups,
+        family_id: group.group_families?.id
       })
 
       // 2. Se o grupo tem família, processar exclusão da família
@@ -711,6 +720,7 @@ export class GroupLinkSystem {
           console.log('🗑️ Família vazia, excluindo família e link universal...')
           
           // Excluir link universal
+          console.log('🗑️ Excluindo link universal da família:', family.id)
           const { error: linkDeleteError } = await supabase
             .from('group_links')
             .delete()
@@ -720,10 +730,11 @@ export class GroupLinkSystem {
           if (linkDeleteError) {
             console.error('❌ Erro ao excluir link universal:', linkDeleteError)
           } else {
-            console.log('✅ Link universal excluído')
+            console.log('✅ Link universal excluído com sucesso')
           }
 
           // Excluir família
+          console.log('🗑️ Excluindo família de grupos:', family.id)
           const { error: familyDeleteError } = await supabase
             .from('group_families')
             .delete()
@@ -733,7 +744,7 @@ export class GroupLinkSystem {
           if (familyDeleteError) {
             console.error('❌ Erro ao excluir família:', familyDeleteError)
           } else {
-            console.log('✅ Família de grupos excluída')
+            console.log('✅ Família de grupos excluída com sucesso')
           }
         } else {
           // Atualizar lista de grupos da família

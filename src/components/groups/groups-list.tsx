@@ -51,9 +51,35 @@ export function GroupsList({
 }: GroupsListProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [groupToDelete, setGroupToDelete] = useState<Group | null>(null)
-  // Note: These functions would need to be implemented separately
+  
+  // Função para excluir grupo via API
   const deleteGroup = async (id: string) => {
-    console.log('Deleting group:', id)
+    try {
+      console.log('🗑️ Excluindo grupo:', id)
+      
+      const response = await fetch(`/api/groups/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao excluir grupo')
+      }
+
+      const result = await response.json()
+      console.log('✅ Grupo excluído com sucesso:', result)
+      
+      // Recarregar a lista de grupos após exclusão
+      window.location.reload()
+      
+      return result
+    } catch (error) {
+      console.error('❌ Erro ao excluir grupo:', error)
+      throw error
+    }
   }
   const syncGroupFromWhatsApp = async (id: string) => {
     console.log('Syncing group from WhatsApp:', id)
