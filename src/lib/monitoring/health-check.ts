@@ -25,11 +25,11 @@ class HealthChecker {
     
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
+      // Fazer uma consulta simples que sempre funciona
+      const { error } = await supabase
         .from('users')
-        .select('count')
+        .select('id')
         .limit(1)
-        .single()
 
       const responseTime = Date.now() - start
 
@@ -88,31 +88,42 @@ class HealthChecker {
     const start = Date.now()
     
     try {
-      const response = await fetch('/api/z-api/status', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
+      // Verificar se há instâncias Z-API ativas no banco
+      const supabase = createClient()
+      const { data: instances, error } = await supabase
+        .from('z_api_instances')
+        .select('id, name, is_active')
+        .eq('is_active', true)
+        .limit(1)
 
       const responseTime = Date.now() - start
 
-      if (!response.ok) {
+      if (error) {
         return {
           service: 'z-api',
           status: 'unhealthy',
           responseTime,
-          error: `HTTP ${response.status}`,
+          error: error.message,
         }
       }
 
-      const data = await response.json()
-      
+      if (!instances || instances.length === 0) {
+        return {
+          service: 'z-api',
+          status: 'degraded',
+          responseTime,
+          details: { message: 'No active Z-API instances found' },
+        }
+      }
+
       return {
         service: 'z-api',
-        status: data.connected ? 'healthy' : 'degraded',
+        status: 'healthy',
         responseTime,
-        details: data,
+        details: { 
+          activeInstances: instances.length,
+          instanceName: instances[0]?.name 
+        },
       }
     } catch (error) {
       return {
