@@ -804,6 +804,129 @@ export class GroupLinkSystem {
     }
   }
 
+  /**
+   * Sincronizar participantes de um grupo com o WhatsApp
+   * Detecta automaticamente quem saiu do grupo
+   */
+  async syncGroupParticipants(
+    groupId: string,
+    userId: string
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log('🔄 SINCRONIZANDO PARTICIPANTES DO GRUPO ===')
+      console.log('Group ID:', groupId)
+      console.log('User ID:', userId)
+
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = await createClient()
+
+      // 1. Buscar dados do grupo
+      const { data: group, error: groupError } = await supabase
+        .from('whatsapp_groups')
+        .select('*')
+        .eq('id', groupId)
+        .eq('user_id', userId)
+        .single()
+
+      if (groupError || !group) {
+        console.error('❌ Grupo não encontrado:', groupError)
+        return { success: false, error: 'Grupo não encontrado' }
+      }
+
+      if (!group.whatsapp_id) {
+        console.error('❌ Grupo não tem whatsapp_id')
+        return { success: false, error: 'Grupo não está conectado ao WhatsApp' }
+      }
+
+      console.log('📋 Dados do grupo:', {
+        name: group.name,
+        whatsapp_id: group.whatsapp_id,
+        participants_count: group.participants?.length || 0
+      })
+
+      // 2. Obter participantes reais do WhatsApp via Z-API
+      const zApiClient = await this.getZApiClient()
+      const participantsResult = await zApiClient.getGroupParticipants(group.whatsapp_id)
+
+      if (!participantsResult.success) {
+        console.error('❌ Erro ao obter participantes do WhatsApp:', participantsResult.error)
+        return { success: false, error: participantsResult.error }
+      }
+
+      const realParticipants = participantsResult.data?.participants || []
+      const realParticipantPhones = realParticipants.map((p: any) => p.phone || p.id).filter(Boolean)
+
+      console.log('📱 Participantes reais do WhatsApp:', {
+        count: realParticipantPhones.length,
+        phones: realParticipantPhones
+      })
+
+      // 3. Comparar com participantes no banco
+      const dbParticipants = group.participants || []
+      const participantsWhoLeft = dbParticipants.filter((phone: string) => 
+        !realParticipantPhones.includes(phone)
+      )
+      const newParticipants = realParticipantPhones.filter((phone: string) => 
+        !dbParticipants.includes(phone)
+      )
+
+      console.log('🔍 Análise de diferenças:', {
+        db_count: dbParticipants.length,
+        whatsapp_count: realParticipantPhones.length,
+        left: participantsWhoLeft,
+        new: newParticipants
+      })
+
+      // 4. Atualizar banco de dados se houver diferenças
+      if (participantsWhoLeft.length > 0 || newParticipants.length > 0) {
+        console.log('🔄 Atualizando participantes no banco de dados...')
+        
+        const { error: updateError } = await supabase
+          .from('whatsapp_groups')
+          .update({
+            participants: realParticipantPhones,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', groupId)
+
+        if (updateError) {
+          console.error('❌ Erro ao atualizar participantes:', updateError)
+          return { success: false, error: 'Erro ao atualizar participantes no banco' }
+        }
+
+        console.log('✅ Participantes atualizados no banco de dados')
+      } else {
+        console.log('✅ Participantes já estão sincronizados')
+      }
+
+      // 5. Se é grupo universal, atualizar contadores da família
+      if (group.group_family) {
+        console.log('🔗 Atualizando contadores da família de grupos...')
+        await this.updateParticipantCounters(group.group_family, groupId)
+      }
+
+      return {
+        success: true,
+        data: {
+          groupId: group.id,
+          groupName: group.name,
+          previousCount: dbParticipants.length,
+          currentCount: realParticipantPhones.length,
+          participantsWhoLeft,
+          newParticipants,
+          realParticipants: realParticipantPhones
+        }
+      }
+
+    } catch (error: any) {
+      console.error('❌ Erro na sincronização de participantes:', error)
+      return { 
+        success: false, 
+        error: error.message || 'Erro interno na sincronização' 
+      }
+    }
+  }
+
   private async checkBlacklist(phone: string, userId: string): Promise<boolean> {
     try {
       const { createClient } = await import('@/lib/supabase/server')
