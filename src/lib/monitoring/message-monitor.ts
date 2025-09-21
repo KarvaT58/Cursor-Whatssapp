@@ -26,10 +26,34 @@ class MessageMonitor {
 
   // Lista de palavras ofensivas (pode ser expandida)
   private readonly OFFENSIVE_WORDS = [
+    // Palavrões básicos
     'merda', 'porra', 'caralho', 'foda', 'puta', 'puto', 'viado', 'bicha',
     'idiota', 'burro', 'retardado', 'imbecil', 'estupido', 'estúpido',
     'filho da puta', 'vai se foder', 'foda-se', 'cacete', 'bosta',
-    'palhaço', 'otário', 'otario', 'babaca', 'trouxa', 'idiota'
+    'palhaço', 'otário', 'otario', 'babaca', 'trouxa', 'idiota',
+    
+    // Conteúdo sexual
+    'sexo', 'transar', 'foder', 'fuder', 'gozar', 'gozada', 'pau', 'pica',
+    'buceta', 'bucetão', 'boceta', 'bocetão', 'xoxota', 'xoxotão',
+    'peitinho', 'peitão', 'peitos', 'bunda', 'bundão', 'rabo', 'rabao',
+    'pornô', 'porno', 'pornografia', 'nude', 'nudes', 'nudismo',
+    'masturbar', 'masturbação', 'orgasmo', 'ejaculação', 'sêmen',
+    'prostituição', 'prostituta', 'putaria', 'puta', 'puto',
+    'safada', 'safado', 'tarada', 'tarado', 'gostosa', 'gostoso',
+    'gata', 'gato', 'delícia', 'deliciosa', 'delicioso',
+    
+    // Conteúdo sexual mais explícito
+    'felação', 'boquete', 'chupar', 'chupada', 'mamada', 'mamar',
+    'penetrar', 'penetração', 'anal', 'oral', 'vaginal',
+    'bdsm', 'sadomasoquismo', 'escravo', 'escrava', 'dominação',
+    'fetichismo', 'fetiche', 'voyeurismo', 'exibicionismo',
+    
+    // Conteúdo sexual em inglês
+    'fuck', 'fucking', 'fucked', 'sex', 'sexual', 'porn', 'pornography',
+    'dick', 'cock', 'pussy', 'ass', 'asshole', 'bitch', 'whore',
+    'slut', 'faggot', 'gay', 'lesbian', 'masturbation', 'orgasm',
+    'cum', 'sperm', 'penis', 'vagina', 'breast', 'boobs', 'tits',
+    'butt', 'buttocks', 'anus', 'anal', 'oral', 'blowjob', 'handjob'
   ]
 
   // Padrões de links de pagamento/checkout
@@ -243,23 +267,32 @@ class MessageMonitor {
       console.log(`🚫 MESSAGE MONITOR: Banindo usuário por ${reason}:`, data.participantPhone)
 
       // 1. Remover do grupo
+      console.log('🔍 MESSAGE MONITOR: Passo 1 - Removendo do grupo...')
       const removed = await this.removeParticipantFromGroup(data.groupId, data.participantPhone, data.userId)
       if (!removed) {
         console.error('❌ MESSAGE MONITOR: Falha ao remover participante do grupo')
         return
       }
+      console.log('✅ MESSAGE MONITOR: Passo 1 - Removido do grupo com sucesso')
 
       // 2. Adicionar à blacklist
+      console.log('🔍 MESSAGE MONITOR: Passo 2 - Adicionando à blacklist...')
       await this.addToBlacklist(data.participantPhone, data.userId, reason)
+      console.log('✅ MESSAGE MONITOR: Passo 2 - Adicionado à blacklist')
 
       // 3. Aguardar 2 segundos
+      console.log('🔍 MESSAGE MONITOR: Passo 3 - Aguardando 2 segundos...')
       await new Promise(resolve => setTimeout(resolve, 2000))
 
       // 4. Enviar mensagem de banimento
+      console.log('🔍 MESSAGE MONITOR: Passo 4 - Enviando mensagem de banimento...')
       await this.sendBanMessage(data.participantPhone, data.userId, reason)
+      console.log('✅ MESSAGE MONITOR: Passo 4 - Mensagem de banimento enviada')
 
       // 5. Criar notificação
+      console.log('🔍 MESSAGE MONITOR: Passo 5 - Criando notificação...')
       await this.createBanNotification(data, reason)
+      console.log('✅ MESSAGE MONITOR: Passo 5 - Notificação criada')
 
       console.log(`✅ MESSAGE MONITOR: Usuário banido com sucesso por ${reason}`)
 
@@ -306,7 +339,7 @@ class MessageMonitor {
       const result = await response.json()
       console.log('🚫 MESSAGE MONITOR: Resposta da remoção:', result)
 
-      if (response.ok && (result.messageId || result.id || result.success)) {
+      if (response.ok && (result.messageId || result.id || result.success || result.value === true)) {
         console.log(`✅ MESSAGE MONITOR: ${participantPhone} removido com sucesso!`)
         return true
       } else {
