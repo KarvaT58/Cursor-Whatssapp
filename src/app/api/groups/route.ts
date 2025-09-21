@@ -391,6 +391,44 @@ export async function POST(request: NextRequest) {
       } catch (error) {
         console.warn('⚠️ Erro ao atualizar configurações do grupo:', error)
       }
+
+      // 🔗 Obter e salvar link de convite do grupo no banco de dados
+      console.log('🔗 Obtendo link de convite do grupo recém-criado...')
+      try {
+        const inviteLinkResult = await zApiClient.getGroupInviteLink(whatsappGroupId)
+        
+        if (inviteLinkResult.success && inviteLinkResult.data) {
+          // Verificar diferentes campos possíveis na resposta
+          const whatsappInviteLink = inviteLinkResult.data?.invitationLink || 
+                                    inviteLinkResult.data?.inviteLink || 
+                                    inviteLinkResult.data?.link || 
+                                    inviteLinkResult.data?.invite_link ||
+                                    inviteLinkResult.data?.groupInviteLink
+          
+          if (whatsappInviteLink) {
+            console.log('✅ Link de convite obtido:', whatsappInviteLink)
+            
+            // Atualizar o grupo no banco com o link de convite
+            const { error: updateError } = await supabase
+              .from('whatsapp_groups')
+              .update({ invite_link: whatsappInviteLink })
+              .eq('id', group.id)
+            
+            if (updateError) {
+              console.error('❌ Erro ao salvar link de convite no banco:', updateError)
+            } else {
+              console.log('✅ Link de convite salvo no banco de dados com sucesso')
+            }
+          } else {
+            console.warn('⚠️ Link de convite não encontrado na resposta da Z-API')
+            console.log('📋 Estrutura da resposta:', JSON.stringify(inviteLinkResult.data, null, 2))
+          }
+        } else {
+          console.warn('⚠️ Erro ao obter link de convite:', inviteLinkResult.error)
+        }
+      } catch (error) {
+        console.warn('⚠️ Erro ao obter link de convite do grupo:', error)
+      }
     }
 
     // Criar sistema de links universais para o grupo (apenas se solicitado)
