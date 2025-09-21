@@ -40,6 +40,19 @@ export default function JoinGroupPage() {
 
   useEffect(() => {
     loadFamilyData()
+    
+    // Suprimir erros do Google Play Services
+    const originalError = window.onerror
+    window.onerror = function(message, source, lineno, colno, error) {
+      if (message && message.includes('play.google.com')) {
+        console.log('⚠️ Erro do Google Play Services ignorado')
+        return true // Suprimir o erro
+      }
+      if (originalError) {
+        return originalError(message, source, lineno, colno, error)
+      }
+      return false
+    }
   }, [familyId])
 
   const loadFamilyData = async () => {
