@@ -866,13 +866,38 @@ export class GroupLinkSystem {
       const zApiClient = await this.getZApiClient()
       const participantsResult = await zApiClient.getGroupParticipants(group.whatsapp_id)
 
+      let realParticipantPhones: string[] = []
+      
       if (!participantsResult.success) {
         console.error('❌ Erro ao obter participantes do WhatsApp:', participantsResult.error)
+        
+        // Se não conseguir obter participantes, usar estratégia alternativa
+        if (participantsResult.error?.includes('timeout') || participantsResult.error?.includes('not responding')) {
+          console.log('⚠️ Instância Z-API com timeout, usando dados do banco como referência')
+          
+          // Para grupos universais, confiar nos webhooks e não forçar sincronização
+          if (group.group_family) {
+            console.log('🔗 Grupo universal detectado, pulando sincronização por timeout')
+            return {
+              success: true,
+              data: {
+                groupId: group.id,
+                groupName: group.name,
+                message: 'Sincronização pulada devido a timeout da instância Z-API',
+                skipped: true
+              }
+            }
+          }
+          
+          // Para grupos normais, retornar erro
+          return { success: false, error: participantsResult.error }
+        }
+        
         return { success: false, error: participantsResult.error }
       }
 
       const realParticipants = participantsResult.data?.participants || []
-      const realParticipantPhones = realParticipants.map((p: any) => p.phone || p.id).filter(Boolean)
+      realParticipantPhones = realParticipants.map((p: any) => p.phone || p.id).filter(Boolean)
 
       console.log('📱 Participantes reais do WhatsApp:', {
         count: realParticipantPhones.length,
