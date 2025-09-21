@@ -99,6 +99,7 @@ export default function JoinGroupPage() {
       })
 
       const data = await response.json()
+      console.log('📋 Resposta completa da API:', data)
       setJoinResult(data)
 
       if (data.success) {
@@ -110,11 +111,14 @@ export default function JoinGroupPage() {
         
         // 🔗 Redirecionar para o link de convite do WhatsApp se disponível
         if (data.data?.whatsappInviteLink) {
-          console.log('🔗 Redirecionando para o link de convite:', data.data.whatsappInviteLink)
+          console.log('🔗 Link de convite encontrado:', data.data.whatsappInviteLink)
           // Aguardar um pouco para mostrar a mensagem de sucesso
           setTimeout(() => {
+            console.log('🚀 Abrindo link do WhatsApp:', data.data.whatsappInviteLink)
             window.open(data.data.whatsappInviteLink, '_blank')
           }, 2000)
+        } else {
+          console.warn('⚠️ Link de convite não encontrado na resposta:', data.data)
         }
       }
     } catch (error) {
