@@ -331,43 +331,29 @@ export class GroupLinkSystem {
         console.log('✅ Novo grupo criado:', targetGroup.name)
       }
 
-      // 6. Adicionar participante ao grupo
-      const zApiClient = await this.getZApiClient()
-      const addResult = await zApiClient.addGroupParticipants(
-        targetGroup.whatsapp_id,
-        [participantPhone]
-      )
+      // 6. Retornar informações do grupo para a pessoa entrar pelo link
+      console.log('🔗 Grupo disponível encontrado, retornando link universal para entrada')
+      
+      // Buscar o link universal da família
+      const { data: universalLinkData } = await supabase
+        .from('group_links')
+        .select('universal_link')
+        .eq('group_family', groupLink.group_families.id)
+        .single()
 
-      if (!addResult.success) {
-        return { success: false, error: addResult.error }
+      if (!universalLinkData) {
+        return { success: false, error: 'Link universal não encontrado' }
       }
 
-      // 7. Atualizar lista de participantes no banco
-      const updatedParticipants = [...(targetGroup.participants || []), participantPhone]
-      const { error: updateError } = await supabase
-        .from('whatsapp_groups')
-        .update({ 
-          participants: updatedParticipants,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', targetGroup.id)
-
-      if (updateError) {
-        console.warn('⚠️ Erro ao atualizar participantes no banco:', updateError)
-      } else {
-        console.log('✅ Participante adicionado ao banco:', participantPhone)
-      }
-
-      // 8. Atualizar contadores (desabilitado temporariamente)
-      // await this.updateParticipantCounters(groupLink.id, targetGroup.id)
-
-      console.log('✅ Participante adicionado via link universal')
+      console.log('✅ Link universal retornado para entrada voluntária')
       return { 
         success: true, 
         data: { 
           groupId: targetGroup.id,
           groupName: targetGroup.name,
-          participantPhone: participantPhone
+          whatsappId: targetGroup.whatsapp_id,
+          universalLink: universalLinkData.universal_link,
+          message: 'Grupo disponível. Use o link universal para entrar quando desejar.'
         } 
       }
 
