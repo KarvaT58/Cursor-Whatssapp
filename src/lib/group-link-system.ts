@@ -48,19 +48,26 @@ export class GroupLinkSystem {
 
   private async getZApiClient(): Promise<ZApiClient> {
     if (!this.zApiClient) {
-      const supabase = await this.getSupabase()
+      // Usar cliente anônimo para evitar problemas de RLS
+      const { createClient: createAnonClient } = await import('@supabase/supabase-js')
+      const supabaseAnon = createAnonClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      )
       
-      // Buscar a instância Z-API ativa do usuário
-      const { data: zApiInstance, error } = await supabase
+      // Buscar a instância Z-API ativa
+      const { data: zApiInstance, error } = await supabaseAnon
         .from('z_api_instances')
         .select('*')
         .eq('is_active', true)
         .single()
 
       if (error || !zApiInstance) {
+        console.error('❌ Erro ao buscar instância Z-API:', error)
         throw new Error('Instância Z-API não encontrada ou não está ativa')
       }
 
+      console.log('✅ Instância Z-API encontrada:', zApiInstance.name)
       this.zApiClient = new ZApiClient(
         zApiInstance.instance_id,
         zApiInstance.instance_token,
