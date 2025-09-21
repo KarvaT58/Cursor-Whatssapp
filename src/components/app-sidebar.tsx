@@ -11,6 +11,7 @@ import {
   IconSearch,
   // IconLink,
   IconShield,
+  IconActivity,
 } from '@tabler/icons-react'
 
 import { NavMain } from '@/components/nav-main'
@@ -61,6 +62,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: 'Blacklist',
         url: '/dashboard/blacklist',
         icon: IconShield,
+      },
+      {
+        title: 'Monitoramento',
+        url: '/dashboard/monitoring',
+        icon: IconActivity,
       },
       {
         title: 'Equipe',
