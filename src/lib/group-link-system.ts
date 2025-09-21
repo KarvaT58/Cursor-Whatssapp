@@ -366,8 +366,7 @@ export class GroupLinkSystem {
       console.log('✅ Link de convite obtido:', whatsappInviteLink)
       
       // 7. Atualizar grupo com o link de convite no banco de dados
-      const { createClient } = await import('@/lib/supabase/server')
-      const supabase = await createClient()
+      // (supabase já está disponível do início da função)
       
       const { error: updateError } = await supabase
         .from('whatsapp_groups')
