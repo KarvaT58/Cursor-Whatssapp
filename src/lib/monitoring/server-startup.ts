@@ -1,21 +1,21 @@
-import { autoStartWatchdog } from './auto-start'
+import { autoStartUltraRobust } from './auto-start'
 
 /**
- * Inicializa o sistema de monitoramento quando o servidor inicia
- * Isso garante que o monitor sempre esteja rodando desde o início
+ * Inicializa o sistema de monitoramento ULTRA-ROBUSTO quando o servidor inicia
+ * Isso garante que o monitor NUNCA pare sozinho desde o início
  */
 export function initializeMonitoringSystem() {
   try {
-    console.log('🚀 Inicializando sistema de monitoramento...')
+    console.log('🚀 Inicializando sistema de monitoramento ULTRA-ROBUSTO...')
     
-    // Auto-inicializar watchdog
-    autoStartWatchdog()
+    // Auto-inicializar sistema ultra-robusto
+    autoStartUltraRobust()
     
-    console.log('✅ Sistema de monitoramento inicializado!')
-    console.log('🛡️ Monitor protegido por watchdog - NUNCA para sozinho!')
+    console.log('✅ Sistema de monitoramento ULTRA-ROBUSTO inicializado!')
+    console.log('🛡️ Monitor protegido contra TODAS as falhas - NUNCA para sozinho!')
     
   } catch (error) {
-    console.error('❌ Erro ao inicializar sistema de monitoramento:', error)
+    console.error('❌ Erro ao inicializar sistema de monitoramento ultra-robusto:', error)
   }
 }
 

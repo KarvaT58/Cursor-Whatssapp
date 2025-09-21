@@ -1,49 +1,49 @@
-import { getMonitorWatchdog } from './monitor-watchdog'
+import { getUltraRobustMonitor } from './ultra-robust-monitor'
 
 /**
- * Auto-inicializa o watchdog quando o servidor inicia
- * Isso garante que o monitor sempre esteja rodando
+ * Auto-inicializa o sistema ultra-robusto quando o servidor inicia
+ * Isso garante que o monitor NUNCA pare sozinho
  */
-export function autoStartWatchdog() {
+export function autoStartUltraRobust() {
   try {
-    console.log('🚀 Auto-inicializando watchdog do monitor...')
+    console.log('🚀 Auto-inicializando sistema ULTRA-ROBUSTO...')
     
-    const watchdog = getMonitorWatchdog()
+    const ultraRobust = getUltraRobustMonitor()
     
     // Verificar se já está rodando
-    if (watchdog.getStatus().isRunning) {
-      console.log('✅ Watchdog já está rodando')
+    if (ultraRobust.getStatus().isRunning) {
+      console.log('✅ Sistema ultra-robusto já está rodando')
       return
     }
     
-    // Iniciar watchdog
-    watchdog.start()
+    // Iniciar sistema ultra-robusto
+    ultraRobust.start()
     
-    console.log('✅ Watchdog auto-inicializado com sucesso!')
-    console.log('🛡️ Monitor protegido contra falhas - NUNCA para sozinho!')
+    console.log('✅ Sistema ULTRA-ROBUSTO auto-inicializado com sucesso!')
+    console.log('🛡️ Monitor protegido contra TODAS as falhas - NUNCA para sozinho!')
     
   } catch (error) {
-    console.error('❌ Erro ao auto-inicializar watchdog:', error)
+    console.error('❌ Erro ao auto-inicializar sistema ultra-robusto:', error)
   }
 }
 
 /**
- * Verifica se o watchdog está rodando e inicia se necessário
+ * Verifica se o sistema ultra-robusto está rodando e inicia se necessário
  */
-export function ensureWatchdogRunning() {
+export function ensureUltraRobustRunning() {
   try {
-    const watchdog = getMonitorWatchdog()
-    const status = watchdog.getStatus()
+    const ultraRobust = getUltraRobustMonitor()
+    const status = ultraRobust.getStatus()
     
     if (!status.isRunning) {
-      console.log('🔄 Watchdog não está rodando - iniciando...')
-      watchdog.start()
+      console.log('🔄 Sistema ultra-robusto não está rodando - iniciando...')
+      ultraRobust.start()
     }
     
     return status.isRunning
     
   } catch (error) {
-    console.error('❌ Erro ao verificar watchdog:', error)
+    console.error('❌ Erro ao verificar sistema ultra-robusto:', error)
     return false
   }
 }

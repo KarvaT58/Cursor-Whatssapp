@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ensureWatchdogRunning } from '@/lib/monitoring/auto-start'
+import { ensureUltraRobustRunning } from '@/lib/monitoring/auto-start'
 
 // GET /api/monitoring/health - Verifica saúde do monitor
 export async function GET(request: NextRequest) {
   try {
-    // Garantir que o watchdog está rodando
-    const watchdogRunning = ensureWatchdogRunning()
+    // Garantir que o sistema ultra-robusto está rodando
+    const ultraRobustRunning = ensureUltraRobustRunning()
     
     const supabase = createClient()
     
@@ -47,9 +47,9 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         ...health,
-        watchdog: {
-          isRunning: watchdogRunning,
-          message: watchdogRunning ? 'Watchdog ativo - Monitor protegido' : 'Watchdog inativo'
+        ultraRobust: {
+          isRunning: ultraRobustRunning,
+          message: ultraRobustRunning ? 'Sistema ultra-robusto ativo - Monitor protegido' : 'Sistema ultra-robusto inativo'
         }
       }
     })

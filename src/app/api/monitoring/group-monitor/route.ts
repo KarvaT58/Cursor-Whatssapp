@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GroupMonitor } from '@/lib/monitoring/group-monitor'
-import { getMonitorWatchdog } from '@/lib/monitoring/monitor-watchdog'
-import { ensureWatchdogRunning } from '@/lib/monitoring/auto-start'
+import { getUltraRobustMonitor } from '@/lib/monitoring/ultra-robust-monitor'
 import { createClient } from '@supabase/supabase-js'
 
 // Instância global do monitor (singleton)
@@ -62,27 +61,31 @@ async function checkAndRecoverMonitor() {
 // GET /api/monitoring/group-monitor - Status do monitor
 export async function GET(request: NextRequest) {
   try {
-    // Garantir que o watchdog está rodando
-    ensureWatchdogRunning()
+    // Obter sistema ultra-robusto (que garante que o monitor NUNCA para)
+    const ultraRobust = getUltraRobustMonitor()
     
-    // Obter watchdog (que garante que o monitor está sempre rodando)
-    const watchdog = getMonitorWatchdog()
+    // Se o sistema não está rodando, iniciar
+    if (!ultraRobust.getStatus().isRunning) {
+      console.log('🛡️ Iniciando sistema ULTRA-ROBUSTO...')
+      ultraRobust.start()
+    }
 
-    // Obter status do monitor atual
-    const watchdogStatus = watchdog.getStatus()
-    const monitorStatus = watchdogStatus.monitorStatus
+    // Obter status completo
+    const status = ultraRobust.getStatus()
 
     return NextResponse.json({
       success: true,
       data: {
-        ...monitorStatus,
-        watchdog: {
-          isRunning: watchdogStatus.isRunning,
-          restartAttempts: watchdogStatus.restartAttempts,
-          lastHealthCheck: watchdogStatus.lastHealthCheck,
-          isHealthy: watchdogStatus.isHealthy
+        ...status.monitorStatus,
+        ultraRobust: {
+          isRunning: status.isRunning,
+          restartAttempts: status.restartAttempts,
+          lastHealthCheck: status.lastHealthCheck,
+          lastForceRestart: status.lastForceRestart,
+          isHealthy: status.isHealthy
         },
-        message: watchdogStatus.isRunning ? 'Monitor protegido por watchdog - NUNCA para sozinho!' : 'Watchdog não está rodando'
+        heartbeat: status.heartbeatStatus,
+        message: status.isRunning ? 'Monitor protegido por sistema ULTRA-ROBUSTO - NUNCA para sozinho!' : 'Sistema ultra-robusto não está rodando'
       }
     })
 
@@ -101,8 +104,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, adminPhone, checkInterval } = body
 
-    // Obter watchdog
-    const watchdog = getMonitorWatchdog()
+    // Obter sistema ultra-robusto
+    const ultraRobust = getUltraRobustMonitor()
 
     if (action === 'start') {
       // Salvar configurações no banco
@@ -126,47 +129,47 @@ export async function POST(request: NextRequest) {
           updated_at: new Date().toISOString()
         })
 
-      // Iniciar watchdog (que garante que o monitor nunca para)
-      watchdog.start()
+      // Iniciar sistema ultra-robusto (que garante que o monitor NUNCA para)
+      ultraRobust.start()
 
       return NextResponse.json({
         success: true,
         data: {
-          message: 'Monitor iniciado com proteção watchdog - NUNCA para sozinho!',
+          message: 'Monitor iniciado com sistema ULTRA-ROBUSTO - NUNCA para sozinho!',
           config: config,
-          watchdog: {
+          ultraRobust: {
             isRunning: true,
-            message: 'Watchdog ativo - Monitor protegido contra falhas'
+            message: 'Sistema ultra-robusto ativo - Monitor protegido contra TODAS as falhas'
           }
         }
       })
 
     } else if (action === 'stop') {
-      // Parar watchdog (apenas por comando manual)
-      watchdog.stop()
+      // Parar sistema ultra-robusto (apenas por comando manual)
+      ultraRobust.stop()
 
       return NextResponse.json({
         success: true,
         data: {
           message: 'Monitor parado por comando manual',
-          watchdog: {
+          ultraRobust: {
             isRunning: false,
-            message: 'Watchdog parado - Monitor pode parar'
+            message: 'Sistema ultra-robusto parado - Monitor pode parar'
           }
         }
       })
 
     } else if (action === 'restart') {
-      // Forçar reinicialização
-      await watchdog.forceRestart()
+      // Forçar reinicialização completa
+      await ultraRobust.forceFullRestart()
 
       return NextResponse.json({
         success: true,
         data: {
-          message: 'Monitor reinicializado com sucesso',
-          watchdog: {
+          message: 'Monitor reinicializado com sistema ultra-robusto',
+          ultraRobust: {
             isRunning: true,
-            message: 'Watchdog reiniciado - Monitor protegido'
+            message: 'Sistema ultra-robusto reiniciado - Monitor protegido'
           }
         }
       })
