@@ -190,7 +190,7 @@ export class GroupMonitor {
 
         // Fazer requisição para obter metadados do grupo com timeout
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos timeout
+        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 segundos timeout
 
         try {
           const response = await fetch(
@@ -224,15 +224,20 @@ export class GroupMonitor {
         }
 
       } catch (error) {
-        console.error(`❌ Erro ao buscar participantes via Z-API (tentativa ${attempt}/${maxRetries}):`, error)
+        const isTimeout = error instanceof Error && error.name === 'AbortError'
+        const errorType = isTimeout ? 'TIMEOUT' : 'NETWORK_ERROR'
+        
+        console.error(`❌ Erro ao buscar participantes via Z-API (tentativa ${attempt}/${maxRetries}) - ${errorType}:`, error.message)
         
         if (attempt === maxRetries) {
           console.error('❌ Falha definitiva ao obter participantes do grupo:', group.name)
           return null
         }
         
-        // Aguardar antes da próxima tentativa
-        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
+        // Aguardar antes da próxima tentativa (mais tempo para timeout)
+        const waitTime = isTimeout ? retryDelay * attempt * 2 : retryDelay * attempt
+        console.log(`⏳ Aguardando ${waitTime}ms antes da próxima tentativa...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
       }
     }
 
@@ -344,7 +349,7 @@ export class GroupMonitor {
 
         // Fazer requisição para remover participante com timeout
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 10000)
+        const timeoutId = setTimeout(() => controller.abort(), 30000)
 
         try {
           const response = await fetch(
@@ -379,15 +384,20 @@ export class GroupMonitor {
         }
 
       } catch (error) {
-        console.error(`❌ Erro ao remover participante do grupo (tentativa ${attempt}/${maxRetries}):`, error)
+        const isTimeout = error instanceof Error && error.name === 'AbortError'
+        const errorType = isTimeout ? 'TIMEOUT' : 'NETWORK_ERROR'
+        
+        console.error(`❌ Erro ao remover participante do grupo (tentativa ${attempt}/${maxRetries}) - ${errorType}:`, error.message)
         
         if (attempt === maxRetries) {
           console.error('❌ Falha definitiva ao remover participante:', participantPhone)
           return
         }
         
-        // Aguardar antes da próxima tentativa
-        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
+        // Aguardar antes da próxima tentativa (mais tempo para timeout)
+        const waitTime = isTimeout ? retryDelay * attempt * 2 : retryDelay * attempt
+        console.log(`⏳ Aguardando ${waitTime}ms antes da próxima tentativa...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
       }
     }
   }
@@ -421,7 +431,7 @@ export class GroupMonitor {
 
         // Fazer requisição para enviar mensagem com timeout
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 10000)
+        const timeoutId = setTimeout(() => controller.abort(), 30000)
 
         try {
           const response = await fetch(
@@ -456,15 +466,20 @@ export class GroupMonitor {
         }
 
       } catch (error) {
-        console.error(`❌ Erro ao enviar mensagem de banimento (tentativa ${attempt}/${maxRetries}):`, error)
+        const isTimeout = error instanceof Error && error.name === 'AbortError'
+        const errorType = isTimeout ? 'TIMEOUT' : 'NETWORK_ERROR'
+        
+        console.error(`❌ Erro ao enviar mensagem de banimento (tentativa ${attempt}/${maxRetries}) - ${errorType}:`, error.message)
         
         if (attempt === maxRetries) {
           console.error('❌ Falha definitiva ao enviar mensagem de banimento para:', participantPhone)
           return
         }
         
-        // Aguardar antes da próxima tentativa
-        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
+        // Aguardar antes da próxima tentativa (mais tempo para timeout)
+        const waitTime = isTimeout ? retryDelay * attempt * 2 : retryDelay * attempt
+        console.log(`⏳ Aguardando ${waitTime}ms antes da próxima tentativa...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
       }
     }
   }
