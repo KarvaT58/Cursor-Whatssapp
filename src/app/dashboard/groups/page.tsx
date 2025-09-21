@@ -136,8 +136,8 @@ export default function GroupsPage() {
     setActionError(null)
   }, [])
 
-  // Função para buscar grupos universais
-  const fetchUniversalGroups = async () => {
+  // Função para buscar grupos de famílias
+  const fetchFamilyGroups = async () => {
     if (!user?.id) return
 
     try {
@@ -148,7 +148,7 @@ export default function GroupsPage() {
         .from('whatsapp_groups')
         .select('*')
         .eq('user_id', user.id)
-        .not('group_family', 'is', null) // Apenas grupos com group_family
+        .not('family_id', 'is', null) // Apenas grupos com family_id
         .order('created_at', { ascending: false })
 
       if (fetchError) {
@@ -157,18 +157,16 @@ export default function GroupsPage() {
 
       setUniversalGroups(data || [])
     } catch (err) {
-      setUniversalError(err instanceof Error ? err.message : 'Erro ao carregar grupos universais')
+      setUniversalError(err instanceof Error ? err.message : 'Erro ao carregar grupos de famílias')
     } finally {
       setUniversalLoading(false)
     }
   }
 
-  // Carregar grupos universais quando o usuário estiver disponível
+  // Carregar grupos de famílias quando o usuário estiver disponível
   useEffect(() => {
     if (user) {
-      fetchUniversalGroups()
-      // Executar correção automática em background
-      autoFixUniversalGroups()
+      fetchFamilyGroups()
     }
   }, [user])
 
