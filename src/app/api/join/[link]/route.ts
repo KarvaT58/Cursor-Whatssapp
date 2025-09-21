@@ -154,19 +154,10 @@ export async function GET(
     const groupLink = groupLinks[0]
     console.log('📋 Group link encontrado:', groupLink)
 
-    // Segunda consulta: buscar a group_family
+    // Segunda consulta: buscar a group_family (dados básicos primeiro)
     const { data: groupFamiliesData, error: familyError } = await supabase
       .from('group_families')
-      .select(`
-        name,
-        base_name,
-        total_participants,
-        whatsapp_groups (
-          id,
-          name,
-          participants
-        )
-      `)
+      .select('name, base_name, total_participants')
       .eq('id', groupLink.group_family)
 
     console.log('📋 Resultado da consulta group_families:', { groupFamiliesData, familyError })
@@ -190,6 +181,24 @@ export async function GET(
 
     const groupFamilies = groupFamiliesData[0] // Pega o primeiro resultado
 
+    // Terceira consulta: buscar os grupos da família
+    const { data: whatsappGroups, error: groupsError } = await supabase
+      .from('whatsapp_groups')
+      .select('id, name, participants')
+      .in('id', groupLink.active_groups || [])
+
+    console.log('📋 Resultado da consulta whatsapp_groups:', { whatsappGroups, groupsError })
+
+    if (groupsError) {
+      console.warn('⚠️ Erro ao buscar grupos:', groupsError)
+    }
+
+    const activeGroups = whatsappGroups || []
+    const availableSpots = activeGroups.reduce(
+      (total: number, group: any) => total + (2 - (group.participants?.length || 0)), // eslint-disable-line @typescript-eslint/no-explicit-any
+      0
+    )
+
     console.log('✅ Link universal encontrado:', groupFamilies.name)
     return NextResponse.json({
       success: true,
@@ -197,11 +206,8 @@ export async function GET(
         familyName: groupFamilies.name,
         baseName: groupFamilies.base_name,
         totalParticipants: groupFamilies.total_participants,
-        activeGroups: groupFamilies.whatsapp_groups?.length || 0,
-        availableSpots: groupFamilies.whatsapp_groups?.reduce(
-          (total: number, group: any) => total + (2 - (group.participants?.length || 0)), // eslint-disable-line @typescript-eslint/no-explicit-any
-          0
-        ) || 0
+        activeGroups: activeGroups.length,
+        availableSpots: availableSpots
       }
     })
 
