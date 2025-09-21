@@ -18,6 +18,15 @@ interface ZApiWebhookData {
   }
 }
 
+// GET /api/webhooks/z-api - Teste de webhook
+export async function GET(request: NextRequest) {
+  return NextResponse.json({
+    success: true,
+    message: 'Webhook endpoint funcionando',
+    timestamp: new Date().toISOString()
+  })
+}
+
 // POST /api/webhooks/z-api - Webhook da Z-API
 export async function POST(request: NextRequest) {
   try {
