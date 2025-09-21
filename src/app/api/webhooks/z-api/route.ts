@@ -169,6 +169,26 @@ async function handleParticipantAdded(
       return
     }
 
+    // Atualizar lista de participantes no banco
+    const currentParticipants = group.participants || []
+    if (!currentParticipants.includes(data.participant)) {
+      const updatedParticipants = [...currentParticipants, data.participant]
+      
+      const { error: updateError } = await supabase
+        .from('whatsapp_groups')
+        .update({
+          participants: updatedParticipants,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', group.id)
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar participantes:', updateError)
+      } else {
+        console.log('✅ Participante adicionado ao banco:', data.participant)
+      }
+    }
+
     // Criar notificação de participante adicionado
     const { error: notificationError } = await supabase
       .from('group_notifications')
@@ -182,7 +202,8 @@ async function handleParticipantAdded(
           participant_phone: data.participant,
           group_whatsapp_id: data.groupId,
           group_name: group.name,
-          timestamp: data.timestamp || Date.now()
+          timestamp: data.timestamp || Date.now(),
+          source: 'webhook'
         }
       })
 
@@ -221,6 +242,26 @@ async function handleParticipantRemoved(
       return
     }
 
+    // Atualizar lista de participantes no banco (remover o participante)
+    const currentParticipants = group.participants || []
+    if (currentParticipants.includes(data.participant)) {
+      const updatedParticipants = currentParticipants.filter(p => p !== data.participant)
+      
+      const { error: updateError } = await supabase
+        .from('whatsapp_groups')
+        .update({
+          participants: updatedParticipants,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', group.id)
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar participantes:', updateError)
+      } else {
+        console.log('✅ Participante removido do banco:', data.participant)
+      }
+    }
+
     // Criar notificação de participante removido
     const { error: notificationError } = await supabase
       .from('group_notifications')
@@ -234,7 +275,8 @@ async function handleParticipantRemoved(
           participant_phone: data.participant,
           group_whatsapp_id: data.groupId,
           group_name: group.name,
-          timestamp: data.timestamp || Date.now()
+          timestamp: data.timestamp || Date.now(),
+          source: 'webhook'
         }
       })
 
