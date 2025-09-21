@@ -1,9 +1,9 @@
 'use client'
 
 import { Badge } from '@/components/ui/badge'
-import { User, Zap, Shield, Bell } from 'lucide-react'
+import { User, Zap, Shield, Bell, UserCheck } from 'lucide-react'
 
-type SettingsTab = 'profile' | 'z-api' | 'security' | 'notifications'
+type SettingsTab = 'profile' | 'z-api' | 'security' | 'notifications' | 'admin'
 
 interface SettingsHeaderProps {
   activeTab: SettingsTab
@@ -30,17 +30,35 @@ const tabConfig = {
     icon: Bell,
     description: 'Configure como você recebe notificações',
   },
+  admin: {
+    title: 'Administrador',
+    icon: UserCheck,
+    description: 'Configure o número do administrador para mensagens de banimento',
+  },
 }
 
 export function SettingsHeader({ activeTab }: SettingsHeaderProps) {
   const config = tabConfig[activeTab]
-  const Icon = config.icon
+  const Icon = config?.icon
+
+  if (!config) {
+    return (
+      <div className="border-b bg-background p-6">
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Configurações</h1>
+            <p className="text-muted-foreground">Aba não encontrada</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="border-b bg-background p-6">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-primary/10 rounded-lg">
-          <Icon className="size-5 text-primary" />
+          {Icon && <Icon className="size-5 text-primary" />}
         </div>
         <div>
           <h1 className="text-2xl font-semibold">{config.title}</h1>
