@@ -38,6 +38,16 @@ export default function JoinGroupPage() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 
+  // Verificar se as variáveis de ambiente estão disponíveis
+  useEffect(() => {
+    console.log('🔧 Verificando variáveis de ambiente:', {
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      keyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length
+    })
+  }, [])
+
   useEffect(() => {
     console.log('🚀 useEffect executado, familyId:', familyId)
     
@@ -72,6 +82,14 @@ export default function JoinGroupPage() {
         hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       })
       
+      // Verificar se as variáveis de ambiente estão disponíveis
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+        console.error('❌ Variáveis de ambiente do Supabase não configuradas')
+        setError('Configuração do banco de dados não encontrada')
+        setLoading(false)
+        return
+      }
+      
       // Teste de conexão básica
       const { data: testData, error: testError } = await supabase
         .from('group_families')
@@ -79,6 +97,13 @@ export default function JoinGroupPage() {
         .limit(1)
       
       console.log('🧪 Teste de conexão:', { testData, testError })
+      
+      if (testError) {
+        console.error('❌ Erro na conexão com Supabase:', testError)
+        setError(`Erro de conexão: ${testError.message}`)
+        setLoading(false)
+        return
+      }
       
       const { data: familyData, error: familyError } = await supabase
         .from('group_families')
