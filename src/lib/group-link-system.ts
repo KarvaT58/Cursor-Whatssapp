@@ -899,10 +899,38 @@ export class GroupLinkSystem {
       if (participantsWhoLeft.length > 0 || newParticipants.length > 0) {
         console.log('🔄 Atualizando participantes no banco de dados...')
         
+        // IMPORTANTE: Preservar o número da instância Z-API e remover apenas quem saiu
+        // Não substituir toda a lista, apenas remover quem realmente saiu
+        let updatedParticipants = [...dbParticipants]
+        
+        // Remover apenas quem saiu (não está mais no WhatsApp)
+        participantsWhoLeft.forEach(phone => {
+          const index = updatedParticipants.indexOf(phone)
+          if (index > -1) {
+            updatedParticipants.splice(index, 1)
+            console.log(`🗑️ Removendo participante que saiu: ${phone}`)
+          }
+        })
+        
+        // Adicionar novos participantes
+        newParticipants.forEach(phone => {
+          if (!updatedParticipants.includes(phone)) {
+            updatedParticipants.push(phone)
+            console.log(`➕ Adicionando novo participante: ${phone}`)
+          }
+        })
+        
+        console.log('📊 Participantes atualizados:', {
+          antes: dbParticipants.length,
+          depois: updatedParticipants.length,
+          removidos: participantsWhoLeft.length,
+          adicionados: newParticipants.length
+        })
+        
         const { error: updateError } = await supabase
           .from('whatsapp_groups')
           .update({
-            participants: realParticipantPhones,
+            participants: updatedParticipants,
             updated_at: new Date().toISOString()
           })
           .eq('id', groupId)
