@@ -331,78 +331,54 @@ export class GroupLinkSystem {
         console.log('✅ Novo grupo criado:', targetGroup.name)
       }
 
-      // 6. Gerar link específico do WhatsApp para o grupo
-      console.log('🔗 Gerando link específico do WhatsApp para o grupo')
+      // 6. Adicionar participante diretamente ao grupo
+      console.log('👥 Adicionando participante diretamente ao grupo')
       
       const zApiClient = await this.getZApiClient()
       
-      // 🔄 TENTAR GERAR LINK DE CONVITE COM MÚLTIPLOS ENDPOINTS
-      const inviteLinkResult = await zApiClient.generateGroupInviteLink(targetGroup.whatsapp_id)
+      // ✅ ADICIONAR PARTICIPANTE DIRETAMENTE AO GRUPO
+      const addParticipantResult = await zApiClient.addParticipants(targetGroup.whatsapp_id, [participantPhone])
       
-      if (!inviteLinkResult.success) {
-        console.error('❌ Erro ao gerar link de convite:', inviteLinkResult.error)
-        
-        // 🔄 FALLBACK: Tentar obter metadados do grupo
-        console.log('🔄 Tentando fallback: obter metadados do grupo...')
-        const metadataResult = await zApiClient.getGroupInviteLink(targetGroup.whatsapp_id)
-        
-        if (!metadataResult.success) {
-          return { success: false, error: 'Erro ao obter link de convite do grupo' }
-        }
-        
-        // 🔍 LOG COMPLETO DA RESPOSTA PARA DEBUG
-        console.log('📋 RESPOSTA COMPLETA DA Z-API (metadados):', JSON.stringify(metadataResult.data, null, 2))
-        
-        // ✅ VERIFICAR DIFERENTES POSSÍVEIS CAMPOS NA RESPOSTA
-        const whatsappInviteLink = metadataResult.data?.inviteLink || 
-                                  metadataResult.data?.link || 
-                                  metadataResult.data?.invite_link ||
-                                  metadataResult.data?.groupInviteLink ||
-                                  metadataResult.data?.inviteCode ||
-                                  metadataResult.data?.invite_url ||
-                                  metadataResult.data?.inviteCode ||
-                                  metadataResult.data?.groupInviteCode
-        
-        if (!whatsappInviteLink) {
-          console.error('❌ Link de convite não encontrado na resposta. Estrutura completa:', metadataResult.data)
-          return { success: false, error: 'Link de convite não foi encontrado na resposta da Z-API' }
-        }
-        
-        console.log('✅ Link específico do WhatsApp obtido via metadados:', whatsappInviteLink)
-        return { 
-          success: true, 
-          data: { 
-            groupId: targetGroup.id,
-            groupName: targetGroup.name,
-            whatsappId: targetGroup.whatsapp_id,
-            whatsappInviteLink: whatsappInviteLink,
-            message: `Grupo "${targetGroup.name}" disponível. Use o link específico para entrar.`
-          } 
-        }
+      if (!addParticipantResult.success) {
+        console.error('❌ Erro ao adicionar participante ao grupo:', addParticipantResult.error)
+        return { success: false, error: `Erro ao adicionar participante ao grupo: ${addParticipantResult.error}` }
       }
 
-      // ✅ VERIFICAR DIFERENTES POSSÍVEIS CAMPOS NA RESPOSTA
-      const whatsappInviteLink = inviteLinkResult.data?.inviteLink || 
-                                inviteLinkResult.data?.link || 
-                                inviteLinkResult.data?.invite_link ||
-                                inviteLinkResult.data?.groupInviteLink ||
-                                inviteLinkResult.data?.inviteCode ||
-                                inviteLinkResult.data?.invite_url
+      console.log('✅ Participante adicionado com sucesso ao grupo')
       
-      if (!whatsappInviteLink) {
-        console.error('❌ Link de convite não encontrado na resposta. Estrutura completa:', inviteLinkResult.data)
-        return { success: false, error: 'Link de convite não foi encontrado na resposta da Z-API' }
+      // 7. Atualizar lista de participantes no banco de dados
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = await createClient()
+      
+      const currentParticipants = targetGroup.participants || []
+      const updatedParticipants = [...currentParticipants, participantPhone]
+      
+      const { error: updateError } = await supabase
+        .from('whatsapp_groups')
+        .update({
+          participants: updatedParticipants,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', targetGroup.id)
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar participantes no banco:', updateError)
+        // Não falhar a operação se não conseguir atualizar o banco
+      } else {
+        console.log('✅ Participantes atualizados no banco de dados')
       }
 
-      console.log('✅ Link específico do WhatsApp gerado:', whatsappInviteLink)
+      // 8. Retornar sucesso com link universal
+      console.log('✅ Participante adicionado com sucesso ao grupo universal')
       return { 
         success: true, 
         data: { 
           groupId: targetGroup.id,
           groupName: targetGroup.name,
           whatsappId: targetGroup.whatsapp_id,
-          whatsappInviteLink: whatsappInviteLink,
-          message: `Grupo "${targetGroup.name}" disponível. Use o link específico para entrar.`
+          participantPhone: participantPhone,
+          universalLink: universalLink,
+          message: `Você foi adicionado com sucesso ao grupo "${targetGroup.name}"!`
         } 
       }
 
