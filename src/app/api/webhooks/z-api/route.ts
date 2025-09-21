@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
 import { simpleBlacklistChecker } from '@/lib/monitoring/simple-blacklist-checker'
+import { messageMonitor } from '@/lib/monitoring/message-monitor'
 
 // Interface para os dados do webhook da Z-API
 interface ZApiWebhookData {
@@ -250,7 +251,7 @@ async function handleReceivedMessage(
     })
 
     // Se for uma mensagem de grupo, verificar se o grupo existe no nosso sistema
-    if (data.isGroup && data.phone) {
+    if (data.isGroup && data.phone && data.participantPhone && data.text?.message) {
       const { data: group, error: groupError } = await supabase
         .from('whatsapp_groups')
         .select('*')
@@ -269,8 +270,28 @@ async function handleReceivedMessage(
         message: data.text?.message
       })
 
-      // Aqui você pode adicionar lógica para processar mensagens de grupos
-      // Por exemplo, salvar no banco, enviar notificações, etc.
+      // 🔍 MONITORAMENTO DE MENSAGENS
+      console.log('🔍 MESSAGE MONITOR: Iniciando monitoramento de mensagem')
+      
+      const messageData = {
+        messageId: data.messageId || '',
+        participantPhone: data.participantPhone,
+        groupId: data.phone,
+        message: data.text.message,
+        timestamp: data.momment || Date.now(),
+        senderName: data.senderName || '',
+        userId: userId
+      }
+
+      // Processar mensagem com o monitor
+      const wasBanned = await messageMonitor.processMessage(messageData)
+      
+      if (wasBanned) {
+        console.log('🚫 MESSAGE MONITOR: Usuário foi banido por violação de regras')
+        return // Não processar mais nada se foi banido
+      }
+
+      console.log('✅ MESSAGE MONITOR: Mensagem aprovada pelo monitor')
     }
 
     // Para mensagens individuais ou outros tipos
