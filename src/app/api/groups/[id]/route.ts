@@ -159,12 +159,15 @@ export async function DELETE(
     // 2. Verificar se é grupo universal (tem group_family ou universal_link)
     const isUniversalGroup = !!(group.group_family || group.universal_link)
     
-    console.log('🗑️ Excluindo grupo:', {
+    console.log('🗑️ EXCLUINDO GRUPO - DADOS COMPLETOS:', {
       id: group.id,
       name: group.name,
       isUniversal: isUniversalGroup,
       hasGroupFamily: !!group.group_family,
-      hasUniversalLink: !!group.universal_link
+      hasUniversalLink: !!group.universal_link,
+      group_family: group.group_family,
+      universal_link: group.universal_link,
+      user_id: user.id
     })
 
     if (isUniversalGroup) {

@@ -684,14 +684,15 @@ export class GroupLinkSystem {
         return { success: false, error: 'Grupo não encontrado' }
       }
 
-      console.log('📋 Dados do grupo encontrado:', {
+      console.log('📋 DADOS DO GRUPO ENCONTRADO:', {
         id: group.id,
         name: group.name,
         group_family: group.group_family,
         universal_link: group.universal_link,
         has_group_families: !!group.group_families,
         family_groups: group.group_families?.current_groups,
-        family_id: group.group_families?.id
+        family_id: group.group_families?.id,
+        user_id: userId
       })
 
       // 2. Se o grupo tem família, processar exclusão da família
@@ -710,31 +711,43 @@ export class GroupLinkSystem {
           console.log('🗑️ Família vazia, excluindo família e link universal...')
           
           // Excluir link universal
-          console.log('🗑️ Excluindo link universal da família:', family.id)
-          const { error: linkDeleteError } = await supabase
+          console.log('🗑️ EXCLUINDO LINK UNIVERSAL DA FAMÍLIA:', {
+            family_id: family.id,
+            user_id: userId
+          })
+          const { error: linkDeleteError, count: linkDeleteCount } = await supabase
             .from('group_links')
             .delete()
             .eq('group_family', family.id)
             .eq('user_id', userId)
 
           if (linkDeleteError) {
-            console.error('❌ Erro ao excluir link universal:', linkDeleteError)
+            console.error('❌ ERRO AO EXCLUIR LINK UNIVERSAL:', linkDeleteError)
           } else {
-            console.log('✅ Link universal excluído com sucesso')
+            console.log('✅ LINK UNIVERSAL EXCLUÍDO COM SUCESSO:', {
+              deleted_count: linkDeleteCount,
+              family_id: family.id
+            })
           }
 
           // Excluir família
-          console.log('🗑️ Excluindo família de grupos:', family.id)
-          const { error: familyDeleteError } = await supabase
+          console.log('🗑️ EXCLUINDO FAMÍLIA DE GRUPOS:', {
+            family_id: family.id,
+            user_id: userId
+          })
+          const { error: familyDeleteError, count: familyDeleteCount } = await supabase
             .from('group_families')
             .delete()
             .eq('id', family.id)
             .eq('user_id', userId)
 
           if (familyDeleteError) {
-            console.error('❌ Erro ao excluir família:', familyDeleteError)
+            console.error('❌ ERRO AO EXCLUIR FAMÍLIA:', familyDeleteError)
           } else {
-            console.log('✅ Família de grupos excluída com sucesso')
+            console.log('✅ FAMÍLIA DE GRUPOS EXCLUÍDA COM SUCESSO:', {
+              deleted_count: familyDeleteCount,
+              family_id: family.id
+            })
           }
         } else {
           // Atualizar lista de grupos da família
