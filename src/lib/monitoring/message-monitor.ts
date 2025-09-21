@@ -32,6 +32,35 @@ class MessageMonitor {
     'filho da puta', 'vai se foder', 'foda-se', 'cacete', 'bosta',
     'palhaço', 'otário', 'otario', 'babaca', 'trouxa', 'idiota',
     
+    // GÍRIAS E ABREVIAÇÕES
+    'bct', 'fdp', 'pqp', 'vsf', 'kct', 'ctz', 'blz', 'vlw', 'tmj',
+    'pq', 'q', 'vc', 'tb', 'tbm', 'hj', 'agr', 'flw', 'tchau',
+    'bjs', 'xau', 't+', 't+', 't+', 't+', 't+', 't+', 't+',
+    'bcta', 'fdpa', 'pqpa', 'vsfa', 'kcta', 'ctza', 'blza',
+    'bcto', 'fdpo', 'pqpo', 'vsfo', 'kcto', 'ctzo', 'blzo',
+    
+    // PALAVRAS COM ERRO DE DIGITAÇÃO (sem acentos, faltando letras)
+    'merda', 'merd', 'merd@', 'merd*', 'm3rda', 'm3rd@', 'm3rd*',
+    'porra', 'porr', 'porr@', 'porr*', 'p0rra', 'p0rr@', 'p0rr*',
+    'caralho', 'caralh', 'caralh@', 'caralh*', 'c4ralho', 'c4ralh@', 'c4ralh*',
+    'puta', 'put', 'put@', 'put*', 'p0ta', 'p0t@', 'p0t*',
+    'puto', 'put', 'put@', 'put*', 'p0to', 'p0t@', 'p0t*',
+    'viado', 'viad', 'viad@', 'viad*', 'v14do', 'v14d@', 'v14d*',
+    'bicha', 'bich', 'bich@', 'bich*', 'b1cha', 'b1ch@', 'b1ch*',
+    'idiota', 'idiot', 'idiot@', 'idiot*', '1diota', '1diot@', '1diot*',
+    'burro', 'burr', 'burr@', 'burr*', 'b0rro', 'b0rr@', 'b0rr*',
+    'retardado', 'retardad', 'retardad@', 'retardad*', 'r3tardado', 'r3tardad@', 'r3tardad*',
+    'imbecil', 'imbec1l', 'imbec1l@', 'imbec1l*', '1mbecil', '1mbec1l@', '1mbec1l*',
+    'estupido', 'estupid', 'estupid@', 'estupid*', '3stupido', '3stupid@', '3stupid*',
+    'estúpido', 'estúpid', 'estúpid@', 'estúpid*', '3stúpido', '3stúpid@', '3stúpid*',
+    'cacete', 'cacet', 'cacet@', 'cacet*', 'c4cete', 'c4cet@', 'c4cet*',
+    'bosta', 'bost', 'bost@', 'bost*', 'b0sta', 'b0st@', 'b0st*',
+    'palhaço', 'palhaç', 'palhaç@', 'palhaç*', 'p4lhaço', 'p4lhaç@', 'p4lhaç*',
+    'otário', 'otári', 'otári@', 'otári*', '0tário', '0tári@', '0tári*',
+    'otario', 'otari', 'otari@', 'otari*', '0tario', '0tari@', '0tari*',
+    'babaca', 'babac', 'babac@', 'babac*', 'b4baca', 'b4bac@', 'b4bac*',
+    'trouxa', 'troux', 'troux@', 'troux*', 'tr0uxa', 'tr0ux@', 'tr0ux*',
+    
     // Conteúdo sexual
     'sexo', 'transar', 'foder', 'fuder', 'gozar', 'gozada', 'pau', 'pica',
     'buceta', 'bucetão', 'boceta', 'bocetão', 'xoxota', 'xoxotão',
