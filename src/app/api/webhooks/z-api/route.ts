@@ -103,7 +103,9 @@ export async function POST(request: NextRequest) {
       // Verificar se é um evento de grupo
       if (body.notification === 'GROUP_PARTICIPANT_LEAVE') {
         await handleParticipantLeft(supabase, instance.user_id, body)
-      } else if (body.notification === 'GROUP_PARTICIPANT_ADD') {
+      } else if (body.notification === 'GROUP_PARTICIPANT_ADD' || body.notification === 'GROUP_PARTICIPANT_INVITE') {
+        // CORRIGIDO: Processar tanto ADD quanto INVITE
+        console.log('🎯 PROCESSANDO EVENTO DE PARTICIPANTE:', body.notification)
         await handleParticipantAdded(supabase, instance.user_id, body)
       } else {
         // Webhook de mensagem recebida normal
@@ -342,14 +344,28 @@ async function handleParticipantAdded(
   data: ZApiWebhookData
 ) {
   try {
+    // CORRIGIDO: Extrair número do participante corretamente
+    let participantPhone = data.participantPhone
+    
+    // Se for GROUP_PARTICIPANT_INVITE, o número está em notificationParameters
+    if (data.notification === 'GROUP_PARTICIPANT_INVITE' && data.notificationParameters && data.notificationParameters.length > 0) {
+      participantPhone = data.notificationParameters[0]
+      console.log('🎯 EXTRAINDO NÚMERO DO INVITE:', participantPhone)
+    }
+
     console.log('👋 Processando participante adicionado:', {
       groupId: data.phone,
-      participantPhone: data.participantPhone,
-      groupName: data.chatName
+      participantPhone: participantPhone,
+      groupName: data.chatName,
+      notification: data.notification
     })
 
-    if (!data.phone || !data.participantPhone) {
-      console.error('❌ Dados incompletos para participante adicionado:', data)
+    if (!data.phone || !participantPhone) {
+      console.error('❌ Dados incompletos para participante adicionado:', {
+        phone: data.phone,
+        participantPhone: participantPhone,
+        notificationParameters: data.notificationParameters
+      })
       return
     }
 
@@ -367,10 +383,10 @@ async function handleParticipantAdded(
     }
 
     // 🔍 VERIFICAÇÃO SIMPLES DE BLACKLIST
-    console.log('🔍 SIMPLES: Verificando blacklist para:', data.participantPhone)
+    console.log('🔍 SIMPLES: Verificando blacklist para:', participantPhone)
     
     const wasRemoved = await simpleBlacklistChecker.checkAndRemoveIfBlacklisted(
-      data.participantPhone,
+      participantPhone,
       data.phone,
       userId
     )
@@ -384,8 +400,8 @@ async function handleParticipantAdded(
 
     // Atualizar lista de participantes no banco
     const currentParticipants = group.participants || []
-    if (!currentParticipants.includes(data.participantPhone)) {
-      const updatedParticipants = [...currentParticipants, data.participantPhone]
+    if (!currentParticipants.includes(participantPhone)) {
+      const updatedParticipants = [...currentParticipants, participantPhone]
       
       const { error: updateError } = await supabase
         .from('whatsapp_groups')
@@ -398,7 +414,7 @@ async function handleParticipantAdded(
       if (updateError) {
         console.error('❌ Erro ao atualizar participantes:', updateError)
       } else {
-        console.log('✅ Participante adicionado ao banco:', data.participantPhone)
+        console.log('✅ Participante adicionado ao banco:', participantPhone)
       }
     }
 
@@ -410,9 +426,9 @@ async function handleParticipantAdded(
         user_id: userId,
         type: 'member_added',
         title: 'Novo participante adicionado',
-        message: `O usuário ${data.participantPhone} foi adicionado ao grupo "${group.name}".`,
+        message: `O usuário ${participantPhone} foi adicionado ao grupo "${group.name}".`,
         data: {
-          participant_phone: data.participantPhone,
+          participant_phone: participantPhone,
           group_whatsapp_id: data.phone,
           group_name: group.name,
           timestamp: data.momment || Date.now(),
@@ -423,7 +439,7 @@ async function handleParticipantAdded(
     if (notificationError) {
       console.error('❌ Erro ao criar notificação de participante adicionado:', notificationError)
     } else {
-      console.log('✅ Notificação de participante adicionado criada para:', data.participantPhone)
+      console.log('✅ Notificação de participante adicionado criada para:', participantPhone)
     }
   } catch (error) {
     console.error('❌ Erro ao processar participante adicionado:', error)
