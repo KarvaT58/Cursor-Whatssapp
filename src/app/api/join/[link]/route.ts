@@ -163,6 +163,16 @@ export async function GET(
       }, { status: 404 })
     }
 
+    // Verificar se group_families existe
+    if (!groupLink.group_families) {
+      console.error('❌ group_families é null para o link:', universalLink)
+      console.log('📋 Dados do groupLink:', JSON.stringify(groupLink, null, 2))
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Dados do grupo não encontrados' 
+      }, { status: 500 })
+    }
+
     console.log('✅ Link universal encontrado:', groupLink.group_families.name)
     return NextResponse.json({
       success: true,
@@ -170,11 +180,11 @@ export async function GET(
         familyName: groupLink.group_families.name,
         baseName: groupLink.group_families.base_name,
         totalParticipants: groupLink.group_families.total_participants,
-        activeGroups: groupLink.group_families.whatsapp_groups.length,
-            availableSpots: groupLink.group_families.whatsapp_groups.reduce(
-              (total: number, group: any) => total + (2 - group.participants.length), // eslint-disable-line @typescript-eslint/no-explicit-any
-              0
-            )
+        activeGroups: groupLink.group_families.whatsapp_groups?.length || 0,
+        availableSpots: groupLink.group_families.whatsapp_groups?.reduce(
+          (total: number, group: any) => total + (2 - (group.participants?.length || 0)), // eslint-disable-line @typescript-eslint/no-explicit-any
+          0
+        ) || 0
       }
     })
 
