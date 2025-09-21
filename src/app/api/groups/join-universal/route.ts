@@ -29,7 +29,8 @@ export async function POST(request: NextRequest) {
     console.log(`🔍 JOIN-UNIVERSAL: Buscando grupos para família ${familyId} (${familyName})`)
 
     // Criar cliente Supabase
-    const supabase = createClient()
+    const supabase = await createClient()
+    console.log('✅ JOIN-UNIVERSAL: Cliente Supabase criado com sucesso')
 
     // 1. Buscar todos os grupos da família
     console.log('🔍 JOIN-UNIVERSAL: Executando query no Supabase...')

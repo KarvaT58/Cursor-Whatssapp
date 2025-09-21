@@ -16,7 +16,7 @@ export async function GET(
     }
 
     // Criar cliente Supabase
-    const supabase = createClient()
+    const supabase = await createClient()
 
     // Buscar dados da família
     const { data: family, error: familyError } = await supabase
