@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
 
 // Interface para os dados do webhook da Z-API
@@ -72,7 +72,11 @@ export async function POST(request: NextRequest) {
     const body: ZApiWebhookData = await request.json()
     console.log('📨 Webhook Z-API recebido:', body)
 
-    const supabase = await createClient()
+    // Criar cliente Supabase para webhooks (sem cookies)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Verificar se a instância existe e está ativa
     const instanceId = body.instanceId || body.instance
@@ -93,8 +97,15 @@ export async function POST(request: NextRequest) {
 
     // Processar diferentes tipos de webhooks
     if (body.type === 'ReceivedCallback') {
-      // Webhook de mensagem recebida
-      await handleReceivedMessage(supabase, instance.user_id, body)
+      // Verificar se é um evento de grupo
+      if (body.notification === 'GROUP_PARTICIPANT_LEAVE') {
+        await handleParticipantLeft(supabase, instance.user_id, body)
+      } else if (body.notification === 'GROUP_PARTICIPANT_ADD') {
+        await handleParticipantAdded(supabase, instance.user_id, body)
+      } else {
+        // Webhook de mensagem recebida normal
+        await handleReceivedMessage(supabase, instance.user_id, body)
+      }
     } else if (body.event) {
       // Webhook de evento de grupo
       switch (body.event) {
@@ -136,6 +147,86 @@ export async function POST(request: NextRequest) {
       { error: 'Erro interno do servidor' },
       { status: 500 }
     )
+  }
+}
+
+// Processar participante que saiu do grupo
+async function handleParticipantLeft(
+  supabase: any,
+  userId: string,
+  data: ZApiWebhookData
+) {
+  try {
+    console.log('👋 Processando participante que saiu:', {
+      groupId: data.phone,
+      participantPhone: data.participantPhone,
+      groupName: data.chatName
+    })
+
+    if (!data.phone || !data.participantPhone) {
+      console.error('❌ Dados incompletos para participante que saiu:', data)
+      return
+    }
+
+    // Buscar dados do grupo
+    const { data: group, error: groupError } = await supabase
+      .from('whatsapp_groups')
+      .select('*')
+      .eq('whatsapp_id', data.phone)
+      .eq('user_id', userId)
+      .single()
+
+    if (groupError || !group) {
+      console.error('❌ Grupo não encontrado:', data.phone)
+      return
+    }
+
+    // Atualizar lista de participantes no banco (remover o participante)
+    const currentParticipants = group.participants || []
+    if (currentParticipants.includes(data.participantPhone)) {
+      const updatedParticipants = currentParticipants.filter(p => p !== data.participantPhone)
+      
+      const { error: updateError } = await supabase
+        .from('whatsapp_groups')
+        .update({
+          participants: updatedParticipants,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', group.id)
+
+      if (updateError) {
+        console.error('❌ Erro ao atualizar participantes:', updateError)
+      } else {
+        console.log('✅ Participante removido do banco:', data.participantPhone)
+      }
+    }
+
+    // Criar notificação de participante removido
+    const { error: notificationError } = await supabase
+      .from('group_notifications')
+      .insert({
+        group_id: group.id,
+        user_id: userId,
+        type: 'member_removed',
+        title: 'Participante saiu do grupo',
+        message: `O usuário ${data.participantPhone} saiu do grupo "${group.name}".`,
+        data: {
+          participant_phone: data.participantPhone,
+          group_whatsapp_id: data.phone,
+          group_name: group.name,
+          timestamp: data.momment || Date.now(),
+          source: 'webhook'
+        }
+      })
+
+    if (notificationError) {
+      console.error('❌ Erro ao criar notificação de participante removido:', notificationError)
+    } else {
+      console.log('✅ Notificação de participante removido criada para:', data.participantPhone)
+    }
+
+  } catch (error) {
+    console.error('❌ Erro ao processar participante que saiu:', error)
   }
 }
 
@@ -241,14 +332,20 @@ async function handleJoinRequest(
   }
 }
 
-// Processar participante adicionado
+// Processar participante adicionado (nova estrutura)
 async function handleParticipantAdded(
   supabase: any,
   userId: string,
-  data: ZApiWebhookData['data']
+  data: ZApiWebhookData
 ) {
   try {
-    if (!data.groupId || !data.participant) {
+    console.log('👋 Processando participante adicionado:', {
+      groupId: data.phone,
+      participantPhone: data.participantPhone,
+      groupName: data.chatName
+    })
+
+    if (!data.phone || !data.participantPhone) {
       console.error('❌ Dados incompletos para participante adicionado:', data)
       return
     }
@@ -257,19 +354,19 @@ async function handleParticipantAdded(
     const { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
       .select('*')
-      .eq('whatsapp_id', data.groupId)
+      .eq('whatsapp_id', data.phone)
       .eq('user_id', userId)
       .single()
 
     if (groupError || !group) {
-      console.error('❌ Grupo não encontrado:', data.groupId)
+      console.error('❌ Grupo não encontrado:', data.phone)
       return
     }
 
     // Atualizar lista de participantes no banco
     const currentParticipants = group.participants || []
-    if (!currentParticipants.includes(data.participant)) {
-      const updatedParticipants = [...currentParticipants, data.participant]
+    if (!currentParticipants.includes(data.participantPhone)) {
+      const updatedParticipants = [...currentParticipants, data.participantPhone]
       
       const { error: updateError } = await supabase
         .from('whatsapp_groups')
@@ -282,7 +379,7 @@ async function handleParticipantAdded(
       if (updateError) {
         console.error('❌ Erro ao atualizar participantes:', updateError)
       } else {
-        console.log('✅ Participante adicionado ao banco:', data.participant)
+        console.log('✅ Participante adicionado ao banco:', data.participantPhone)
       }
     }
 
@@ -294,12 +391,12 @@ async function handleParticipantAdded(
         user_id: userId,
         type: 'member_added',
         title: 'Novo participante adicionado',
-        message: `O usuário ${data.participant} foi adicionado ao grupo "${group.name}".`,
+        message: `O usuário ${data.participantPhone} foi adicionado ao grupo "${group.name}".`,
         data: {
-          participant_phone: data.participant,
-          group_whatsapp_id: data.groupId,
+          participant_phone: data.participantPhone,
+          group_whatsapp_id: data.phone,
           group_name: group.name,
-          timestamp: data.timestamp || Date.now(),
+          timestamp: data.momment || Date.now(),
           source: 'webhook'
         }
       })
@@ -307,7 +404,7 @@ async function handleParticipantAdded(
     if (notificationError) {
       console.error('❌ Erro ao criar notificação de participante adicionado:', notificationError)
     } else {
-      console.log('✅ Notificação de participante adicionado criada para:', data.participant)
+      console.log('✅ Notificação de participante adicionado criada para:', data.participantPhone)
     }
   } catch (error) {
     console.error('❌ Erro ao processar participante adicionado:', error)
