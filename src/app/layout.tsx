@@ -6,8 +6,6 @@ import { RealtimeProvider } from '@/providers/realtime-provider'
 import { WebVitalsProvider } from '@/components/monitoring/web-vitals-provider'
 import { Toaster } from '@/components/ui/toaster'
 
-// Auto-inicializar sistema de monitoramento
-import '@/lib/monitoring/server-startup'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
