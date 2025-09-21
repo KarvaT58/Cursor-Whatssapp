@@ -62,38 +62,67 @@ export class GroupMonitor {
     try {
       console.log('🔍 Verificando todos os grupos ativos...')
 
-      // Buscar todos os grupos ativos
-      const { data: groups, error: groupsError } = await this.supabase
-        .from('whatsapp_groups')
-        .select(`
-          *,
-          group_families (
-            id,
-            name,
-            user_id
-          )
-        `)
-        .not('whatsapp_id', 'is', null)
+      // Buscar todos os grupos ativos com timeout
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 segundos timeout
 
-      if (groupsError) {
-        console.error('❌ Erro ao buscar grupos:', groupsError)
-        return
-      }
+      try {
+        const { data: groups, error: groupsError } = await this.supabase
+          .from('whatsapp_groups')
+          .select(`
+            *,
+            group_families (
+              id,
+              name,
+              user_id
+            )
+          `)
+          .not('whatsapp_id', 'is', null)
 
-      if (!groups || groups.length === 0) {
-        console.log('ℹ️ Nenhum grupo ativo encontrado')
-        return
-      }
+        clearTimeout(timeoutId)
 
-      console.log(`📋 Encontrados ${groups.length} grupos para verificar`)
+        if (groupsError) {
+          console.error('❌ Erro ao buscar grupos:', {
+            message: groupsError.message,
+            details: groupsError.details,
+            hint: groupsError.hint,
+            code: groupsError.code
+          })
+          return
+        }
 
-      // Verificar cada grupo
-      for (const group of groups) {
-        await this.checkGroupParticipants(group)
+        if (!groups || groups.length === 0) {
+          console.log('ℹ️ Nenhum grupo ativo encontrado')
+          return
+        }
+
+        console.log(`📋 Encontrados ${groups.length} grupos para verificar`)
+
+        // Verificar cada grupo com delay para evitar sobrecarga
+        for (let i = 0; i < groups.length; i++) {
+          const group = groups[i]
+          console.log(`🔍 Verificando grupo ${i + 1}/${groups.length}: ${group.name}`)
+          
+          await this.checkGroupParticipants(group)
+          
+          // Pequeno delay entre verificações para evitar sobrecarga da API
+          if (i < groups.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000)) // 2 segundos entre grupos
+          }
+        }
+
+      } catch (fetchError) {
+        clearTimeout(timeoutId)
+        throw fetchError
       }
 
     } catch (error) {
-      console.error('❌ Erro ao verificar grupos:', error)
+      console.error('❌ Erro ao verificar grupos:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? error.stack : String(error),
+        hint: '',
+        code: ''
+      })
     }
   }
 
@@ -141,48 +170,72 @@ export class GroupMonitor {
    * Busca participantes atuais do grupo via Z-API
    */
   private async getGroupParticipantsFromZApi(group: any): Promise<string[] | null> {
-    try {
-      // Buscar instância Z-API ativa do usuário
-      const { data: zApiInstance, error: instanceError } = await this.supabase
-        .from('z_api_instances')
-        .select('*')
-        .eq('user_id', group.group_families.user_id)
-        .eq('is_active', true)
-        .single()
+    const maxRetries = 3
+    const retryDelay = 1000 // 1 segundo
 
-      if (instanceError || !zApiInstance) {
-        console.error('❌ Instância Z-API não encontrada para grupo:', group.name)
-        return null
-      }
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Buscar instância Z-API ativa do usuário
+        const { data: zApiInstance, error: instanceError } = await this.supabase
+          .from('z_api_instances')
+          .select('*')
+          .eq('user_id', group.group_families.user_id)
+          .eq('is_active', true)
+          .single()
 
-      // Fazer requisição para obter metadados do grupo
-      const response = await fetch(
-        `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/group-metadata/${group.whatsapp_id}`,
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-Token': zApiInstance.client_token || '',
-          }
+        if (instanceError || !zApiInstance) {
+          console.error('❌ Instância Z-API não encontrada para grupo:', group.name)
+          return null
         }
-      )
 
-      const result = await response.json()
-      
-      if (response.ok && result.participants) {
-        // Extrair apenas os números de telefone dos participantes
-        const participants = result.participants.map((p: any) => p.phone).filter(Boolean)
-        console.log(`📋 Participantes obtidos do grupo ${group.name}:`, participants.length)
-        return participants
-      } else {
-        console.error('❌ Erro ao obter participantes do grupo:', result)
-        return null
+        // Fazer requisição para obter metadados do grupo com timeout
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos timeout
+
+        try {
+          const response = await fetch(
+            `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/group-metadata/${group.whatsapp_id}`,
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Client-Token': zApiInstance.client_token || '',
+              },
+              signal: controller.signal
+            }
+          )
+
+          clearTimeout(timeoutId)
+          const result = await response.json()
+          
+          if (response.ok && result.participants) {
+            // Extrair apenas os números de telefone dos participantes
+            const participants = result.participants.map((p: any) => p.phone).filter(Boolean)
+            console.log(`📋 Participantes obtidos do grupo ${group.name}:`, participants.length)
+            return participants
+          } else {
+            console.error('❌ Erro ao obter participantes do grupo:', result)
+            return null
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId)
+          throw fetchError
+        }
+
+      } catch (error) {
+        console.error(`❌ Erro ao buscar participantes via Z-API (tentativa ${attempt}/${maxRetries}):`, error)
+        
+        if (attempt === maxRetries) {
+          console.error('❌ Falha definitiva ao obter participantes do grupo:', group.name)
+          return null
+        }
+        
+        // Aguardar antes da próxima tentativa
+        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
       }
-
-    } catch (error) {
-      console.error('❌ Erro ao buscar participantes via Z-API:', error)
-      return null
     }
+
+    return null
   }
 
   /**
@@ -230,48 +283,73 @@ export class GroupMonitor {
    * Remove participante do grupo via Z-API
    */
   private async removeParticipantFromGroup(groupId: string, participantPhone: string, userId: string) {
-    try {
-      console.log('🚫 Removendo participante do grupo:', { groupId, participantPhone })
+    const maxRetries = 3
+    const retryDelay = 1000
 
-      // Buscar instância Z-API ativa
-      const { data: zApiInstance, error: instanceError } = await this.supabase
-        .from('z_api_instances')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .single()
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🚫 Removendo participante do grupo (tentativa ${attempt}/${maxRetries}):`, { groupId, participantPhone })
 
-      if (instanceError || !zApiInstance) {
-        console.error('❌ Instância Z-API não encontrada para remoção:', instanceError)
-        return
-      }
+        // Buscar instância Z-API ativa
+        const { data: zApiInstance, error: instanceError } = await this.supabase
+          .from('z_api_instances')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
 
-      // Fazer requisição para remover participante
-      const response = await fetch(
-        `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/remove-participant`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-Token': zApiInstance.client_token || '',
-          },
-          body: JSON.stringify({
-            groupId: groupId,
-            phone: participantPhone
-          })
+        if (instanceError || !zApiInstance) {
+          console.error('❌ Instância Z-API não encontrada para remoção:', instanceError)
+          return
         }
-      )
 
-      const result = await response.json()
-      
-      if (response.ok && result.value) {
-        console.log('✅ Participante removido com sucesso do grupo:', participantPhone)
-      } else {
-        console.error('❌ Erro ao remover participante:', result)
+        // Fazer requisição para remover participante com timeout
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000)
+
+        try {
+          const response = await fetch(
+            `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/remove-participant`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Client-Token': zApiInstance.client_token || '',
+              },
+              body: JSON.stringify({
+                groupId: groupId,
+                phone: participantPhone
+              }),
+              signal: controller.signal
+            }
+          )
+
+          clearTimeout(timeoutId)
+          const result = await response.json()
+          
+          if (response.ok && result.value) {
+            console.log('✅ Participante removido com sucesso do grupo:', participantPhone)
+            return // Sucesso, sair do loop
+          } else {
+            console.error('❌ Erro ao remover participante:', result)
+            if (attempt === maxRetries) return
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId)
+          throw fetchError
+        }
+
+      } catch (error) {
+        console.error(`❌ Erro ao remover participante do grupo (tentativa ${attempt}/${maxRetries}):`, error)
+        
+        if (attempt === maxRetries) {
+          console.error('❌ Falha definitiva ao remover participante:', participantPhone)
+          return
+        }
+        
+        // Aguardar antes da próxima tentativa
+        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
       }
-
-    } catch (error) {
-      console.error('❌ Erro ao remover participante do grupo:', error)
     }
   }
 
@@ -279,51 +357,76 @@ export class GroupMonitor {
    * Envia mensagem de banimento
    */
   private async sendBanMessage(participantPhone: string, userId: string) {
-    try {
-      console.log('📱 Enviando mensagem de banimento para:', participantPhone)
+    const maxRetries = 3
+    const retryDelay = 1000
 
-      // Buscar instância Z-API ativa
-      const { data: zApiInstance, error: instanceError } = await this.supabase
-        .from('z_api_instances')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-        .single()
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`📱 Enviando mensagem de banimento para: ${participantPhone} (tentativa ${attempt}/${maxRetries})`)
 
-      if (instanceError || !zApiInstance) {
-        console.error('❌ Instância Z-API não encontrada para envio de mensagem:', instanceError)
-        return
-      }
+        // Buscar instância Z-API ativa
+        const { data: zApiInstance, error: instanceError } = await this.supabase
+          .from('z_api_instances')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .single()
 
-      // Mensagem de banimento
-      const banMessage = `Você está banido dos grupos do WhatsApp. Contate o administrador para mais informações: ${this.config.adminPhone}`
-
-      // Fazer requisição para enviar mensagem
-      const response = await fetch(
-        `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/send-text`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-Token': zApiInstance.client_token || '',
-          },
-          body: JSON.stringify({
-            phone: participantPhone,
-            message: banMessage
-          })
+        if (instanceError || !zApiInstance) {
+          console.error('❌ Instância Z-API não encontrada para envio de mensagem:', instanceError)
+          return
         }
-      )
 
-      const result = await response.json()
-      
-      if (response.ok && result.value) {
-        console.log('✅ Mensagem de banimento enviada com sucesso para:', participantPhone)
-      } else {
-        console.error('❌ Erro ao enviar mensagem de banimento:', result)
+        // Mensagem de banimento
+        const banMessage = `Você está banido dos grupos do WhatsApp. Contate o administrador para mais informações: ${this.config.adminPhone}`
+
+        // Fazer requisição para enviar mensagem com timeout
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 10000)
+
+        try {
+          const response = await fetch(
+            `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/send-text`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Client-Token': zApiInstance.client_token || '',
+              },
+              body: JSON.stringify({
+                phone: participantPhone,
+                message: banMessage
+              }),
+              signal: controller.signal
+            }
+          )
+
+          clearTimeout(timeoutId)
+          const result = await response.json()
+          
+          if (response.ok && result.value) {
+            console.log('✅ Mensagem de banimento enviada com sucesso para:', participantPhone)
+            return // Sucesso, sair do loop
+          } else {
+            console.error('❌ Erro ao enviar mensagem de banimento:', result)
+            if (attempt === maxRetries) return
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId)
+          throw fetchError
+        }
+
+      } catch (error) {
+        console.error(`❌ Erro ao enviar mensagem de banimento (tentativa ${attempt}/${maxRetries}):`, error)
+        
+        if (attempt === maxRetries) {
+          console.error('❌ Falha definitiva ao enviar mensagem de banimento para:', participantPhone)
+          return
+        }
+        
+        // Aguardar antes da próxima tentativa
+        await new Promise(resolve => setTimeout(resolve, retryDelay * attempt))
       }
-
-    } catch (error) {
-      console.error('❌ Erro ao enviar mensagem de banimento:', error)
     }
   }
 
