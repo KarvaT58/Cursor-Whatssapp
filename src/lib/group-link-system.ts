@@ -810,7 +810,12 @@ export class GroupLinkSystem {
    */
   async syncGroupParticipants(
     groupId: string,
-    userId: string
+    userId: string,
+    options: { 
+      autoSync?: boolean,
+      forceUpdate?: boolean,
+      createNotifications?: boolean 
+    } = {}
   ): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
       console.log('🔄 SINCRONIZANDO PARTICIPANTES DO GRUPO ===')
@@ -895,6 +900,17 @@ export class GroupLinkSystem {
         }
 
         console.log('✅ Participantes atualizados no banco de dados')
+
+        // 4.1. Criar notificações se habilitado
+        if (options.createNotifications !== false) {
+          await this.createParticipantChangeNotifications(
+            supabase,
+            group,
+            participantsWhoLeft,
+            newParticipants,
+            userId
+          )
+        }
       } else {
         console.log('✅ Participantes já estão sincronizados')
       }
@@ -923,6 +939,165 @@ export class GroupLinkSystem {
       return { 
         success: false, 
         error: error.message || 'Erro interno na sincronização' 
+      }
+    }
+  }
+
+  /**
+   * Criar notificações quando participantes saem ou entram
+   */
+  private async createParticipantChangeNotifications(
+    supabase: any,
+    group: any,
+    participantsWhoLeft: string[],
+    newParticipants: string[],
+    userId: string
+  ): Promise<void> {
+    try {
+      console.log('🔔 Criando notificações de mudanças de participantes...')
+
+      // Notificações para quem saiu
+      for (const phone of participantsWhoLeft) {
+        const { error: leftError } = await supabase
+          .from('group_notifications')
+          .insert({
+            group_id: group.id,
+            user_id: userId,
+            type: 'member_removed',
+            title: 'Participante saiu do grupo',
+            message: `O usuário ${phone} saiu do grupo "${group.name}".`,
+            data: {
+              participant_phone: phone,
+              group_whatsapp_id: group.whatsapp_id,
+              group_name: group.name,
+              timestamp: Date.now(),
+              sync_type: 'automatic'
+            }
+          })
+
+        if (leftError) {
+          console.error('❌ Erro ao criar notificação de saída:', leftError)
+        } else {
+          console.log(`✅ Notificação criada: ${phone} saiu do grupo`)
+        }
+      }
+
+      // Notificações para quem entrou
+      for (const phone of newParticipants) {
+        const { error: joinedError } = await supabase
+          .from('group_notifications')
+          .insert({
+            group_id: group.id,
+            user_id: userId,
+            type: 'member_added',
+            title: 'Novo participante no grupo',
+            message: `O usuário ${phone} entrou no grupo "${group.name}".`,
+            data: {
+              participant_phone: phone,
+              group_whatsapp_id: group.whatsapp_id,
+              group_name: group.name,
+              timestamp: Date.now(),
+              sync_type: 'automatic'
+            }
+          })
+
+        if (joinedError) {
+          console.error('❌ Erro ao criar notificação de entrada:', joinedError)
+        } else {
+          console.log(`✅ Notificação criada: ${phone} entrou no grupo`)
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Erro ao criar notificações:', error)
+    }
+  }
+
+  /**
+   * Sincronização automática de todos os grupos do usuário
+   */
+  async autoSyncAllGroups(userId: string): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      console.log('🔄 SINCRONIZAÇÃO AUTOMÁTICA DE TODOS OS GRUPOS ===')
+      console.log('User ID:', userId)
+
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = await createClient()
+
+      // Buscar todos os grupos do usuário
+      const { data: groups, error: groupsError } = await supabase
+        .from('whatsapp_groups')
+        .select('id, name, whatsapp_id, group_family')
+        .eq('user_id', userId)
+        .not('whatsapp_id', 'is', null)
+
+      if (groupsError) {
+        console.error('❌ Erro ao buscar grupos:', groupsError)
+        return { success: false, error: 'Erro ao buscar grupos' }
+      }
+
+      if (!groups || groups.length === 0) {
+        console.log('ℹ️ Nenhum grupo encontrado para sincronizar')
+        return { success: true, data: { syncedGroups: 0, message: 'Nenhum grupo para sincronizar' } }
+      }
+
+      console.log(`📋 Encontrados ${groups.length} grupos para sincronizar`)
+
+      const results = []
+      let totalChanges = 0
+
+      // Sincronizar cada grupo
+      for (const group of groups) {
+        console.log(`🔄 Sincronizando grupo: ${group.name} (${group.id})`)
+        
+        const syncResult = await this.syncGroupParticipants(
+          group.id,
+          userId,
+          { 
+            autoSync: true,
+            createNotifications: true 
+          }
+        )
+
+        if (syncResult.success && syncResult.data) {
+          const changes = (syncResult.data.participantsWhoLeft?.length || 0) + 
+                         (syncResult.data.newParticipants?.length || 0)
+          totalChanges += changes
+          
+          results.push({
+            groupId: group.id,
+            groupName: group.name,
+            success: true,
+            changes: changes,
+            data: syncResult.data
+          })
+        } else {
+          results.push({
+            groupId: group.id,
+            groupName: group.name,
+            success: false,
+            error: syncResult.error
+          })
+        }
+      }
+
+      console.log(`✅ Sincronização automática concluída: ${totalChanges} mudanças em ${groups.length} grupos`)
+
+      return {
+        success: true,
+        data: {
+          totalGroups: groups.length,
+          totalChanges,
+          results,
+          timestamp: new Date().toISOString()
+        }
+      }
+
+    } catch (error: any) {
+      console.error('❌ Erro na sincronização automática:', error)
+      return { 
+        success: false, 
+        error: error.message || 'Erro interno na sincronização automática' 
       }
     }
   }

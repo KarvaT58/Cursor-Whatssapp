@@ -27,7 +27,14 @@ export async function POST(
 
     // Usar o GroupLinkSystem para sincronizar
     const groupLinkSystem = new GroupLinkSystem()
-    const syncResult = await groupLinkSystem.syncGroupParticipants(groupId, user.id)
+    const syncResult = await groupLinkSystem.syncGroupParticipants(
+      groupId, 
+      user.id,
+      { 
+        autoSync: false, // Manual
+        createNotifications: true 
+      }
+    )
 
     if (!syncResult.success) {
       console.error('❌ Erro na sincronização:', syncResult.error)
