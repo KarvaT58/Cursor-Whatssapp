@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { blacklistCache } from '@/lib/monitoring/blacklist-cache'
 
 // GET /api/blacklist - Listar blacklist
 export async function GET(request: NextRequest) {
@@ -76,8 +75,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao adicionar à blacklist' }, { status: 500 })
     }
 
-    // Invalidar cache para forçar atualização
-    blacklistCache.invalidateCache(user.id)
+    // Cache não é mais necessário - sistema simples
 
     return NextResponse.json({ 
       success: true, 
@@ -120,8 +118,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Erro ao remover da blacklist' }, { status: 500 })
     }
 
-    // Invalidar cache para forçar atualização
-    blacklistCache.invalidateCache(user.id)
+    // Cache não é mais necessário - sistema simples
 
     return NextResponse.json({ 
       success: true,
