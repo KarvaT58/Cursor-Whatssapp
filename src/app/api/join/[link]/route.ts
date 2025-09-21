@@ -106,19 +106,25 @@ export async function GET(
 ) {
   try {
     console.log('🔗 VERIFICANDO LINK UNIVERSAL ===')
+    console.log('Request URL:', request.url)
+    console.log('Request method:', request.method)
     
     const resolvedParams = await params
     const universalLink = resolvedParams.link
     console.log('Universal Link:', universalLink)
 
     if (!universalLink) {
+      console.log('❌ Link universal não fornecido')
       return NextResponse.json({ error: 'Link universal é obrigatório' }, { status: 400 })
     }
 
     // Buscar pelo link usando LIKE para encontrar independente da URL base
+    console.log('🔍 Conectando ao Supabase...')
     const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
+    console.log('✅ Supabase client criado')
 
+    console.log('🔍 Buscando link universal no banco...')
     const { data: groupLinks, error: linkError } = await supabase
       .from('group_links')
       .select(`
@@ -136,9 +142,21 @@ export async function GET(
       `)
       .like('universal_link', `%/join/${universalLink}`)
 
+    console.log('📋 Resultado da consulta:', { groupLinks, linkError })
+
     const groupLink = groupLinks?.[0] // Pega o primeiro resultado
 
-    if (linkError || !groupLink) {
+    if (linkError) {
+      console.error('❌ Erro na consulta ao banco:', linkError)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Erro ao buscar link universal',
+        details: linkError.message
+      }, { status: 500 })
+    }
+
+    if (!groupLink) {
+      console.log('❌ Link universal não encontrado no banco')
       return NextResponse.json({ 
         success: false, 
         error: 'Link universal não encontrado' 
