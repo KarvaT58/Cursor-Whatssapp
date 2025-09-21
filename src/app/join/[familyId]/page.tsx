@@ -39,6 +39,15 @@ export default function JoinGroupPage() {
   )
 
   useEffect(() => {
+    console.log('🚀 useEffect executado, familyId:', familyId)
+    
+    if (!familyId) {
+      console.error('❌ familyId não fornecido')
+      setError('ID da família não fornecido')
+      setLoading(false)
+      return
+    }
+    
     loadFamilyData()
     
     // Suprimir erros do Google Play Services
@@ -57,22 +66,45 @@ export default function JoinGroupPage() {
 
   const loadFamilyData = async () => {
     try {
+      console.log('🔍 Carregando dados da família:', familyId)
+      console.log('🔧 Configuração Supabase:', {
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+      })
+      
+      // Teste de conexão básica
+      const { data: testData, error: testError } = await supabase
+        .from('group_families')
+        .select('count')
+        .limit(1)
+      
+      console.log('🧪 Teste de conexão:', { testData, testError })
+      
       const { data: familyData, error: familyError } = await supabase
         .from('group_families')
         .select('*')
         .eq('id', familyId)
         .single()
 
+      console.log('📊 Resultado da consulta:', { familyData, familyError })
+
       if (familyError) {
-        console.error('Erro ao carregar família:', familyError)
+        console.error('❌ Erro ao carregar família:', familyError)
+        setError(`Família não encontrada: ${familyError.message}`)
+        return
+      }
+
+      if (!familyData) {
+        console.error('❌ Nenhum dado retornado para família:', familyId)
         setError('Família não encontrada')
         return
       }
 
+      console.log('✅ Família carregada com sucesso:', familyData)
       setFamily(familyData)
     } catch (error) {
-      console.error('Erro ao carregar dados:', error)
-      setError('Erro ao carregar dados')
+      console.error('❌ Erro ao carregar dados:', error)
+      setError(`Erro ao carregar dados: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     } finally {
       setLoading(false)
     }
