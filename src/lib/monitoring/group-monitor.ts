@@ -162,6 +162,7 @@ export class GroupMonitor {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
+            'Client-Token': zApiInstance.client_token || '',
           }
         }
       )
@@ -252,6 +253,7 @@ export class GroupMonitor {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Client-Token': zApiInstance.client_token || '',
           },
           body: JSON.stringify({
             groupId: groupId,
@@ -303,6 +305,7 @@ export class GroupMonitor {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Client-Token': zApiInstance.client_token || '',
           },
           body: JSON.stringify({
             phone: participantPhone,

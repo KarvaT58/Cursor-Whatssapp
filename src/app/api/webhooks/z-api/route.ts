@@ -723,6 +723,7 @@ async function removeParticipantFromGroup(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Client-Token': zApiInstance.client_token || '',
         },
         body: JSON.stringify({
           groupId: groupId,
@@ -776,6 +777,7 @@ async function sendBanMessage(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Client-Token': zApiInstance.client_token || '',
         },
         body: JSON.stringify({
           phone: participantPhone,
