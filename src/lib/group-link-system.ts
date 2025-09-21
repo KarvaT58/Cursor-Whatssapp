@@ -331,29 +331,33 @@ export class GroupLinkSystem {
         console.log('✅ Novo grupo criado:', targetGroup.name)
       }
 
-      // 6. Retornar informações do grupo para a pessoa entrar pelo link
-      console.log('🔗 Grupo disponível encontrado, retornando link universal para entrada')
+      // 6. Gerar link específico do WhatsApp para o grupo
+      console.log('🔗 Gerando link específico do WhatsApp para o grupo')
       
-      // Buscar o link universal da família
-      const { data: universalLinkData } = await supabase
-        .from('group_links')
-        .select('universal_link')
-        .eq('group_family', groupLink.group_families.id)
-        .single()
-
-      if (!universalLinkData) {
-        return { success: false, error: 'Link universal não encontrado' }
+      const zApiClient = await this.getZApiClient()
+      const inviteLinkResult = await zApiClient.getGroupInviteLink(targetGroup.whatsapp_id)
+      
+      if (!inviteLinkResult.success) {
+        console.error('❌ Erro ao gerar link de convite:', inviteLinkResult.error)
+        return { success: false, error: 'Erro ao gerar link de convite do grupo' }
       }
 
-      console.log('✅ Link universal retornado para entrada voluntária')
+      const whatsappInviteLink = inviteLinkResult.data?.inviteLink || inviteLinkResult.data?.link
+      
+      if (!whatsappInviteLink) {
+        console.error('❌ Link de convite não encontrado na resposta')
+        return { success: false, error: 'Link de convite não foi gerado' }
+      }
+
+      console.log('✅ Link específico do WhatsApp gerado:', whatsappInviteLink)
       return { 
         success: true, 
         data: { 
           groupId: targetGroup.id,
           groupName: targetGroup.name,
           whatsappId: targetGroup.whatsapp_id,
-          universalLink: universalLinkData.universal_link,
-          message: 'Grupo disponível. Use o link universal para entrar quando desejar.'
+          whatsappInviteLink: whatsappInviteLink,
+          message: `Grupo "${targetGroup.name}" disponível. Use o link específico para entrar.`
         } 
       }
 
