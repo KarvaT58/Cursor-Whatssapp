@@ -335,17 +335,23 @@ export class GroupLinkSystem {
       console.log('🔗 Gerando link específico do WhatsApp para o grupo')
       
       const zApiClient = await this.getZApiClient()
-      const inviteLinkResult = await zApiClient.getGroupInviteLink(targetGroup.whatsapp_id)
+      
+      // ✅ USAR O MÉTODO CORRETO: generateGroupInviteLink em vez de getGroupInviteLink
+      const inviteLinkResult = await zApiClient.generateGroupInviteLink(targetGroup.whatsapp_id)
       
       if (!inviteLinkResult.success) {
         console.error('❌ Erro ao gerar link de convite:', inviteLinkResult.error)
         return { success: false, error: 'Erro ao gerar link de convite do grupo' }
       }
 
-      const whatsappInviteLink = inviteLinkResult.data?.inviteLink || inviteLinkResult.data?.link
+      // ✅ VERIFICAR DIFERENTES POSSÍVEIS CAMPOS NA RESPOSTA
+      const whatsappInviteLink = inviteLinkResult.data?.inviteLink || 
+                                inviteLinkResult.data?.link || 
+                                inviteLinkResult.data?.invite_link ||
+                                inviteLinkResult.data?.groupInviteLink
       
       if (!whatsappInviteLink) {
-        console.error('❌ Link de convite não encontrado na resposta')
+        console.error('❌ Link de convite não encontrado na resposta:', inviteLinkResult.data)
         return { success: false, error: 'Link de convite não foi gerado' }
       }
 
