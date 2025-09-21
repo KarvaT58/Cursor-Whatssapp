@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { GroupLinkSystem } from '@/lib/group-link-system'
 
 export async function DELETE(
   request: NextRequest,
@@ -50,23 +49,28 @@ export async function DELETE(
     })
 
     if (isUniversalGroup) {
-      // Usar método específico para grupos universais
-      console.log('🔗 Excluindo grupo universal...')
-      const groupLinkSystem = new GroupLinkSystem()
-      const deleteResult = await groupLinkSystem.deleteUniversalGroup(id, user.id)
+      // Exclusão de grupo de família (sistema simplificado)
+      console.log('🔗 Excluindo grupo de família...')
       
-      if (!deleteResult.success) {
-        console.error('❌ Erro na exclusão do grupo universal:', deleteResult.error)
+      // Excluir o grupo
+      const { error: deleteError } = await supabase
+        .from('whatsapp_groups')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+      if (deleteError) {
+        console.error('❌ Erro ao excluir grupo de família:', deleteError)
         return NextResponse.json(
-          { error: deleteResult.error || 'Erro ao excluir grupo universal' },
+          { error: 'Erro ao excluir grupo de família' },
           { status: 500 }
         )
       }
 
-      console.log('✅ Grupo universal excluído com sucesso!')
+      console.log('✅ Grupo de família excluído com sucesso!')
       return NextResponse.json({
         success: true,
-        message: 'Grupo universal excluído com sucesso',
+        message: 'Grupo de família excluído com sucesso',
         data: {
           groupId: id,
           groupName: group.name,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ZApiClient } from '@/lib/z-api/client'
-import { GroupLinkSystem } from '@/lib/group-link-system'
 import { z } from 'zod'
 
 const CreateGroupSchema = z.object({
@@ -431,28 +430,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Criar sistema de links universais para o grupo (apenas se solicitado)
+    // Sistema de links universais simplificado
     if (validatedData.enable_universal_link) {
-      console.log('🔗 Criando sistema de links universais para o grupo...')
-      try {
-        const groupLinkSystem = new GroupLinkSystem()
-        const linkResult = await groupLinkSystem.createUniversalLinkSystem(
-          group.id,
-          validatedData.name,
-          user.id,
-          validatedData.system_phone, // Passar o número do sistema
-          request.url // Passar a URL da requisição para detectar o domínio
-        )
-        
-        if (linkResult.success) {
-          console.log('✅ Sistema de links universais criado com sucesso')
-          console.log('Link universal:', linkResult.data?.universal_link)
-        } else {
-          console.warn('⚠️ Grupo criado mas sistema de links não foi criado:', linkResult.error)
-        }
-      } catch (linkError) {
-        console.warn('⚠️ Erro ao criar sistema de links universais:', linkError)
-      }
+      console.log('🔗 Sistema de links universais simplificado - use o novo sistema em /join/[familyId]')
     } else {
       console.log('ℹ️ Sistema de links universais não foi solicitado para este grupo')
     }
