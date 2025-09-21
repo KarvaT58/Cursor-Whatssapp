@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
-import { blacklistCache } from '@/lib/monitoring/blacklist-cache'
+import { simpleBlacklistChecker } from '@/lib/monitoring/simple-blacklist-checker'
 
 // Interface para os dados do webhook da Z-API
 interface ZApiWebhookData {
@@ -366,50 +366,17 @@ async function handleParticipantAdded(
       return
     }
 
-    // ⚡ VERIFICAÇÃO ULTRA-RÁPIDA DE BLACKLIST
-    const startTime = Date.now()
-    console.log('⚡ Verificação instantânea de blacklist para:', data.participantPhone)
+    // 🔍 VERIFICAÇÃO SIMPLES DE BLACKLIST
+    console.log('🔍 SIMPLES: Verificando blacklist para:', data.participantPhone)
     
-    const blacklistEntry = await blacklistCache.isBlacklisted(data.participantPhone, userId)
-    
-    const checkTime = Date.now() - startTime
-    console.log(`⚡ Verificação concluída em ${checkTime}ms`)
+    const wasRemoved = await simpleBlacklistChecker.checkAndRemoveIfBlacklisted(
+      data.participantPhone,
+      data.phone,
+      userId
+    )
 
-    // Se o participante está na blacklist, remover IMEDIATAMENTE
-    if (blacklistEntry) {
-      console.log('🚫 PARTICIPANTE ENCONTRADO NA BLACKLIST - REMOVENDO AUTOMATICAMENTE')
-      
-      // Remover do grupo via Z-API
-      await removeParticipantFromGroup(data.phone, data.participantPhone, userId, supabase)
-      
-      // Enviar mensagem de banimento
-      await sendBanMessage(data.participantPhone, userId, supabase)
-      
-      // Criar notificação de remoção por blacklist
-      const { error: notificationError } = await supabase
-        .from('group_notifications')
-        .insert({
-          group_id: group.id,
-          user_id: userId,
-          type: 'member_banned',
-          title: 'Participante removido por blacklist',
-          message: `O usuário ${data.participantPhone} foi removido automaticamente do grupo "${group.name}" por estar na blacklist.`,
-          data: {
-            participant_phone: data.participantPhone,
-            group_whatsapp_id: data.phone,
-            group_name: group.name,
-            timestamp: data.momment || Date.now(),
-            source: 'webhook_blacklist_check',
-            reason: 'blacklist'
-          }
-        })
-
-      if (notificationError) {
-        console.error('❌ Erro ao criar notificação de banimento:', notificationError)
-      } else {
-        console.log('✅ Notificação de banimento criada para:', data.participantPhone)
-      }
-
+    if (wasRemoved) {
+      console.log('🚫 SIMPLES: Participante removido da blacklist - não adicionando ao grupo')
       return // Não adicionar à lista de participantes
     }
 

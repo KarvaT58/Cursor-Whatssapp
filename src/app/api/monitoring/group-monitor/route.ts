@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { GroupMonitor } from '@/lib/monitoring/group-monitor'
-import { getUltraRobustMonitor } from '@/lib/monitoring/ultra-robust-monitor'
 import { createClient } from '@supabase/supabase-js'
 
 // Instância global do monitor (singleton)
@@ -58,134 +56,48 @@ async function checkAndRecoverMonitor() {
   }
 }
 
-// GET /api/monitoring/group-monitor - Status do monitor
+// GET /api/monitoring/group-monitor - Status do sistema simples
 export async function GET(request: NextRequest) {
   try {
-    // Obter sistema ultra-robusto (que garante que o monitor NUNCA para)
-    const ultraRobust = getUltraRobustMonitor()
-    
-    // Se o sistema não está rodando, iniciar
-    if (!ultraRobust.getStatus().isRunning) {
-      console.log('🛡️ Iniciando sistema ULTRA-ROBUSTO...')
-      ultraRobust.start()
-    }
-
-    // Obter status completo
-    const status = ultraRobust.getStatus()
-
     return NextResponse.json({
       success: true,
       data: {
-        ...status.monitorStatus,
-        ultraRobust: {
-          isRunning: status.isRunning,
-          restartAttempts: status.restartAttempts,
-          lastHealthCheck: status.lastHealthCheck,
-          lastForceRestart: status.lastForceRestart,
-          isHealthy: status.isHealthy
-        },
-        heartbeat: status.heartbeatStatus,
-        message: status.isRunning ? 'Monitor protegido por sistema ULTRA-ROBUSTO - NUNCA para sozinho!' : 'Sistema ultra-robusto não está rodando'
+        isRunning: true,
+        message: 'Sistema SIMPLES ativo - Verificação via webhook Z-API',
+        system: 'simple_blacklist_checker',
+        description: 'Sistema simplificado que verifica blacklist apenas via webhook'
       }
     })
 
   } catch (error) {
-    console.error('❌ Erro ao obter status do monitor:', error)
+    console.error('❌ Erro ao obter status:', error)
     return NextResponse.json({
       success: false,
-      error: 'Erro ao obter status do monitor'
+      error: 'Erro ao obter status'
     }, { status: 500 })
   }
 }
 
-// POST /api/monitoring/group-monitor - Iniciar/Parar monitor
+// POST /api/monitoring/group-monitor - Sistema simples não precisa de controle
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { action, adminPhone, checkInterval } = body
+    const { action } = body
 
-    // Obter sistema ultra-robusto
-    const ultraRobust = getUltraRobustMonitor()
-
-    if (action === 'start') {
-      // Salvar configurações no banco
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
-
-      const config = {
-        checkInterval: checkInterval || 30000,
-        adminPhone: adminPhone || '(45) 91284-3589'
+    return NextResponse.json({
+      success: true,
+      data: {
+        message: 'Sistema SIMPLES sempre ativo - Verificação automática via webhook Z-API',
+        system: 'simple_blacklist_checker',
+        description: 'Não precisa iniciar/parar - funciona automaticamente quando alguém entra no grupo'
       }
-
-      await supabase
-        .from('monitor_state')
-        .upsert({
-          id: 'group_monitor',
-          check_interval: config.checkInterval,
-          admin_phone: config.adminPhone,
-          is_running: true,
-          updated_at: new Date().toISOString()
-        })
-
-      // Iniciar sistema ultra-robusto (que garante que o monitor NUNCA para)
-      ultraRobust.start()
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          message: 'Monitor iniciado com sistema ULTRA-ROBUSTO - NUNCA para sozinho!',
-          config: config,
-          ultraRobust: {
-            isRunning: true,
-            message: 'Sistema ultra-robusto ativo - Monitor protegido contra TODAS as falhas'
-          }
-        }
-      })
-
-    } else if (action === 'stop') {
-      // Parar sistema ultra-robusto (apenas por comando manual)
-      ultraRobust.stop()
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          message: 'Monitor parado por comando manual',
-          ultraRobust: {
-            isRunning: false,
-            message: 'Sistema ultra-robusto parado - Monitor pode parar'
-          }
-        }
-      })
-
-    } else if (action === 'restart') {
-      // Forçar reinicialização completa
-      await ultraRobust.forceFullRestart()
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          message: 'Monitor reinicializado com sistema ultra-robusto',
-          ultraRobust: {
-            isRunning: true,
-            message: 'Sistema ultra-robusto reiniciado - Monitor protegido'
-          }
-        }
-      })
-
-    } else {
-      return NextResponse.json({
-        success: false,
-        error: 'Ação inválida. Use "start", "stop" ou "restart"'
-      }, { status: 400 })
-    }
+    })
 
   } catch (error) {
-    console.error('❌ Erro ao controlar monitor:', error)
+    console.error('❌ Erro:', error)
     return NextResponse.json({
       success: false,
-      error: 'Erro ao controlar monitor'
+      error: 'Erro'
     }, { status: 500 })
   }
 }
