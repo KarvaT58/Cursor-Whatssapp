@@ -8,11 +8,12 @@ import { ProfileSettings } from './profile-settings'
 import { ZApiSettings } from './z-api-settings'
 import { SecuritySettings } from './security-settings'
 import { NotificationSettings } from './notification-settings'
+import { AdminConfigForm } from '@/components/admin-config-form'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Settings, AlertCircle } from 'lucide-react'
 
-type SettingsTab = 'profile' | 'z-api' | 'security' | 'notifications'
+type SettingsTab = 'profile' | 'z-api' | 'security' | 'notifications' | 'admin'
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
@@ -86,6 +87,8 @@ export function SettingsPage() {
         return <SecuritySettings user={user} />
       case 'notifications':
         return <NotificationSettings user={user} />
+      case 'admin':
+        return <AdminConfigForm />
       default:
         return <ProfileSettings user={user} />
     }

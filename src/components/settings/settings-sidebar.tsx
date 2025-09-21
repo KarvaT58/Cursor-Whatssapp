@@ -1,9 +1,9 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { User, Zap, Shield, Bell, Settings as SettingsIcon } from 'lucide-react'
+import { User, Zap, Shield, Bell, Settings as SettingsIcon, UserCog } from 'lucide-react'
 
-type SettingsTab = 'profile' | 'z-api' | 'security' | 'notifications'
+type SettingsTab = 'profile' | 'z-api' | 'security' | 'notifications' | 'admin'
 
 interface SettingsSidebarProps {
   activeTab: SettingsTab
@@ -34,6 +34,12 @@ const settingsTabs = [
     label: 'Notificações',
     icon: Bell,
     description: 'Preferências de notificações',
+  },
+  {
+    id: 'admin' as const,
+    label: 'Administrador',
+    icon: UserCog,
+    description: 'Configurações do administrador',
   },
 ]
 

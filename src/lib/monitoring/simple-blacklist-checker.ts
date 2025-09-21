@@ -159,6 +159,16 @@ export class SimpleBlacklistChecker {
         return false
       }
 
+      // Buscar número do administrador do usuário
+      const { data: user, error: userError } = await this.supabase
+        .from('users')
+        .select('admin_phone')
+        .eq('id', userId)
+        .single()
+
+      const adminPhone = user?.admin_phone || '(45) 91284-3589'
+      console.log('📱 SIMPLES: Usando número do admin:', adminPhone)
+
       // Enviar mensagem
       const response = await fetch(
         `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/send-text`,
@@ -170,7 +180,7 @@ export class SimpleBlacklistChecker {
           },
           body: JSON.stringify({
             phone: participantPhone,
-            message: 'Você está banido dos grupos do WhatsApp contate o administrado para mais informações (45) 91284-3589'
+            message: `Você está banido dos grupos do WhatsApp contate o administrado para mais informações ${adminPhone}`
           })
         }
       )
