@@ -25,7 +25,7 @@ export default function JoinGroupPage() {
           A página está carregando corretamente.
         </p>
         <p style={{ color: '#6b7280', marginTop: '1rem' }}>
-          Timestamp: {new Date().toISOString()}
+          Sistema de Link Universal Ativo
         </p>
       </div>
     </div>
