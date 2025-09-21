@@ -882,7 +882,9 @@ export class ZApiClient {
         const requestData = {
           groupName: data.name,
           phones: data.participants,  // ✅ Enviar números sem formatação, como no sistema que funciona
-          autoInvite: true
+          autoInvite: true,
+          ...(data.description && { description: data.description }),
+          ...(data.imageUrl && { imageUrl: data.imageUrl })
         }
 
         console.log(`📤 Dados enviados para Z-API (tentativa ${attempt}/${maxRetries}):`, JSON.stringify(requestData, null, 2))

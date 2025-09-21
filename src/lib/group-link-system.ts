@@ -205,8 +205,14 @@ export class GroupLinkSystem {
               id,
               whatsapp_id,
               name,
+              description,
+              image_url,
               participants,
-              user_id
+              user_id,
+              admin_only_message,
+              admin_only_settings,
+              require_admin_approval,
+              admin_only_add_member
             )
           )
         `)
@@ -220,7 +226,7 @@ export class GroupLinkSystem {
       // 1.1. Buscar TODOS os grupos da família usando current_groups
       const { data: allFamilyGroups, error: groupsError } = await supabase
         .from('whatsapp_groups')
-        .select('id, whatsapp_id, name, participants, user_id')
+        .select('id, whatsapp_id, name, description, image_url, participants, user_id, admin_only_message, admin_only_settings, require_admin_approval, admin_only_add_member')
         .in('id', groupLink.group_families.current_groups)
 
       if (groupsError) {
@@ -324,6 +330,9 @@ export class GroupLinkSystem {
       console.log('🔍 VERIFICANDO EXPANSÃO DA FAMÍLIA DE GRUPOS ===')
       console.log('Family ID:', familyId)
 
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = await createClient()
+
       const { data: family, error: familyError } = await supabase
         .from('group_families')
         .select(`
@@ -332,8 +341,14 @@ export class GroupLinkSystem {
             id,
             whatsapp_id,
             name,
+            description,
+            image_url,
             participants,
-            user_id
+            user_id,
+            admin_only_message,
+            admin_only_settings,
+            require_admin_approval,
+            admin_only_add_member
           )
         `)
         .eq('id', familyId)
@@ -384,6 +399,17 @@ export class GroupLinkSystem {
         return { success: false, error: 'Não foi possível encontrar grupo base para replicar configurações' }
       }
 
+      // Debug: verificar dados do primeiro grupo
+      console.log('🔍 Dados do primeiro grupo para replicação:', {
+        name: firstGroup.name,
+        description: firstGroup.description,
+        image_url: firstGroup.image_url,
+        admin_only_message: firstGroup.admin_only_message,
+        admin_only_settings: firstGroup.admin_only_settings,
+        require_admin_approval: firstGroup.require_admin_approval,
+        admin_only_add_member: firstGroup.admin_only_add_member
+      })
+
       // 3. Criar grupo no WhatsApp via Z-API
       const zApiClient = await this.getZApiClient()
       
@@ -393,11 +419,19 @@ export class GroupLinkSystem {
       const zApiPhone = '554598228660'   // Número conectado no Z-API
       const initialParticipants = [finalSystemPhone, zApiPhone]
       
+      // Debug: verificar dados que serão enviados para Z-API
+      console.log('📤 Dados sendo enviados para Z-API:', {
+        name: newGroupName,
+        description: firstGroup.description || '',
+        participants: initialParticipants,
+        imageUrl: firstGroup.image_url || undefined
+      })
+
       const createResult = await zApiClient.createGroup({
         name: newGroupName,
         description: firstGroup.description || '',
         participants: initialParticipants, // Adicionar ambos os números
-        imageUrl: firstGroup.image_url || undefined
+        imageUrl: undefined // Não enviar imagem na criação, vamos atualizar depois
       })
       
       if (!createResult.success) {
@@ -405,6 +439,32 @@ export class GroupLinkSystem {
       }
 
       console.log('✅ Grupo criado no WhatsApp:', createResult.data)
+
+      // 3.1. Atualizar descrição do grupo se houver uma no grupo original
+      if (firstGroup.description) {
+        console.log('📝 Atualizando descrição do grupo com a descrição do grupo original...')
+        const descriptionResult = await zApiClient.updateGroupDescription(createResult.data.phone, firstGroup.description)
+        
+        if (descriptionResult.success) {
+          console.log('✅ Descrição do grupo atualizada com sucesso')
+        } else {
+          console.warn('⚠️ Erro ao atualizar descrição do grupo:', descriptionResult.error)
+          // Não falhar a operação se a descrição não puder ser atualizada
+        }
+      }
+
+      // 3.2. Atualizar foto do grupo se houver uma no grupo original
+      if (firstGroup.image_url) {
+        console.log('📸 Atualizando foto do grupo com a imagem do grupo original...')
+        const photoResult = await zApiClient.updateGroupPhoto(createResult.data.phone, firstGroup.image_url)
+        
+        if (photoResult.success) {
+          console.log('✅ Foto do grupo atualizada com sucesso')
+        } else {
+          console.warn('⚠️ Erro ao atualizar foto do grupo:', photoResult.error)
+          // Não falhar a operação se a foto não puder ser atualizada
+        }
+      }
 
       // 4. Buscar o link universal da família para associar ao novo grupo
       const { data: familyLink, error: linkError } = await supabase
@@ -634,8 +694,14 @@ export class GroupLinkSystem {
             id,
             whatsapp_id,
             name,
+            description,
+            image_url,
             participants,
-            user_id
+            user_id,
+            admin_only_message,
+            admin_only_settings,
+            require_admin_approval,
+            admin_only_add_member
           )
         `)
         .eq('id', familyId)
