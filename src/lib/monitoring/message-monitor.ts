@@ -324,6 +324,12 @@ class MessageMonitor {
    */
   private async addToBlacklist(phone: string, userId: string, reason: string): Promise<void> {
     try {
+      console.log(`🔍 MESSAGE MONITOR: Tentando adicionar à blacklist:`, {
+        phone: phone,
+        userId: userId,
+        reason: reason
+      })
+
       // Verificar se já está na blacklist
       const { data: existing, error: checkError } = await this.supabase
         .from('blacklist')
@@ -332,25 +338,41 @@ class MessageMonitor {
         .eq('phone', phone)
         .single()
 
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('❌ MESSAGE MONITOR: Erro ao verificar blacklist:', checkError)
+      }
+
       if (existing) {
         console.log('ℹ️ MESSAGE MONITOR: Usuário já está na blacklist')
         return
       }
 
+      console.log('📝 MESSAGE MONITOR: Inserindo na blacklist...')
+
       // Adicionar à blacklist
-      const { error: insertError } = await this.supabase
+      const { data: insertedData, error: insertError } = await this.supabase
         .from('blacklist')
         .insert({
           phone: phone,
           user_id: userId,
           reason: reason,
-          auto_added: true
+          auto_added: true,
+          original_message: '', // Será preenchido pela função createBanNotification
+          banned_at: new Date().toISOString()
         })
+        .select()
 
       if (insertError) {
         console.error('❌ MESSAGE MONITOR: Erro ao adicionar à blacklist:', insertError)
+        console.error('❌ MESSAGE MONITOR: Detalhes do erro:', {
+          code: insertError.code,
+          message: insertError.message,
+          details: insertError.details,
+          hint: insertError.hint
+        })
       } else {
         console.log(`✅ MESSAGE MONITOR: ${phone} adicionado à blacklist por ${reason}`)
+        console.log('✅ MESSAGE MONITOR: Dados inseridos:', insertedData)
       }
     } catch (error) {
       console.error('❌ MESSAGE MONITOR: Erro ao adicionar à blacklist:', error)
@@ -489,6 +511,17 @@ class MessageMonitor {
             original_message: data.message
           }
         })
+
+      // Atualizar a blacklist com a mensagem original
+      if (!notificationError) {
+        await this.supabase
+          .from('blacklist')
+          .update({ original_message: data.message })
+          .eq('user_id', data.userId)
+          .eq('phone', data.participantPhone)
+          .eq('reason', reason)
+          .eq('auto_added', true)
+      }
 
       if (notificationError) {
         console.error('❌ MESSAGE MONITOR: Erro ao criar notificação:', notificationError)
