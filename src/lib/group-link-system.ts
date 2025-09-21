@@ -348,7 +348,8 @@ export class GroupLinkSystem {
       console.log('📋 RESPOSTA COMPLETA DA Z-API (metadados):', JSON.stringify(inviteLinkResult.data, null, 2))
 
       // ✅ VERIFICAR DIFERENTES POSSÍVEIS CAMPOS NA RESPOSTA
-      const whatsappInviteLink = inviteLinkResult.data?.inviteLink || 
+      const whatsappInviteLink = inviteLinkResult.data?.invitationLink || 
+                                inviteLinkResult.data?.inviteLink || 
                                 inviteLinkResult.data?.link || 
                                 inviteLinkResult.data?.invite_link ||
                                 inviteLinkResult.data?.groupInviteLink ||
