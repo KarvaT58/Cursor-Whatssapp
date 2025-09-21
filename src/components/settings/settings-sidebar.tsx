@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import { User, Zap, Shield, Bell, Settings as SettingsIcon, UserCog } from 'lucide-react'
+import { User, Zap, Shield, Bell, Settings as SettingsIcon, UserCheck } from 'lucide-react'
 
 type SettingsTab = 'profile' | 'z-api' | 'security' | 'notifications' | 'admin'
 
@@ -38,7 +38,7 @@ const settingsTabs = [
   {
     id: 'admin' as const,
     label: 'Administrador',
-    icon: UserCog,
+    icon: UserCheck,
     description: 'Configurações do administrador',
   },
 ]
@@ -72,7 +72,7 @@ export function SettingsSidebar({
               onClick={() => onTabChange(tab.id)}
             >
               <div className="flex items-start gap-3">
-                <Icon className="size-4 mt-0.5" />
+                {Icon && <Icon className="size-4 mt-0.5" />}
                 <div className="text-left">
                   <div className="font-medium">{tab.label}</div>
                   <div className="text-xs text-muted-foreground mt-0.5">
