@@ -155,7 +155,7 @@ export async function GET(
     console.log('📋 Group link encontrado:', groupLink)
 
     // Segunda consulta: buscar a group_family
-    const { data: groupFamilies, error: familyError } = await supabase
+    const { data: groupFamiliesData, error: familyError } = await supabase
       .from('group_families')
       .select(`
         name,
@@ -168,9 +168,8 @@ export async function GET(
         )
       `)
       .eq('id', groupLink.group_family)
-      .single()
 
-    console.log('📋 Resultado da consulta group_families:', { groupFamilies, familyError })
+    console.log('📋 Resultado da consulta group_families:', { groupFamiliesData, familyError })
 
     if (familyError) {
       console.error('❌ Erro na consulta group_families:', familyError)
@@ -181,13 +180,15 @@ export async function GET(
       }, { status: 500 })
     }
 
-    if (!groupFamilies) {
+    if (!groupFamiliesData || groupFamiliesData.length === 0) {
       console.error('❌ group_families não encontrada para o ID:', groupLink.group_family)
       return NextResponse.json({ 
         success: false, 
         error: 'Família do grupo não encontrada' 
       }, { status: 404 })
     }
+
+    const groupFamilies = groupFamiliesData[0] // Pega o primeiro resultado
 
     console.log('✅ Link universal encontrado:', groupFamilies.name)
     return NextResponse.json({
