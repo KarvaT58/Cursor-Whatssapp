@@ -10,6 +10,11 @@ export class GroupMonitor {
   private config: GroupMonitorConfig
   private intervalId: NodeJS.Timeout | null = null
   private isRunning = false
+  private restartCount = 0
+  private maxRestarts = 5
+  private lastCheckTime = 0
+  private consecutiveErrors = 0
+  private maxConsecutiveErrors = 3
 
   constructor(config: GroupMonitorConfig) {
     this.config = config
@@ -17,6 +22,23 @@ export class GroupMonitor {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+    
+    // Configurar handlers para cleanup
+    this.setupCleanupHandlers()
+  }
+
+  /**
+   * Configura handlers para cleanup quando o processo termina
+   */
+  private setupCleanupHandlers() {
+    const cleanup = () => {
+      console.log('🧹 Limpando monitor antes de encerrar processo...')
+      this.stop()
+    }
+
+    process.on('SIGINT', cleanup)
+    process.on('SIGTERM', cleanup)
+    process.on('exit', cleanup)
   }
 
   /**
@@ -30,17 +52,29 @@ export class GroupMonitor {
 
     console.log('🚀 Iniciando monitor de grupos com intervalo de', this.config.checkInterval, 'ms')
     this.isRunning = true
+    this.lastCheckTime = Date.now()
 
     this.intervalId = setInterval(async () => {
       try {
         await this.checkAllGroups()
+        this.consecutiveErrors = 0 // Reset contador de erros em caso de sucesso
       } catch (error) {
-        console.error('❌ Erro no monitor de grupos:', error)
+        this.consecutiveErrors++
+        console.error(`❌ Erro no monitor de grupos (${this.consecutiveErrors}/${this.maxConsecutiveErrors}):`, error)
+        
+        // Se muitos erros consecutivos, tentar reiniciar
+        if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
+          console.log('🔄 Muitos erros consecutivos, reiniciando monitor...')
+          await this.restart()
+        }
       }
     }, this.config.checkInterval)
 
     // Executar verificação imediata
     this.checkAllGroups()
+    
+    // Salvar estado no banco
+    this.saveMonitorState()
   }
 
   /**
@@ -53,6 +87,61 @@ export class GroupMonitor {
     }
     this.isRunning = false
     console.log('⏹️ Monitor de grupos parado')
+    
+    // Salvar estado parado no banco
+    this.saveMonitorState()
+  }
+
+  /**
+   * Reinicia o monitor
+   */
+  private async restart() {
+    if (this.restartCount >= this.maxRestarts) {
+      console.error('❌ Máximo de reinicializações atingido, parando monitor')
+      this.stop()
+      return
+    }
+
+    this.restartCount++
+    console.log(`🔄 Reiniciando monitor (tentativa ${this.restartCount}/${this.maxRestarts})`)
+    
+    this.stop()
+    
+    // Aguardar um pouco antes de reiniciar
+    await new Promise(resolve => setTimeout(resolve, 5000))
+    
+    this.start()
+  }
+
+  /**
+   * Salva o estado do monitor no banco de dados
+   */
+  private async saveMonitorState() {
+    try {
+      const state = {
+        is_running: this.isRunning,
+        last_check_time: new Date(this.lastCheckTime).toISOString(),
+        restart_count: this.restartCount,
+        consecutive_errors: this.consecutiveErrors,
+        check_interval: this.config.checkInterval,
+        admin_phone: this.config.adminPhone,
+        updated_at: new Date().toISOString()
+      }
+
+      // Usar upsert para atualizar ou criar
+      const { error } = await this.supabase
+        .from('monitor_state')
+        .upsert({
+          id: 'group_monitor',
+          ...state
+        })
+
+      if (error) {
+        console.error('❌ Erro ao salvar estado do monitor:', error)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao salvar estado do monitor:', error)
+    }
   }
 
   /**
@@ -60,6 +149,7 @@ export class GroupMonitor {
    */
   private async checkAllGroups() {
     try {
+      this.lastCheckTime = Date.now()
       console.log('🔍 Verificando todos os grupos ativos...')
 
       // Buscar todos os grupos ativos com timeout
@@ -462,10 +552,19 @@ export class GroupMonitor {
    * Status do monitor
    */
   getStatus() {
+    const now = Date.now()
+    const timeSinceLastCheck = now - this.lastCheckTime
+    
     return {
       isRunning: this.isRunning,
       checkInterval: this.config.checkInterval,
-      adminPhone: this.config.adminPhone
+      adminPhone: this.config.adminPhone,
+      restartCount: this.restartCount,
+      consecutiveErrors: this.consecutiveErrors,
+      lastCheckTime: this.lastCheckTime,
+      timeSinceLastCheck: timeSinceLastCheck,
+      isHealthy: this.consecutiveErrors < this.maxConsecutiveErrors && timeSinceLastCheck < (this.config.checkInterval * 2),
+      uptime: this.isRunning ? now - this.lastCheckTime : 0
     }
   }
 }

@@ -1,12 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GroupMonitor } from '@/lib/monitoring/group-monitor'
+import { createClient } from '@/lib/supabase/server'
 
 // Instância global do monitor (singleton)
 let groupMonitor: GroupMonitor | null = null
 
+// Função para verificar e recuperar o monitor se necessário
+async function checkAndRecoverMonitor() {
+  try {
+    const supabase = createClient()
+    
+    // Buscar estado do monitor no banco
+    const { data: monitorState, error: stateError } = await supabase
+      .from('monitor_state')
+      .select('*')
+      .eq('id', 'group_monitor')
+      .single()
+
+    if (stateError && stateError.code !== 'PGRST116') {
+      console.error('❌ Erro ao buscar estado do monitor:', stateError)
+      return
+    }
+
+    // Se não há estado no banco, não há nada para recuperar
+    if (!monitorState) {
+      return
+    }
+
+    const now = Date.now()
+    const lastCheckTime = monitorState.last_check_time ? new Date(monitorState.last_check_time).getTime() : 0
+    const timeSinceLastCheck = now - lastCheckTime
+    const isStale = timeSinceLastCheck > (monitorState.check_interval || 30000) * 2
+
+    // Se o monitor deveria estar rodando mas está stale ou com muitos erros
+    if (monitorState.is_running && (isStale || monitorState.consecutive_errors >= 3)) {
+      console.log('🔄 Monitor detectado como inativo, tentando recuperar...')
+      
+      // Criar novo monitor com as configurações salvas
+      if (groupMonitor) {
+        groupMonitor.stop()
+      }
+      
+      groupMonitor = new GroupMonitor({
+        checkInterval: monitorState.check_interval || 30000,
+        adminPhone: monitorState.admin_phone || '(45) 91284-3589'
+      })
+      
+      groupMonitor.start()
+      console.log('✅ Monitor recuperado com sucesso')
+    }
+  } catch (error) {
+    console.error('❌ Erro ao verificar recuperação do monitor:', error)
+  }
+}
+
 // GET /api/monitoring/group-monitor - Status do monitor
 export async function GET(request: NextRequest) {
   try {
+    // Verificar se o monitor precisa ser recuperado
+    await checkAndRecoverMonitor()
+
     if (!groupMonitor) {
       return NextResponse.json({
         success: true,
