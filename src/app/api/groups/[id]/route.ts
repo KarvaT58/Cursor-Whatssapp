@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { GroupLinkSystem } from '@/lib/group-link-system'
 import { z } from 'zod'
 
 const UpdateGroupSchema = z.object({
@@ -139,22 +140,74 @@ export async function DELETE(
 
     const { id } = await params
 
-    // Excluir grupo
-    const { error } = await supabase
+    // 1. Verificar se é um grupo universal antes de excluir
+    const { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
-      .delete()
+      .select('id, name, group_family, universal_link')
       .eq('id', id)
       .eq('user_id', user.id)
+      .single()
 
-    if (error) {
-      console.error('Erro ao excluir grupo:', error)
+    if (groupError) {
+      console.error('Erro ao buscar grupo:', groupError)
       return NextResponse.json(
-        { error: 'Erro ao excluir grupo' },
-        { status: 500 }
+        { error: 'Grupo não encontrado' },
+        { status: 404 }
       )
     }
 
-    return NextResponse.json({ success: true })
+    // 2. Verificar se é grupo universal (tem group_family ou universal_link)
+    const isUniversalGroup = !!(group.group_family || group.universal_link)
+    
+    console.log('🗑️ Excluindo grupo:', {
+      id: group.id,
+      name: group.name,
+      isUniversal: isUniversalGroup,
+      hasGroupFamily: !!group.group_family,
+      hasUniversalLink: !!group.universal_link
+    })
+
+    if (isUniversalGroup) {
+      // 3. Usar método específico para grupos universais
+      console.log('🔗 Grupo universal detectado, usando exclusão completa...')
+      const groupLinkSystem = new GroupLinkSystem()
+      const deleteResult = await groupLinkSystem.deleteUniversalGroup(id, user.id)
+      
+      if (!deleteResult.success) {
+        console.error('Erro ao excluir grupo universal:', deleteResult.error)
+        return NextResponse.json(
+          { error: deleteResult.error || 'Erro ao excluir grupo universal' },
+          { status: 500 }
+        )
+      }
+      
+      console.log('✅ Grupo universal excluído com sucesso')
+    } else {
+      // 4. Exclusão normal para grupos não-universais
+      console.log('📱 Grupo normal detectado, usando exclusão simples...')
+      const { error } = await supabase
+        .from('whatsapp_groups')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('Erro ao excluir grupo:', error)
+        return NextResponse.json(
+          { error: 'Erro ao excluir grupo' },
+          { status: 500 }
+        )
+      }
+      
+      console.log('✅ Grupo normal excluído com sucesso')
+    }
+
+    return NextResponse.json({ 
+      success: true,
+      message: isUniversalGroup 
+        ? 'Grupo universal e todos os dados relacionados foram excluídos com sucesso'
+        : 'Grupo excluído com sucesso'
+    })
   } catch (error) {
     console.error('Erro na API de grupo:', error)
     return NextResponse.json(

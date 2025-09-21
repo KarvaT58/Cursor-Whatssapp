@@ -648,6 +648,161 @@ export class GroupLinkSystem {
     }
   }
 
+  /**
+   * Excluir grupo universal e todos os dados relacionados
+   */
+  async deleteUniversalGroup(
+    groupId: string,
+    userId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('🗑️ EXCLUINDO GRUPO UNIVERSAL E DADOS RELACIONADOS ===')
+      console.log('Group ID:', groupId)
+      console.log('User ID:', userId)
+
+      const { createClient } = await import('@/lib/supabase/server')
+      const supabase = await createClient()
+
+      // 1. Buscar informações do grupo para identificar a família
+      const { data: group, error: groupError } = await supabase
+        .from('whatsapp_groups')
+        .select(`
+          id,
+          whatsapp_id,
+          name,
+          group_family,
+          universal_link,
+          group_families (
+            id,
+            name,
+            base_name,
+            current_groups
+          )
+        `)
+        .eq('id', groupId)
+        .eq('user_id', userId)
+        .single()
+
+      if (groupError || !group) {
+        console.error('❌ Grupo não encontrado:', groupError)
+        return { success: false, error: 'Grupo não encontrado' }
+      }
+
+      console.log('📋 Dados do grupo encontrado:', {
+        name: group.name,
+        group_family: group.group_family,
+        universal_link: group.universal_link,
+        family_groups: group.group_families?.current_groups
+      })
+
+      // 2. Se o grupo tem família, processar exclusão da família
+      if (group.group_family && group.group_families) {
+        const family = group.group_families
+        const updatedGroups = family.current_groups.filter((id: string) => id !== groupId)
+        
+        console.log('👥 Atualizando família de grupos:', {
+          family_id: family.id,
+          grupos_anteriores: family.current_groups.length,
+          grupos_restantes: updatedGroups.length
+        })
+
+        if (updatedGroups.length === 0) {
+          // Se não há mais grupos na família, excluir a família e o link universal
+          console.log('🗑️ Família vazia, excluindo família e link universal...')
+          
+          // Excluir link universal
+          const { error: linkDeleteError } = await supabase
+            .from('group_links')
+            .delete()
+            .eq('group_family', family.id)
+            .eq('user_id', userId)
+
+          if (linkDeleteError) {
+            console.error('❌ Erro ao excluir link universal:', linkDeleteError)
+          } else {
+            console.log('✅ Link universal excluído')
+          }
+
+          // Excluir família
+          const { error: familyDeleteError } = await supabase
+            .from('group_families')
+            .delete()
+            .eq('id', family.id)
+            .eq('user_id', userId)
+
+          if (familyDeleteError) {
+            console.error('❌ Erro ao excluir família:', familyDeleteError)
+          } else {
+            console.log('✅ Família de grupos excluída')
+          }
+        } else {
+          // Atualizar lista de grupos da família
+          console.log('🔄 Atualizando lista de grupos da família...')
+          const { error: familyUpdateError } = await supabase
+            .from('group_families')
+            .update({
+              current_groups: updatedGroups,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', family.id)
+
+          if (familyUpdateError) {
+            console.error('❌ Erro ao atualizar família:', familyUpdateError)
+          } else {
+            console.log('✅ Família atualizada com sucesso')
+          }
+
+          // Atualizar grupos ativos no link universal
+          const { data: currentLink } = await supabase
+            .from('group_links')
+            .select('active_groups')
+            .eq('group_family', family.id)
+            .single()
+
+          if (currentLink) {
+            const updatedActiveGroups = currentLink.active_groups.filter((id: string) => id !== groupId)
+            const { error: linkUpdateError } = await supabase
+              .from('group_links')
+              .update({
+                active_groups: updatedActiveGroups,
+                updated_at: new Date().toISOString()
+              })
+              .eq('group_family', family.id)
+
+            if (linkUpdateError) {
+              console.error('❌ Erro ao atualizar link universal:', linkUpdateError)
+            } else {
+              console.log('✅ Link universal atualizado')
+            }
+          }
+        }
+      }
+
+      // 3. Excluir o grupo principal
+      console.log('🗑️ Excluindo grupo principal...')
+      const { error: groupDeleteError } = await supabase
+        .from('whatsapp_groups')
+        .delete()
+        .eq('id', groupId)
+        .eq('user_id', userId)
+
+      if (groupDeleteError) {
+        console.error('❌ Erro ao excluir grupo:', groupDeleteError)
+        return { success: false, error: 'Erro ao excluir grupo' }
+      }
+
+      console.log('✅ Grupo universal excluído com sucesso!')
+      return { success: true }
+
+    } catch (error: any) {
+      console.error('❌ Erro na exclusão do grupo universal:', error)
+      return { 
+        success: false, 
+        error: error.message || 'Erro interno na exclusão' 
+      }
+    }
+  }
+
   private async checkBlacklist(phone: string, userId: string): Promise<boolean> {
     try {
       const { createClient } = await import('@/lib/supabase/server')
