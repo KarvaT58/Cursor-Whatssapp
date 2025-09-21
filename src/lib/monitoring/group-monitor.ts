@@ -167,11 +167,41 @@ export class GroupMonitor {
   }
 
   /**
+   * Verifica se a instância Z-API está online
+   */
+  private async checkZApiInstanceStatus(zApiInstance: any): Promise<boolean> {
+    try {
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 segundos para status
+
+      const response = await fetch(
+        `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/status`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Client-Token': zApiInstance.client_token || '',
+          },
+          signal: controller.signal
+        }
+      )
+
+      clearTimeout(timeoutId)
+      const result = await response.json()
+      
+      return response.ok && result.connected === true
+    } catch (error) {
+      console.log('⚠️ Erro ao verificar status da instância Z-API:', error.message)
+      return false
+    }
+  }
+
+  /**
    * Busca participantes atuais do grupo via Z-API
    */
   private async getGroupParticipantsFromZApi(group: any): Promise<string[] | null> {
-    const maxRetries = 3
-    const retryDelay = 1000 // 1 segundo
+    const maxRetries = 2 // Reduzir tentativas
+    const retryDelay = 2000 // 2 segundos
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
@@ -188,9 +218,20 @@ export class GroupMonitor {
           return null
         }
 
-        // Fazer requisição para obter metadados do grupo com timeout
+        // Verificar se a instância está online antes de fazer a requisição
+        console.log(`🔍 Verificando status da instância Z-API para ${group.name}...`)
+        const isOnline = await this.checkZApiInstanceStatus(zApiInstance)
+        
+        if (!isOnline) {
+          console.log(`⚠️ Instância Z-API offline para ${group.name}, pulando verificação`)
+          return null
+        }
+
+        console.log(`✅ Instância Z-API online, buscando participantes do grupo ${group.name}...`)
+
+        // Fazer requisição para obter metadados do grupo com timeout reduzido
         const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 segundos timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 segundos timeout
 
         try {
           const response = await fetch(
@@ -231,11 +272,16 @@ export class GroupMonitor {
         
         if (attempt === maxRetries) {
           console.error('❌ Falha definitiva ao obter participantes do grupo:', group.name)
-          return null
+          console.log('⚠️ Usando participantes salvos no banco como fallback')
+          
+          // Fallback: usar participantes salvos no banco
+          const savedParticipants = group.participants || []
+          console.log(`📋 Usando ${savedParticipants.length} participantes salvos no banco`)
+          return savedParticipants
         }
         
-        // Aguardar antes da próxima tentativa (mais tempo para timeout)
-        const waitTime = isTimeout ? retryDelay * attempt * 2 : retryDelay * attempt
+        // Aguardar antes da próxima tentativa
+        const waitTime = retryDelay * attempt
         console.log(`⏳ Aguardando ${waitTime}ms antes da próxima tentativa...`)
         await new Promise(resolve => setTimeout(resolve, waitTime))
       }
