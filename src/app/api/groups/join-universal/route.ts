@@ -3,19 +3,36 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
-    const { familyId, familyName } = await request.json()
+    console.log('🚀 JOIN-UNIVERSAL: Iniciando requisição...')
+    
+    const body = await request.json()
+    console.log('📥 JOIN-UNIVERSAL: Dados recebidos:', body)
+    
+    const { familyId, familyName } = body
 
-    if (!familyId || !familyName) {
+    if (!familyId) {
+      console.error('❌ JOIN-UNIVERSAL: familyId não fornecido')
       return NextResponse.json(
-        { error: 'Família ID e nome são obrigatórios' },
+        { error: 'ID da família é obrigatório' },
         { status: 400 }
       )
     }
+
+    if (!familyName) {
+      console.error('❌ JOIN-UNIVERSAL: familyName não fornecido')
+      return NextResponse.json(
+        { error: 'Nome da família é obrigatório' },
+        { status: 400 }
+      )
+    }
+
+    console.log(`🔍 JOIN-UNIVERSAL: Buscando grupos para família ${familyId} (${familyName})`)
 
     // Criar cliente Supabase
     const supabase = createClient()
 
     // 1. Buscar todos os grupos da família
+    console.log('🔍 JOIN-UNIVERSAL: Executando query no Supabase...')
     const { data: groups, error: groupsError } = await supabase
       .from('whatsapp_groups')
       .select('*')
@@ -23,20 +40,25 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
       .order('created_at', { ascending: true })
 
+    console.log('📊 JOIN-UNIVERSAL: Resultado da query:', { groups, groupsError })
+
     if (groupsError) {
-      console.error('Erro ao buscar grupos:', groupsError)
+      console.error('❌ JOIN-UNIVERSAL: Erro ao buscar grupos:', groupsError)
       return NextResponse.json(
-        { error: 'Erro ao buscar grupos' },
+        { error: 'Erro ao buscar grupos', details: groupsError.message },
         { status: 500 }
       )
     }
 
     if (!groups || groups.length === 0) {
+      console.log('⚠️ JOIN-UNIVERSAL: Nenhum grupo encontrado para esta família')
       return NextResponse.json(
         { error: 'Nenhum grupo encontrado para esta família' },
         { status: 404 }
       )
     }
+
+    console.log(`✅ JOIN-UNIVERSAL: Encontrados ${groups.length} grupos para a família`)
 
     // 2. Verificar se há vagas nos grupos existentes
     let availableGroup = null
@@ -184,9 +206,13 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('❌ Erro no join-universal:', error)
+    console.error('❌ JOIN-UNIVERSAL: Erro interno:', error)
+    console.error('❌ JOIN-UNIVERSAL: Stack trace:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
       { status: 500 }
     )
   }
