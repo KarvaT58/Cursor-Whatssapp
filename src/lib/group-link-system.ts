@@ -93,6 +93,27 @@ export class GroupLinkSystem {
       // 2. Verificar se já existe uma família de grupos
       const { createClient } = await import('@/lib/supabase/server')
       const supabase = await createClient()
+      
+      // 2.1. Verificar se já existe um link universal para este grupo
+      const { data: existingGroupLink } = await supabase
+        .from('group_links')
+        .select('*')
+        .eq('group_family', (await supabase
+          .from('group_families')
+          .select('id')
+          .eq('base_name', baseName)
+          .eq('user_id', userId)
+          .single()).data?.id)
+        .single()
+
+      if (existingGroupLink) {
+        console.log('✅ Link universal já existe para esta família de grupos')
+        return {
+          success: true,
+          data: existingGroupLink
+        }
+      }
+
       const { data: existingFamily } = await supabase
         .from('group_families')
         .select('*')
@@ -140,20 +161,54 @@ export class GroupLinkSystem {
       const universalLink = this.generateUniversalLink(baseName, familyId, requestUrl)
       console.log('Universal Link:', universalLink)
 
-      // 4. Criar registro do link universal
-      const { data: groupLink, error: linkError } = await supabase
+      // 3.1. Verificar se o link já existe
+      const { data: existingLink } = await supabase
         .from('group_links')
-        .insert({
-          universal_link: universalLink,
-          group_family: familyId,
-          active_groups: [groupId],
-          total_participants: 0,
-          user_id: userId
-        })
-        .select()
+        .select('id, universal_link, group_family')
+        .eq('universal_link', universalLink)
         .single()
 
-      if (linkError) throw linkError
+      let groupLink: any
+
+      if (existingLink) {
+        // Link já existe, usar o existente
+        console.log('✅ Link universal já existe, usando o existente:', existingLink.id)
+        groupLink = existingLink
+        
+        // Atualizar grupos ativos se necessário
+        const { data: currentLink } = await supabase
+          .from('group_links')
+          .select('active_groups')
+          .eq('id', existingLink.id)
+          .single()
+        
+        if (currentLink && !currentLink.active_groups.includes(groupId)) {
+          const updatedGroups = [...currentLink.active_groups, groupId]
+          await supabase
+            .from('group_links')
+            .update({ 
+              active_groups: updatedGroups,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingLink.id)
+        }
+      } else {
+        // 4. Criar registro do link universal
+        const { data: newGroupLink, error: linkError } = await supabase
+          .from('group_links')
+          .insert({
+            universal_link: universalLink,
+            group_family: familyId,
+            active_groups: [groupId],
+            total_participants: 0,
+            user_id: userId
+          })
+          .select()
+          .single()
+
+        if (linkError) throw linkError
+        groupLink = newGroupLink
+      }
 
       // 5. Atualizar grupo com link universal
       const { error: groupUpdateError } = await supabase
