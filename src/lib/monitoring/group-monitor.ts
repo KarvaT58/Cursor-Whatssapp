@@ -283,8 +283,9 @@ export class GroupMonitor {
           clearTimeout(timeoutId)
           const result = await response.json()
           
-          if (response.ok && result.value) {
+          if (response.ok && (result.value || result.success || result.removed)) {
             console.log('✅ Participante removido com sucesso do grupo:', participantPhone)
+            console.log('🚫 Detalhes da remoção:', result)
             return // Sucesso, sair do loop
           } else {
             console.error('❌ Erro ao remover participante:', result)
@@ -365,8 +366,9 @@ export class GroupMonitor {
           clearTimeout(timeoutId)
           const result = await response.json()
           
-          if (response.ok && result.value) {
+          if (response.ok && (result.value || result.messageId || result.id)) {
             console.log('✅ Mensagem de banimento enviada com sucesso para:', participantPhone)
+            console.log('📱 Detalhes da mensagem:', result)
             return // Sucesso, sair do loop
           } else {
             console.error('❌ Erro ao enviar mensagem de banimento:', result)
