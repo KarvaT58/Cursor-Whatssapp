@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { GroupMonitor } from '@/lib/monitoring/group-monitor'
+import { getMonitorWatchdog } from '@/lib/monitoring/monitor-watchdog'
+import { ensureWatchdogRunning } from '@/lib/monitoring/auto-start'
 import { createClient } from '@supabase/supabase-js'
 
 // Instância global do monitor (singleton)
@@ -60,23 +62,28 @@ async function checkAndRecoverMonitor() {
 // GET /api/monitoring/group-monitor - Status do monitor
 export async function GET(request: NextRequest) {
   try {
-    // Verificar se o monitor precisa ser recuperado
-    await checkAndRecoverMonitor()
+    // Garantir que o watchdog está rodando
+    ensureWatchdogRunning()
+    
+    // Obter watchdog (que garante que o monitor está sempre rodando)
+    const watchdog = getMonitorWatchdog()
 
-    if (!groupMonitor) {
-      return NextResponse.json({
-        success: true,
-        data: {
-          isRunning: false,
-          message: 'Monitor não foi inicializado'
-        }
-      })
-    }
+    // Obter status do monitor atual
+    const watchdogStatus = watchdog.getStatus()
+    const monitorStatus = watchdogStatus.monitorStatus
 
-    const status = groupMonitor.getStatus()
     return NextResponse.json({
       success: true,
-      data: status
+      data: {
+        ...monitorStatus,
+        watchdog: {
+          isRunning: watchdogStatus.isRunning,
+          restartAttempts: watchdogStatus.restartAttempts,
+          lastHealthCheck: watchdogStatus.lastHealthCheck,
+          isHealthy: watchdogStatus.isHealthy
+        },
+        message: watchdogStatus.isRunning ? 'Monitor protegido por watchdog - NUNCA para sozinho!' : 'Watchdog não está rodando'
+      }
     })
 
   } catch (error) {
@@ -94,54 +101,80 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, adminPhone, checkInterval } = body
 
+    // Obter watchdog
+    const watchdog = getMonitorWatchdog()
+
     if (action === 'start') {
-      // Parar monitor existente se estiver rodando
-      if (groupMonitor) {
-        groupMonitor.stop()
+      // Salvar configurações no banco
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!
+      )
+
+      const config = {
+        checkInterval: checkInterval || 30000,
+        adminPhone: adminPhone || '(45) 91284-3589'
       }
 
-      // Criar novo monitor com configurações
-      groupMonitor = new GroupMonitor({
-        checkInterval: checkInterval || 30000, // 30 segundos por padrão
-        adminPhone: adminPhone || '(45) 91284-3589'
-      })
+      await supabase
+        .from('monitor_state')
+        .upsert({
+          id: 'group_monitor',
+          check_interval: config.checkInterval,
+          admin_phone: config.adminPhone,
+          is_running: true,
+          updated_at: new Date().toISOString()
+        })
 
-      // Iniciar monitoramento
-      groupMonitor.start()
+      // Iniciar watchdog (que garante que o monitor nunca para)
+      watchdog.start()
 
       return NextResponse.json({
         success: true,
         data: {
-          message: 'Monitor iniciado com sucesso',
-          config: {
-            checkInterval: checkInterval || 30000,
-            adminPhone: adminPhone || '(45) 91284-3589'
+          message: 'Monitor iniciado com proteção watchdog - NUNCA para sozinho!',
+          config: config,
+          watchdog: {
+            isRunning: true,
+            message: 'Watchdog ativo - Monitor protegido contra falhas'
           }
         }
       })
 
     } else if (action === 'stop') {
-      if (groupMonitor) {
-        groupMonitor.stop()
-        groupMonitor = null
+      // Parar watchdog (apenas por comando manual)
+      watchdog.stop()
 
-        return NextResponse.json({
-          success: true,
-          data: {
-            message: 'Monitor parado com sucesso'
+      return NextResponse.json({
+        success: true,
+        data: {
+          message: 'Monitor parado por comando manual',
+          watchdog: {
+            isRunning: false,
+            message: 'Watchdog parado - Monitor pode parar'
           }
-        })
-      } else {
-        return NextResponse.json({
-          success: false,
-          error: 'Monitor não está rodando'
-        }, { status: 400 })
-      }
+        }
+      })
+
+    } else if (action === 'restart') {
+      // Forçar reinicialização
+      await watchdog.forceRestart()
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          message: 'Monitor reinicializado com sucesso',
+          watchdog: {
+            isRunning: true,
+            message: 'Watchdog reiniciado - Monitor protegido'
+          }
+        }
+      })
 
     } else {
       return NextResponse.json({
         success: false,
-        error: 'Ação inválida. Use "start" ou "stop"'
+        error: 'Ação inválida. Use "start", "stop" ou "restart"'
       }, { status: 400 })
     }
 
