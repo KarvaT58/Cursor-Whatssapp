@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 
 interface GroupFamily {
   id: string
@@ -33,20 +33,8 @@ export default function JoinGroupPage() {
   const [joining, setJoining] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
+  const supabase = createClient()
 
-  // Verificar se as variáveis de ambiente estão disponíveis
-  useEffect(() => {
-    console.log('🔧 Verificando variáveis de ambiente:', {
-      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      url: process.env.NEXT_PUBLIC_SUPABASE_URL,
-      keyLength: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.length
-    })
-  }, [])
 
   useEffect(() => {
     console.log('🚀 useEffect executado, familyId:', familyId)
@@ -82,13 +70,6 @@ export default function JoinGroupPage() {
         hasKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
       })
       
-      // Verificar se as variáveis de ambiente estão disponíveis
-      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-        console.error('❌ Variáveis de ambiente do Supabase não configuradas')
-        setError('Configuração do banco de dados não encontrada')
-        setLoading(false)
-        return
-      }
       
       // Teste de conexão básica
       const { data: testData, error: testError } = await supabase
