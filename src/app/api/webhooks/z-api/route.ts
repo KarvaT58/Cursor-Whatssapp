@@ -79,12 +79,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body: ZApiWebhookData = await request.json()
-    console.log('📨 WEBHOOK Z-API RECEBIDO:', body)
+    console.log('📨 WEBHOOK Z-API RECEBIDO:', JSON.stringify(body, null, 2))
     console.log('🔍 WEBHOOK - Tipo:', body.type)
     console.log('🔍 WEBHOOK - Notification:', body.notification)
     console.log('🔍 WEBHOOK - Event:', body.event)
     console.log('🔍 WEBHOOK - Phone:', body.phone)
     console.log('🔍 WEBHOOK - ChatName:', body.chatName)
+    console.log('🔍 WEBHOOK - ParticipantPhone:', body.participantPhone)
+    console.log('🔍 WEBHOOK - NotificationParameters:', body.notificationParameters)
     console.log('🔍 Tipo de evento:', body.notification || body.event || 'unknown')
     console.log('🔍 Dados do evento:', body.data || body)
 
