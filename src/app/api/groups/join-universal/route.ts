@@ -127,17 +127,46 @@ export async function POST(request: NextRequest) {
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
       
-      // USAR O MESMO NOME QUE FUNCIONA MANUALMENTE
-      const newGroupName = `${firstGroup.name} ${newGroupNumber}`
-      console.log(`🏗️ JOIN-UNIVERSAL: Usando nome que funciona manualmente: "${newGroupName}"`)
+      // LIMPAR E SANITIZAR O NOME PARA EVITAR PROBLEMAS COM Z-API
+      let baseName = firstGroup.name || familyName || 'Grupo'
+      
+      // Remover caracteres especiais e espaços extras
+      baseName = baseName.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
+      
+      // Se o nome base estiver vazio, usar fallback
+      if (!baseName || baseName.length === 0) {
+        baseName = 'Grupo'
+      }
+      
+      const newGroupName = `${baseName} ${newGroupNumber}`
+      
+      console.log(`🏗️ JOIN-UNIVERSAL: Nome original: "${firstGroup.name}"`)
+      console.log(`🏗️ JOIN-UNIVERSAL: Nome limpo: "${baseName}"`)
+      console.log(`🏗️ JOIN-UNIVERSAL: Nome final: "${newGroupName}"`)
+      console.log(`🏗️ JOIN-UNIVERSAL: Tamanho do nome: ${newGroupName.length} caracteres`)
+
+      // VALIDAR SE O NOME NÃO ESTÁ VAZIO
+      if (!newGroupName || newGroupName.trim().length === 0) {
+        console.error('❌ JOIN-UNIVERSAL: Nome do grupo está vazio após limpeza!')
+        return NextResponse.json(
+          { error: 'Erro: Nome do grupo inválido' },
+          { status: 500 }
+        )
+      }
 
       const createGroupPayload = {
-        name: newGroupName,
-        description: firstGroup.description || `Grupo ${familyName}`,
+        name: newGroupName.trim(),
+        description: (firstGroup.description || `Grupo ${familyName}`).trim(),
         participants: participants
       }
 
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
+
+      // DEBUG: Verificar se o JSON está sendo serializado corretamente
+      const jsonPayload = JSON.stringify(createGroupPayload)
+      console.log(`🔍 JOIN-UNIVERSAL: JSON serializado:`, jsonPayload)
+      console.log(`🔍 JOIN-UNIVERSAL: Tamanho do JSON: ${jsonPayload.length} bytes`)
+      console.log(`🔍 JOIN-UNIVERSAL: Nome no JSON: "${JSON.parse(jsonPayload).name}"`)
 
       // FAZER EXATAMENTE COMO A CRIAÇÃO MANUAL
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição EXATAMENTE como criação manual`)

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import ContentDetector from '@/lib/ai/content-detector'
 
 interface MessageData {
   messageId: string
@@ -21,6 +22,7 @@ interface SpamTracker {
 class MessageMonitor {
   private supabase: any
   private spamTracker: SpamTracker = {}
+  private contentDetector: ContentDetector
   private readonly SPAM_THRESHOLD = 15 // 15 mensagens
   private readonly SPAM_WINDOW = 60000 // 1 minuto em ms
 
@@ -316,6 +318,7 @@ class MessageMonitor {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+    this.contentDetector = new ContentDetector()
   }
 
   /**
