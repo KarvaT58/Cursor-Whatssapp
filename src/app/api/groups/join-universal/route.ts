@@ -273,13 +273,13 @@ export async function POST(request: NextRequest) {
       }
 
       console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${createGroupResult.groupId})`)
-      console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${inviteLinkResult.link}`)
+      console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${inviteLinkResult.data.invitationLink}`)
 
       return NextResponse.json({
         success: true,
-        groupId: createGroupResult.groupId,
+        groupId: createGroupResult.data.phone,
         groupName: newGroupName,
-        inviteLink: inviteLinkResult.link,
+        inviteLink: inviteLinkResult.data.invitationLink,
         isNewGroup: true,
         message: `Novo grupo "${newGroupName}" criado com sucesso!`
       })
