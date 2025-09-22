@@ -384,6 +384,8 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      const groupWhatsappId = createGroupResult.data.phone
+      
       console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${groupWhatsappId})`)
       console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${inviteLinkResult.data.invitationLink}`)
       
