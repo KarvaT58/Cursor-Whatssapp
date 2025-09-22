@@ -228,7 +228,30 @@ async function handleParticipantLeft(
           group_name: data.chatName,
           error: groupByNameError
         })
-        return
+        
+        // Se o grupo não existe, pode ser um grupo criado recentemente que ainda não foi salvo
+        // Vamos aguardar um pouco e tentar novamente
+        console.log('⏳ Aguardando 2 segundos e tentando novamente...')
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        const { data: retryGroup, error: retryError } = await supabase
+          .from('whatsapp_groups')
+          .select('*')
+          .eq('whatsapp_id', data.phone)
+          .eq('user_id', userId)
+          .single()
+        
+        if (retryGroup && !retryError) {
+          console.log('✅ Grupo encontrado na segunda tentativa!')
+          group = retryGroup
+        } else {
+          console.error('❌ Grupo não encontrado mesmo após retry:', {
+            whatsapp_id: data.phone,
+            group_name: data.chatName,
+            error: retryError
+          })
+          return
+        }
       }
     }
 
@@ -278,7 +301,7 @@ async function handleParticipantLeft(
 
     // Disparar notificação em tempo real
     await triggerRealtimeNotification(supabase, userId, {
-      type: 'participant_leave',
+      type: 'member_removed',
       group_name: group.name,
       sender_name: data.participantPhone,
       message: `O usuário ${data.participantPhone} saiu do grupo "${group.name}".`,
@@ -360,7 +383,7 @@ async function handleReceivedMessage(
     // Disparar notificação em tempo real para mensagens de grupo
     if (data.isGroup && data.chatName && data.text?.message) {
       await triggerRealtimeNotification(supabase, userId, {
-        type: 'new_message',
+        type: 'group_updated',
         group_name: data.chatName,
         sender_name: data.senderName,
         message: data.text.message,
@@ -533,7 +556,7 @@ async function handleParticipantAdded(
 
     // Disparar notificação em tempo real
     await triggerRealtimeNotification(supabase, userId, {
-      type: 'participant_join',
+      type: 'member_added',
       group_name: group.name,
       sender_name: participantPhone,
       message: `O usuário ${participantPhone} foi adicionado ao grupo "${group.name}".`,

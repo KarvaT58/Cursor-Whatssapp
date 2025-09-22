@@ -371,14 +371,15 @@ export async function POST(request: NextRequest) {
           .from('group_notifications')
           .insert({
             user_id: firstGroup.user_id,
-            type: 'group_created',
+            type: 'group_updated',
             title: newGroupName,
             message: `Grupo "${newGroupName}" criado automaticamente para a família "${familyName}".`,
             group_id: newGroup.id,
             data: {
               group_name: newGroupName,
               family_name: familyName,
-              is_group: true
+              is_group: true,
+              action: 'created'
             },
             created_at: new Date().toISOString()
           })

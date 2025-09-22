@@ -143,22 +143,28 @@ export function useRealtimeNotifications(): UseRealtimeNotificationsReturn {
 
     // Mostrar notificação baseada no tipo
     switch (data.type) {
-      case 'participant_join':
+      case 'member_added':
         toast.success(`${data.sender_name} entrou no grupo "${data.group_name}"`)
         break
         
-      case 'participant_leave':
+      case 'member_removed':
         toast.info(`${data.sender_name} saiu do grupo "${data.group_name}"`)
         break
         
-      case 'new_message':
-        if (data.is_group) {
+      case 'group_updated':
+        if (data.action === 'created') {
+          toast.success(`Grupo "${data.group_name}" criado automaticamente`)
+        } else if (data.is_group) {
           toast.info(`Nova mensagem em "${data.group_name}"`)
         }
         break
         
-      case 'group_created':
-        toast.success(`Grupo "${data.group_name}" criado automaticamente`)
+      case 'join_request':
+        toast.info(`Solicitação de entrada em "${data.group_name}"`)
+        break
+        
+      case 'admin_promotion':
+        toast.info(`${data.sender_name} foi promovido a admin em "${data.group_name}"`)
         break
         
       default:
