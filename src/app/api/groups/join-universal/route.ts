@@ -106,9 +106,37 @@ export async function POST(request: NextRequest) {
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
-      const newGroupName = `${firstGroup.name} ${newGroupNumber}`
+      
+      // Usar nome do grupo original ou fallback para nome da família
+      const baseGroupName = firstGroup.name && firstGroup.name.trim() !== '' 
+        ? firstGroup.name 
+        : familyName || 'Grupo Universal'
+      
+      const newGroupName = `${baseGroupName} ${newGroupNumber}`
       
       console.log(`🏗️ JOIN-UNIVERSAL: Criando grupo "${newGroupName}" com configurações do grupo original`)
+      console.log(`📋 JOIN-UNIVERSAL: Nome do grupo original: "${firstGroup.name}"`)
+      console.log(`📋 JOIN-UNIVERSAL: Nome base usado: "${baseGroupName}"`)
+      console.log(`📋 JOIN-UNIVERSAL: Nome do novo grupo: "${newGroupName}"`)
+      
+      // Verificar se o nome não está vazio
+      if (!newGroupName || newGroupName.trim() === '') {
+        console.error('❌ JOIN-UNIVERSAL: Nome do grupo está vazio!')
+        return NextResponse.json(
+          { error: 'Nome do grupo não pode estar vazio' },
+          { status: 400 }
+        )
+      }
+      
+      const createGroupPayload = {
+        name: newGroupName,
+        description: firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`,
+        // Adicionar o dono do grupo como primeiro participante
+        participants: [zApiInstance.phone_number]
+      }
+      
+      console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
+      console.log(`🔗 JOIN-UNIVERSAL: URL: https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`)
       
       const createGroupResponse = await fetch(
         `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`,
@@ -118,12 +146,7 @@ export async function POST(request: NextRequest) {
             'Content-Type': 'application/json',
             'Client-Token': zApiInstance.client_token || '',
           },
-          body: JSON.stringify({
-            name: newGroupName,
-            description: firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`,
-            // Adicionar o dono do grupo como primeiro participante
-            participants: [zApiInstance.phone_number]
-          }),
+          body: JSON.stringify(createGroupPayload),
         }
       )
 
