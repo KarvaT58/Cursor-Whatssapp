@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     // 2. Verificar se há vagas nos grupos existentes
     let availableGroup = null
     const firstGroup = groups[0]
-    const MAX_PARTICIPANTS = firstGroup.max_participants_per_group || 256 // Usar limite do grupo ou padrão 256
+    const MAX_PARTICIPANTS = 3 // Limite de teste: 3 participantes por grupo
 
     console.log(`🔍 JOIN-UNIVERSAL: Verificando vagas com limite de ${MAX_PARTICIPANTS} participantes...`)
     console.log(`📋 JOIN-UNIVERSAL: Grupos encontrados para verificação:`, groups.map((g, index) => ({ 
