@@ -24,10 +24,24 @@ export class CampaignScheduler {
 
   constructor() {
     // Usar service role key para ter acesso completo aos dados
+    console.log('🔧 [SCHEDULER] Inicializando cliente Supabase...');
+    console.log('🔧 [SCHEDULER] URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Definida' : 'Não definida');
+    console.log('🔧 [SCHEDULER] Service Key:', process.env.SUPABASE_SERVICE_ROLE_KEY ? 'Definida' : 'Não definida');
+    
     this.supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
     );
+    
+    console.log('🔧 [SCHEDULER] Cliente Supabase inicializado:', typeof this.supabase);
+    console.log('🔧 [SCHEDULER] Método from disponível:', typeof this.supabase.from);
+    
     this.campaignSender = new CampaignSender();
   }
 
