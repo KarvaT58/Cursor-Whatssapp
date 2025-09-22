@@ -73,7 +73,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body: ZApiWebhookData = await request.json()
-    console.log('📨 Webhook Z-API recebido:', body)
+    console.log('📨 WEBHOOK Z-API RECEBIDO:', body)
+    console.log('🔍 WEBHOOK - Tipo:', body.type)
+    console.log('🔍 WEBHOOK - Notification:', body.notification)
+    console.log('🔍 WEBHOOK - Event:', body.event)
+    console.log('🔍 WEBHOOK - Phone:', body.phone)
+    console.log('🔍 WEBHOOK - ChatName:', body.chatName)
     console.log('🔍 Tipo de evento:', body.notification || body.event || 'unknown')
     console.log('🔍 Dados do evento:', body.data || body)
 
@@ -102,14 +107,19 @@ export async function POST(request: NextRequest) {
 
     // Processar diferentes tipos de webhooks
     if (body.type === 'ReceivedCallback') {
+      console.log('📨 WEBHOOK RECEBIDO - Tipo:', body.type, 'Notification:', body.notification)
+      
       // Verificar se é um evento de grupo
       if (body.notification === 'GROUP_PARTICIPANT_LEAVE') {
+        console.log('👋 WEBHOOK: Participante saiu do grupo')
         await handleParticipantLeft(supabase, instance.user_id, body)
       } else if (body.notification === 'GROUP_PARTICIPANT_ADD' || body.notification === 'GROUP_PARTICIPANT_INVITE') {
         // CORRIGIDO: Processar tanto ADD quanto INVITE
-        console.log('🎯 PROCESSANDO EVENTO DE PARTICIPANTE:', body.notification)
+        console.log('🎯 WEBHOOK: Participante adicionado ao grupo - Notification:', body.notification)
+        console.log('📊 WEBHOOK: Dados completos do webhook:', JSON.stringify(body, null, 2))
         await handleParticipantAdded(supabase, instance.user_id, body)
       } else {
+        console.log('💬 WEBHOOK: Mensagem recebida normal')
         // Webhook de mensagem recebida normal
         await handleReceivedMessage(supabase, instance.user_id, body)
       }
@@ -454,11 +464,13 @@ async function handleParticipantAdded(
       console.log('🎯 EXTRAINDO NÚMERO DO INVITE:', participantPhone)
     }
 
-    console.log('👋 Processando participante adicionado:', {
+    console.log('👋 PROCESSANDO PARTICIPANTE ADICIONADO:', {
       groupId: data.phone,
       participantPhone: participantPhone,
       groupName: data.chatName,
-      notification: data.notification
+      notification: data.notification,
+      notificationParameters: data.notificationParameters,
+      senderName: data.senderName
     })
 
     if (!data.phone || !participantPhone) {
@@ -500,6 +512,13 @@ async function handleParticipantAdded(
     console.log('✅ Participante não está na blacklist - permitindo entrada')
 
     // Adicionar participante à nova tabela group_participants
+    console.log('🔄 ADICIONANDO PARTICIPANTE À TABELA group_participants:', {
+      group_id: group.id,
+      group_name: group.name,
+      participant_phone: participantPhone,
+      participant_name: data.senderName || null
+    })
+    
     const addResult = await addGroupParticipant(
       group.id, 
       participantPhone, 
@@ -509,9 +528,10 @@ async function handleParticipantAdded(
     )
     
     if (addResult.success) {
-      console.log('✅ Participante adicionado à tabela group_participants:', participantPhone)
+      console.log('✅ PARTICIPANTE ADICIONADO COM SUCESSO à tabela group_participants:', participantPhone)
+      console.log('🔄 TRIGGER DEVE ATUALIZAR participant_count automaticamente')
     } else {
-      console.error('❌ Erro ao adicionar participante à tabela group_participants:', addResult.error)
+      console.error('❌ ERRO ao adicionar participante à tabela group_participants:', addResult.error)
     }
 
     // Criar notificação de participante adicionado
