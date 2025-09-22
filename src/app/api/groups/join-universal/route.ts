@@ -119,20 +119,16 @@ export async function POST(request: NextRequest) {
       console.log(`📱 JOIN-UNIVERSAL: instance_id: "${zApiInstance.instance_id}"`)
       console.log(`📱 JOIN-UNIVERSAL: instance_token: "${zApiInstance.instance_token}"`)
       
-      // TESTE: Usar o número da instância mesmo que seja undefined
-      let adminPhoneNumber = zApiInstance.phone_number
-      let participants = []
+      // CORREÇÃO: A tabela z_api_instances NÃO TEM phone_number!
+      // Vamos usar o primeiro participante do grupo original como admin
+      let adminPhoneNumber = firstGroup.participants && firstGroup.participants.length > 0 
+        ? firstGroup.participants[0] 
+        : '554599854508' // Fallback para o número que sabemos que funciona
       
-      // Se não tem número na instância, não adicionar participantes
-      if (adminPhoneNumber && adminPhoneNumber !== 'undefined') {
-        participants = [adminPhoneNumber]
-        console.log(`✅ JOIN-UNIVERSAL: Usando número da instância: ${adminPhoneNumber}`)
-      } else {
-        console.log(`⚠️ JOIN-UNIVERSAL: Instância sem número, criando grupo sem participantes iniciais`)
-        participants = []
-      }
+      let participants = [adminPhoneNumber]
       
-      console.log(`📱 JOIN-UNIVERSAL: Número da instância: "${zApiInstance.phone_number}"`)
+      console.log(`✅ JOIN-UNIVERSAL: Usando primeiro participante do grupo como admin: ${adminPhoneNumber}`)
+      console.log(`📱 JOIN-UNIVERSAL: Participantes do grupo original:`, firstGroup.participants)
       console.log(`📱 JOIN-UNIVERSAL: Participantes finais:`, participants)
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
