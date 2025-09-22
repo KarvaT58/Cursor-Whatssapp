@@ -417,14 +417,24 @@ async function handleReceivedMessage(
 
     // Disparar notificação em tempo real para mensagens de grupo
     if (data.isGroup && data.chatName && data.text?.message) {
-      await triggerRealtimeNotification(supabase, userId, {
-        type: 'group_updated',
-        group_name: data.chatName,
-        sender_name: data.senderName,
-        message: data.text.message,
-        is_group: true,
-        group_id: data.phone
-      })
+      // Buscar o ID interno do grupo para usar na notificação
+      let { data: group, error: groupError } = await supabase
+        .from('whatsapp_groups')
+        .select('id')
+        .eq('whatsapp_id', data.phone)
+        .eq('user_id', userId)
+        .single()
+
+      if (group && !groupError) {
+        await triggerRealtimeNotification(supabase, userId, {
+          type: 'group_updated',
+          group_name: data.chatName,
+          sender_name: data.senderName,
+          message: data.text.message,
+          is_group: true,
+          group_id: group.id // Usar ID interno do banco
+        })
+      }
     }
 
   } catch (error) {
