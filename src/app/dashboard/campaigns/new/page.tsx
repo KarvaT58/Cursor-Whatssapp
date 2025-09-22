@@ -205,7 +205,12 @@ export default function NewCampaignPage() {
               ...variant, 
               media: variant.media.map((media, index) => 
                 index === mediaIndex 
-                  ? { ...media, media_url: url, media_name: fileName }
+                  ? { 
+                      ...media, 
+                      media_url: url, 
+                      media_name: fileName,
+                      media_order: variant.message.message_order // Garantir que media_order seja igual ao message_order
+                    }
                   : media
               )
             }
@@ -228,7 +233,7 @@ export default function NewCampaignPage() {
       media_type: 'image',
       media_url: '',
       media_name: '',
-      media_order: variant.media.length + 1,
+      media_order: variant.message.message_order, // Usar o message_order da variante
       is_active: true
     };
     

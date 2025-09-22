@@ -177,6 +177,8 @@ export async function POST(request: NextRequest) {
         // Encontrar a mensagem correspondente baseada na ordem
         const correspondingMessage = createdMessages.find(msg => msg.message_order === med.media_order);
         
+        console.log(`🔗 Associando mídia ${med.media_name} (order: ${med.media_order}) com mensagem:`, correspondingMessage?.id || 'NENHUMA');
+        
         return {
           campaign_id: campaign.id,
           message_id: correspondingMessage?.id || null,
