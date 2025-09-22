@@ -123,7 +123,16 @@ export async function POST(request: NextRequest) {
         ? firstGroup.name 
         : familyName || 'Grupo Universal'
       
+      // Tentar diferentes formatos de nome
       const newGroupName = `${baseGroupName} ${newGroupNumber}`
+      const alternativeName = `${familyName} ${newGroupNumber}`
+      const simpleName = `${familyName}`
+      
+      console.log(`📝 JOIN-UNIVERSAL: Opções de nome:`, {
+        original: newGroupName,
+        alternative: alternativeName,
+        simple: simpleName
+      })
       
       console.log(`🏗️ JOIN-UNIVERSAL: Criando grupo "${newGroupName}" com configurações do grupo original`)
       console.log(`📋 JOIN-UNIVERSAL: Nome do grupo original: "${firstGroup.name}"`)
@@ -139,12 +148,18 @@ export async function POST(request: NextRequest) {
         )
       }
       
+      // Tentar usar o nome mais simples primeiro
+      const cleanGroupName = simpleName.trim().replace(/[^\w\s-]/g, '') // Remover caracteres especiais
+      
       const createGroupPayload = {
-        name: newGroupName,
-        description: firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`,
+        name: cleanGroupName,
+        description: (firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`).trim(),
         // Adicionar o dono do grupo como primeiro participante
         participants: [adminPhoneNumber]
       }
+      
+      console.log(`🧹 JOIN-UNIVERSAL: Nome limpo: "${cleanGroupName}"`)
+      console.log(`📝 JOIN-UNIVERSAL: Descrição: "${createGroupPayload.description}"`)
       
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
       console.log(`🔗 JOIN-UNIVERSAL: URL: https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`)
