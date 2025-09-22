@@ -191,81 +191,44 @@ export async function POST(request: NextRequest) {
       console.log(`🧪 JOIN-UNIVERSAL: TESTE EXTREMO - Nome de 1 caractere: "${newGroupName}"`)
       console.log(`🏗️ JOIN-UNIVERSAL: Tamanho do nome: ${newGroupName.length} caracteres`)
 
-      const createGroupPayload = {
-        groupName: newGroupName.trim(),
-        phones: participants,
-        autoInvite: true,
-        ...(firstGroup.description && { description: (firstGroup.description || `Grupo ${familyName}`).trim() })
-      }
-
-      console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
-
-      // DEBUG: Verificar se o JSON está sendo serializado corretamente
-      const jsonPayload = JSON.stringify(createGroupPayload)
-      console.log(`🔍 JOIN-UNIVERSAL: JSON serializado:`, jsonPayload)
-      console.log(`🔍 JOIN-UNIVERSAL: Tamanho do JSON: ${jsonPayload.length} bytes`)
-      console.log(`🔍 JOIN-UNIVERSAL: Nome no JSON: "${JSON.parse(jsonPayload).groupName}"`)
-
-      // FAZER EXATAMENTE COMO A CRIAÇÃO MANUAL
-      console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição EXATAMENTE como criação manual`)
-      console.log(`🔗 JOIN-UNIVERSAL: URL: https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`)
-      console.log(`📋 JOIN-UNIVERSAL: Headers:`, {
-        'Content-Type': 'application/json',
-        'Client-Token': zApiInstance.client_token ? 'Presente' : 'Ausente'
-      })
-      console.log(`📋 JOIN-UNIVERSAL: Body:`, JSON.stringify(createGroupPayload, null, 2))
-
-      // TENTAR COM HEADERS EXTRAS E DIFERENTES ENCODINGS
-      const headers = {
-        'Content-Type': 'application/json; charset=utf-8',
-        'Accept': 'application/json',
-        'User-Agent': 'WhatsApp-Professional/1.0',
-        'Client-Token': zApiInstance.client_token || '',
-      }
+      // USAR O ZApiClient que já funciona em vez de fetch direto
+      console.log(`🚀 JOIN-UNIVERSAL: Usando ZApiClient para criar grupo...`)
       
-      console.log(`🔧 JOIN-UNIVERSAL: Headers finais:`, headers)
-      
-      const createGroupResponse = await fetch(
-        `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`,
-        {
-          method: 'POST',
-          headers: headers,
-          body: JSON.stringify(createGroupPayload),
-        }
+      const { ZApiClient } = await import('@/lib/z-api/client')
+      const zApiClient = new ZApiClient(
+        zApiInstance.instance_id,
+        zApiInstance.instance_token,
+        zApiInstance.client_token
       )
 
-      const createGroupResult = await createGroupResponse.json()
-      console.log('🚀 Resultado da criação do grupo:', createGroupResult)
-      console.log('📊 Status da resposta:', createGroupResponse.status)
-      console.log('📊 Headers da resposta:', Object.fromEntries(createGroupResponse.headers.entries()))
+      console.log(`📤 JOIN-UNIVERSAL: Dados para criação:`, {
+        name: newGroupName.trim(),
+        description: (firstGroup.description || `Grupo ${familyName}`).trim(),
+        participants: participants
+      })
 
-      if (!createGroupResponse.ok || !createGroupResult.groupId) {
-        console.error('❌ Erro ao criar grupo:', createGroupResult)
+      const createGroupResult = await zApiClient.createGroup({
+        name: newGroupName.trim(),
+        description: (firstGroup.description || `Grupo ${familyName}`).trim(),
+        participants: participants
+      })
+
+      console.log('🚀 Resultado da criação do grupo via ZApiClient:', createGroupResult)
+
+      if (!createGroupResult.success || !createGroupResult.data?.phone) {
+        console.error('❌ Erro ao criar grupo via ZApiClient:', createGroupResult)
         return NextResponse.json(
           { error: 'Erro ao criar novo grupo', details: createGroupResult.error || 'Erro desconhecido' },
           { status: 500 }
         )
       }
 
-      // Obter link de convite do novo grupo
-      const inviteLinkResponse = await fetch(
-        `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/group-invite-link`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-Token': zApiInstance.client_token || '',
-          },
-          body: JSON.stringify({
-            groupId: createGroupResult.groupId
-          }),
-        }
-      )
-
-      const inviteLinkResult = await inviteLinkResponse.json()
+      // Obter link de convite do novo grupo usando ZApiClient
+      console.log('🔗 Obtendo link de convite via ZApiClient...')
+      const inviteLinkResult = await zApiClient.getGroupInviteLink(createGroupResult.data.phone)
       console.log('🔗 Resultado do link de convite:', inviteLinkResult)
 
-      if (!inviteLinkResponse.ok || !inviteLinkResult.link) {
+      if (!inviteLinkResult.success || !inviteLinkResult.data?.link) {
         console.error('❌ Erro ao obter link de convite:', inviteLinkResult)
         return NextResponse.json(
           { error: 'Erro ao obter link de convite', details: inviteLinkResult.error || 'Erro desconhecido' },
@@ -278,8 +241,8 @@ export async function POST(request: NextRequest) {
         .from('whatsapp_groups')
         .insert({
           name: newGroupName,
-          whatsapp_id: createGroupResult.groupId,
-          invite_link: inviteLinkResult.link,
+          whatsapp_id: createGroupResult.data.phone,
+          invite_link: inviteLinkResult.data.link,
           description: firstGroup.description || `Grupo ${familyName}`,
           participants: participants,
           max_participants: MAX_PARTICIPANTS,
