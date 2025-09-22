@@ -61,6 +61,30 @@ export async function removeGroupParticipant(
   try {
     const supabase = await createClient()
     
+    // Primeiro, verificar se o participante existe
+    const { data: existingParticipant, error: checkError } = await supabase
+      .from('group_participants')
+      .select('id, is_active')
+      .eq('group_id', groupId)
+      .eq('participant_phone', participantPhone)
+      .single()
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('❌ Erro ao verificar participante:', checkError)
+      return { success: false, error: checkError.message }
+    }
+
+    if (!existingParticipant) {
+      console.log(`⚠️ Participante ${participantPhone} não encontrado no grupo ${groupId}`)
+      return { success: true } // Considerar sucesso se não existe
+    }
+
+    if (!existingParticipant.is_active) {
+      console.log(`⚠️ Participante ${participantPhone} já está inativo no grupo ${groupId}`)
+      return { success: true } // Considerar sucesso se já está inativo
+    }
+
+    // Marcar como inativo
     const { error } = await supabase
       .from('group_participants')
       .update({
