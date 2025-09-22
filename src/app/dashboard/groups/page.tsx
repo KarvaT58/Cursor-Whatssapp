@@ -136,8 +136,8 @@ export default function GroupsPage() {
     setActionError(null)
   }, [])
 
-  // Função para buscar grupos de famílias
-  const fetchFamilyGroups = async () => {
+  // Função para buscar grupos universais
+  const fetchUniversalGroups = async () => {
     if (!user?.id) return
 
     try {
@@ -148,7 +148,7 @@ export default function GroupsPage() {
         .from('whatsapp_groups')
         .select('*')
         .eq('user_id', user.id)
-        .not('group_family', 'is', null) // Apenas grupos com group_family
+        .eq('group_type', 'universal') // Buscar apenas grupos universais
         .order('created_at', { ascending: false })
 
       if (fetchError) {
@@ -157,16 +157,16 @@ export default function GroupsPage() {
 
       setUniversalGroups(data || [])
     } catch (err) {
-      setUniversalError(err instanceof Error ? err.message : 'Erro ao carregar grupos de famílias')
+      setUniversalError(err instanceof Error ? err.message : 'Erro ao carregar grupos universais')
     } finally {
       setUniversalLoading(false)
     }
   }
 
-  // Carregar grupos de famílias quando o usuário estiver disponível
+  // Carregar grupos universais quando o usuário estiver disponível
   useEffect(() => {
     if (user) {
-      fetchFamilyGroups()
+      fetchUniversalGroups()
     }
   }, [user])
 
@@ -788,7 +788,7 @@ export default function GroupsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {new Set(universalGroups.map(g => g.group_family).filter(Boolean)).size}
+                    {new Set(universalGroups.map(g => g.family_name).filter(Boolean)).size}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Famílias de grupos universais

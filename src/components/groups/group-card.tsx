@@ -193,13 +193,13 @@ export function GroupCard({
 
 
             {/* Link Universal */}
-            {group.group_family && (
+            {group.group_type === 'universal' && group.universal_link && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-blue-800 mb-1">Link Universal</p>
                     <p className="text-xs text-blue-600 truncate">
-                      {typeof window !== 'undefined' ? `${window.location.origin}/join/${group.group_family}` : `/join/${group.group_family}`}
+                      {typeof window !== 'undefined' ? `${window.location.origin}${group.universal_link}` : group.universal_link}
                     </p>
                   </div>
                   <Button
@@ -208,8 +208,8 @@ export function GroupCard({
                     className="h-6 px-2 text-xs ml-2"
                     onClick={() => {
                       const universalLink = typeof window !== 'undefined' 
-                        ? `${window.location.origin}/join/${group.group_family}`
-                        : `/join/${group.group_family}`
+                        ? `${window.location.origin}${group.universal_link}`
+                        : group.universal_link
                       navigator.clipboard.writeText(universalLink)
                       toast.success('Link universal copiado para a área de transferência!')
                     }}
