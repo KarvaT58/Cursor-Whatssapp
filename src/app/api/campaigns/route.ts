@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Criar mensagens variáveis
+    let createdMessages: any[] = [];
     if (messages && messages.length > 0) {
       const campaignMessages = messages.map((msg: any) => ({
         campaign_id: campaign.id,
@@ -156,28 +157,38 @@ export async function POST(request: NextRequest) {
         is_active: msg.is_active
       }));
 
-      const { error: messagesError } = await supabase
+      const { data: insertedMessages, error: messagesError } = await supabase
         .from('campaign_messages')
-        .insert(campaignMessages);
+        .insert(campaignMessages)
+        .select();
 
       if (messagesError) {
         console.error('Erro ao criar mensagens:', messagesError);
         // Continuar mesmo com erro nas mensagens
+      } else {
+        createdMessages = insertedMessages || [];
+        console.log('Mensagens criadas:', createdMessages.length);
       }
     }
 
-    // Criar mídias
+    // Criar mídias associadas às mensagens
     if (media && media.length > 0) {
-      const campaignMedia = media.map((med: any) => ({
-        campaign_id: campaign.id,
-        media_type: med.media_type,
-        media_url: med.media_url,
-        media_name: med.media_name,
-        media_size: med.media_size,
-        media_mime_type: med.media_mime_type,
-        media_order: med.media_order,
-        is_active: med.is_active
-      }));
+      const campaignMedia = media.map((med: any) => {
+        // Encontrar a mensagem correspondente baseada na ordem
+        const correspondingMessage = createdMessages.find(msg => msg.message_order === med.media_order);
+        
+        return {
+          campaign_id: campaign.id,
+          message_id: correspondingMessage?.id || null,
+          media_type: med.media_type,
+          media_url: med.media_url,
+          media_name: med.media_name,
+          media_size: med.media_size,
+          media_mime_type: med.media_mime_type,
+          media_order: med.media_order,
+          is_active: med.is_active
+        };
+      });
 
       const { error: mediaError } = await supabase
         .from('campaign_media')
@@ -186,6 +197,8 @@ export async function POST(request: NextRequest) {
       if (mediaError) {
         console.error('Erro ao criar mídias:', mediaError);
         // Continuar mesmo com erro nas mídias
+      } else {
+        console.log('Mídias criadas:', campaignMedia.length);
       }
     }
 

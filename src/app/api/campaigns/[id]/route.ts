@@ -178,6 +178,7 @@ export async function PUT(
     }
 
     // Remover mensagens existentes e criar novas (apenas se não for atualização parcial)
+    let createdMessages: any[] = [];
     if (!isPartialUpdate) {
       await supabase
         .from('campaign_messages')
@@ -192,12 +193,16 @@ export async function PUT(
           is_active: msg.is_active
         }));
 
-        const { error: messagesError } = await supabase
+        const { data: insertedMessages, error: messagesError } = await supabase
           .from('campaign_messages')
-          .insert(campaignMessages);
+          .insert(campaignMessages)
+          .select();
 
         if (messagesError) {
           console.error('Erro ao atualizar mensagens:', messagesError);
+        } else {
+          createdMessages = insertedMessages || [];
+          console.log('Mensagens atualizadas:', createdMessages.length);
         }
       }
     }
@@ -210,16 +215,22 @@ export async function PUT(
         .eq('campaign_id', campaignId);
 
       if (media && media.length > 0) {
-        const campaignMedia = media.map((med: any) => ({
-          campaign_id: campaignId,
-          media_type: med.media_type,
-          media_url: med.media_url,
-          media_name: med.media_name,
-          media_size: med.media_size,
-          media_mime_type: med.media_mime_type,
-          media_order: med.media_order,
-          is_active: med.is_active
-        }));
+        const campaignMedia = media.map((med: any) => {
+          // Encontrar a mensagem correspondente baseada na ordem
+          const correspondingMessage = createdMessages.find(msg => msg.message_order === med.media_order);
+          
+          return {
+            campaign_id: campaignId,
+            message_id: correspondingMessage?.id || null,
+            media_type: med.media_type,
+            media_url: med.media_url,
+            media_name: med.media_name,
+            media_size: med.media_size,
+            media_mime_type: med.media_mime_type,
+            media_order: med.media_order,
+            is_active: med.is_active
+          };
+        });
 
         const { error: mediaError } = await supabase
           .from('campaign_media')
@@ -227,6 +238,8 @@ export async function PUT(
 
         if (mediaError) {
           console.error('Erro ao atualizar mídias:', mediaError);
+        } else {
+          console.log('Mídias atualizadas:', campaignMedia.length);
         }
       }
     }

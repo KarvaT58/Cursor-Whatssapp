@@ -230,9 +230,9 @@ export interface Database {
         Row: {
           id: string
           name: string
-          message: string
+          message: string | null
           recipients: string[]
-          status: 'draft' | 'scheduled' | 'running' | 'completed' | 'failed'
+          status: 'draft' | 'scheduled' | 'running' | 'completed' | 'failed' | 'active' | 'paused'
           scheduled_at: string | null
           started_at: string | null
           completed_at: string | null
@@ -243,49 +243,213 @@ export interface Database {
             read: number
             failed: number
           }
-          user_id: string
+          user_id: string | null
+          created_at: string
+          updated_at: string
+          description: string | null
+          instance_id: string | null
+          send_order: 'text_first' | 'media_first' | 'together'
+          created_by: string | null
+          global_interval: number | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          message?: string | null
+          recipients?: string[]
+          status?: 'draft' | 'scheduled' | 'running' | 'completed' | 'failed' | 'active' | 'paused'
+          scheduled_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          stats?: {
+            total: number
+            sent: number
+            delivered: number
+            read: number
+            failed: number
+          }
+          user_id?: string | null
+          created_at?: string
+          updated_at?: string
+          description?: string | null
+          instance_id?: string | null
+          send_order?: 'text_first' | 'media_first' | 'together'
+          created_by?: string | null
+          global_interval?: number | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          message?: string | null
+          recipients?: string[]
+          status?: 'draft' | 'scheduled' | 'running' | 'completed' | 'failed' | 'active' | 'paused'
+          scheduled_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          stats?: {
+            total: number
+            sent: number
+            delivered: number
+            read: number
+            failed: number
+          }
+          user_id?: string | null
+          created_at?: string
+          updated_at?: string
+          description?: string | null
+          instance_id?: string | null
+          send_order?: 'text_first' | 'media_first' | 'together'
+          created_by?: string | null
+          global_interval?: number | null
+        }
+      }
+      campaign_messages: {
+        Row: {
+          id: string
+          campaign_id: string
+          message_text: string
+          message_order: number
+          is_active: boolean | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          name: string
-          message: string
-          recipients?: string[]
-          status?: 'draft' | 'scheduled' | 'running' | 'completed' | 'failed'
-          scheduled_at?: string | null
-          started_at?: string | null
-          completed_at?: string | null
-          stats?: {
-            total: number
-            sent: number
-            delivered: number
-            read: number
-            failed: number
-          }
-          user_id: string
+          campaign_id: string
+          message_text: string
+          message_order?: number
+          is_active?: boolean | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          name?: string
-          message?: string
-          recipients?: string[]
-          status?: 'draft' | 'scheduled' | 'running' | 'completed' | 'failed'
-          scheduled_at?: string | null
-          started_at?: string | null
-          completed_at?: string | null
-          stats?: {
-            total: number
-            sent: number
-            delivered: number
-            read: number
-            failed: number
-          }
-          user_id?: string
+          campaign_id?: string
+          message_text?: string
+          message_order?: number
+          is_active?: boolean | null
           created_at?: string
           updated_at?: string
+        }
+      }
+      campaign_media: {
+        Row: {
+          id: string
+          campaign_id: string
+          message_id: string | null
+          media_type: 'image' | 'video' | 'audio' | 'document'
+          media_url: string
+          media_name: string | null
+          media_size: number | null
+          media_mime_type: string | null
+          media_order: number
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          campaign_id: string
+          message_id?: string | null
+          media_type: 'image' | 'video' | 'audio' | 'document'
+          media_url: string
+          media_name?: string | null
+          media_size?: number | null
+          media_mime_type?: string | null
+          media_order?: number
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          campaign_id?: string
+          message_id?: string | null
+          media_type?: 'image' | 'video' | 'audio' | 'document'
+          media_url?: string
+          media_name?: string | null
+          media_size?: number | null
+          media_mime_type?: string | null
+          media_order?: number
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      campaign_schedules: {
+        Row: {
+          id: string
+          campaign_id: string
+          schedule_name: string
+          start_time: string
+          days_of_week: string
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+          is_recurring: boolean | null
+          last_executed_at: string | null
+          next_execution_at: string | null
+        }
+        Insert: {
+          id?: string
+          campaign_id: string
+          schedule_name: string
+          start_time: string
+          days_of_week?: string
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+          is_recurring?: boolean | null
+          last_executed_at?: string | null
+          next_execution_at?: string | null
+        }
+        Update: {
+          id?: string
+          campaign_id?: string
+          schedule_name?: string
+          start_time?: string
+          days_of_week?: string
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+          is_recurring?: boolean | null
+          last_executed_at?: string | null
+          next_execution_at?: string | null
+        }
+      }
+      campaign_send_logs: {
+        Row: {
+          id: string
+          campaign_id: string
+          group_id: string | null
+          message_id: string | null
+          media_id: string | null
+          status: 'sent' | 'delivered' | 'read' | 'failed'
+          message_id_whatsapp: string | null
+          error_message: string | null
+          sent_at: string
+        }
+        Insert: {
+          id?: string
+          campaign_id: string
+          group_id?: string | null
+          message_id?: string | null
+          media_id?: string | null
+          status: 'sent' | 'delivered' | 'read' | 'failed'
+          message_id_whatsapp?: string | null
+          error_message?: string | null
+          sent_at?: string
+        }
+        Update: {
+          id?: string
+          campaign_id?: string
+          group_id?: string | null
+          message_id?: string | null
+          media_id?: string | null
+          status?: 'sent' | 'delivered' | 'read' | 'failed'
+          message_id_whatsapp?: string | null
+          error_message?: string | null
+          sent_at?: string
         }
       }
       team_messages: {
