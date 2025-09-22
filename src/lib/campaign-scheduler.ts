@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { CampaignSender } from './campaign-sender';
 
 interface CampaignSchedule {
@@ -11,14 +11,15 @@ interface CampaignSchedule {
   is_active: boolean;
 }
 
-interface Campaign {
+interface CampaignData {
   id: string;
   name: string;
   status: 'draft' | 'active' | 'paused' | 'completed' | 'cancelled';
+  campaign_schedules?: CampaignSchedule[];
 }
 
 export class CampaignScheduler {
-  private supabase: any;
+  private supabase: ReturnType<typeof createClient>;
   private campaignSender: CampaignSender;
 
   constructor() {
@@ -79,13 +80,13 @@ export class CampaignScheduler {
       console.log(`📊 [SCHEDULER] Encontradas ${campaigns.length} campanhas ativas`);
       
       // Log detalhado de cada campanha
-      for (const campaign of campaigns) {
+      for (const campaign of campaigns as CampaignData[]) {
         console.log(`📋 [SCHEDULER] Campanha: ${campaign.name} (${campaign.id})`);
         console.log(`📋 [SCHEDULER] Status: ${campaign.status}`);
         console.log(`📋 [SCHEDULER] Agendamentos: ${campaign.campaign_schedules?.length || 0}`);
       }
 
-      for (const campaign of campaigns) {
+      for (const campaign of campaigns as CampaignData[]) {
         await this.processCampaign(campaign, currentTime, currentDay);
       }
 
@@ -97,7 +98,7 @@ export class CampaignScheduler {
   /**
    * Processar uma campanha específica
    */
-  private async processCampaign(campaign: any, currentTime: string, currentDay: number): Promise<void> {
+  private async processCampaign(campaign: CampaignData, currentTime: string, currentDay: number): Promise<void> {
     try {
       console.log(`\n🎯 Processando campanha: ${campaign.name} (${campaign.id})`);
 
@@ -116,7 +117,7 @@ export class CampaignScheduler {
           console.log(`✅ Agendamento "${schedule.schedule_name}" deve ser executado agora!`);
           
           // Verificar se já foi executado hoje
-          const alreadyExecuted = await this.checkIfAlreadyExecutedToday(campaign.id, schedule.id);
+          const alreadyExecuted = await this.checkIfAlreadyExecutedToday(campaign.id);
           
           if (!alreadyExecuted) {
             console.log(`🚀 Executando campanha ${campaign.name}...`);
@@ -125,10 +126,10 @@ export class CampaignScheduler {
             
             if (result.success) {
               console.log(`✅ Campanha executada com sucesso!`);
-              await this.logScheduleExecution(campaign.id, schedule.id, 'success', result.message);
+              await this.logScheduleExecution(campaign.id, 'success', result.message);
             } else {
               console.error(`❌ Erro ao executar campanha: ${result.message}`);
-              await this.logScheduleExecution(campaign.id, schedule.id, 'error', result.message);
+              await this.logScheduleExecution(campaign.id, 'error', result.message);
             }
           } else {
             console.log('ℹ️ Campanha já foi executada hoje para este agendamento');
@@ -190,7 +191,7 @@ export class CampaignScheduler {
   /**
    * Verificar se a campanha já foi executada hoje para este agendamento
    */
-  private async checkIfAlreadyExecutedToday(campaignId: string, scheduleId: string): Promise<boolean> {
+  private async checkIfAlreadyExecutedToday(campaignId: string): Promise<boolean> {
     try {
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -220,11 +221,12 @@ export class CampaignScheduler {
   /**
    * Registrar execução do agendamento
    */
-  private async logScheduleExecution(campaignId: string, scheduleId: string, status: 'success' | 'error', message: string): Promise<void> {
+  private async logScheduleExecution(campaignId: string, status: 'success' | 'error', message: string): Promise<void> {
     try {
       // Aqui você pode criar uma tabela específica para logs de agendamento
       // Por enquanto, vamos usar a tabela campaign_sends
-      await this.supabase
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (this.supabase as any)
         .from('campaign_sends')
         .insert({
           campaign_id: campaignId,
@@ -260,7 +262,7 @@ export class CampaignScheduler {
   /**
    * Executar campanha manualmente
    */
-  async executeCampaignManually(campaignId: string): Promise<{ success: boolean; message: string; stats?: any }> {
+  async executeCampaignManually(campaignId: string): Promise<{ success: boolean; message: string; stats?: Record<string, unknown> }> {
     try {
       console.log(`🎯 Executando campanha manualmente: ${campaignId}`);
       
