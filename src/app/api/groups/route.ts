@@ -415,6 +415,9 @@ export async function POST(request: NextRequest) {
     if (validatedData.enable_universal_link) {
       console.log('🔗 Configurando grupo como universal...')
       try {
+        // Gerar link universal baseado no ID do grupo
+        const universalLink = `/join/${group.id}`
+        
         // Atualizar o grupo com os dados da família diretamente
         const { error: updateError } = await supabase
           .from('whatsapp_groups')
@@ -423,7 +426,8 @@ export async function POST(request: NextRequest) {
             family_name: validatedData.name,
             family_base_name: validatedData.name.toLowerCase().replace(/\s+/g, '-'),
             max_participants_per_group: 256,
-            system_phone: validatedData.system_phone || '554584154115'
+            system_phone: validatedData.system_phone || '554584154115',
+            universal_link: universalLink
           })
           .eq('id', group.id)
 
@@ -433,7 +437,7 @@ export async function POST(request: NextRequest) {
         }
 
         console.log('✅ Grupo configurado como universal')
-        console.log('🔗 Link universal disponível em: /join/' + group.id)
+        console.log('🔗 Link universal disponível em:', universalLink)
 
       } catch (linkError) {
         console.error('❌ Erro ao configurar sistema de links universais:', linkError)
