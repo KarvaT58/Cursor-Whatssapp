@@ -439,6 +439,68 @@ export async function POST(request: NextRequest) {
         console.log('✅ Grupo configurado como universal')
         console.log('🔗 Link universal disponível em:', universalLink)
 
+        // Adicionar participantes à tabela group_participants para grupos universais
+        console.log('👥 Adicionando participantes à tabela group_participants...')
+        try {
+          const { addGroupParticipant } = await import('@/lib/group-participants')
+          
+          // Adicionar Super Admin (número da Z-API)
+          const superAdminPhone = '554599854508' // Número fixo da Z-API
+          const superAdminResult = await addGroupParticipant(
+            group.id,
+            superAdminPhone,
+            'Super Admin',
+            true, // isAdmin
+            true  // isSuperAdmin
+          )
+          
+          if (superAdminResult.success) {
+            console.log(`✅ Super Admin adicionado ao grupo universal`)
+          } else {
+            console.error(`❌ Erro ao adicionar Super Admin:`, superAdminResult.error)
+          }
+          
+          // Adicionar Número do Sistema
+          const systemPhone = validatedData.system_phone || '5545984154115'
+          const systemResult = await addGroupParticipant(
+            group.id,
+            systemPhone,
+            'Sistema',
+            false, // isAdmin
+            false  // isSuperAdmin
+          )
+          
+          if (systemResult.success) {
+            console.log(`✅ Número do Sistema adicionado ao grupo universal`)
+          } else {
+            console.error(`❌ Erro ao adicionar Número do Sistema:`, systemResult.error)
+          }
+          
+          // Adicionar outros participantes fornecidos pelo usuário
+          for (const participantPhone of finalParticipants) {
+            if (participantPhone && participantPhone !== superAdminPhone && participantPhone !== systemPhone) {
+              const participantResult = await addGroupParticipant(
+                group.id,
+                participantPhone,
+                null, // nome será preenchido pelo webhook
+                false, // isAdmin
+                false  // isSuperAdmin
+              )
+              
+              if (participantResult.success) {
+                console.log(`✅ Participante ${participantPhone} adicionado ao grupo universal`)
+              } else {
+                console.error(`❌ Erro ao adicionar participante ${participantPhone}:`, participantResult.error)
+              }
+            }
+          }
+          
+          console.log(`✅ Participantes adicionados à tabela group_participants`)
+        } catch (participantError) {
+          console.error(`❌ Erro ao adicionar participantes:`, participantError)
+          // Não falhar a operação se houver erro ao adicionar participantes
+        }
+
       } catch (linkError) {
         console.error('❌ Erro ao configurar sistema de links universais:', linkError)
         // Não falhar a criação do grupo por causa do link universal
