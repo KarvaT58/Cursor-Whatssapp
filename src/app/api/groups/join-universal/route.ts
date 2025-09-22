@@ -140,6 +140,9 @@ export async function POST(request: NextRequest) {
       
       const normalizedAdminPhone = normalizePhoneForZApi(adminPhoneNumber)
       
+      // Declarar variável participants no escopo correto
+      let participants: string[] = []
+      
       // Verificar se o número existe no WhatsApp antes de criar o grupo
       console.log(`🔍 JOIN-UNIVERSAL: Verificando se o número ${normalizedAdminPhone} existe no WhatsApp...`)
       
