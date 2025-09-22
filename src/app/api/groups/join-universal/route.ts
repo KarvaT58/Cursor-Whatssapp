@@ -117,9 +117,10 @@ export async function POST(request: NextRequest) {
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
-      const newGroupName = `${firstGroup.name} ${newGroupNumber}`
-
-      console.log(`🏗️ JOIN-UNIVERSAL: Criando grupo "${newGroupName}"`)
+      
+      // Tentar diferentes formatos de nome para contornar bug da Z-API
+      let newGroupName = `Grupo${newGroupNumber}` // Nome simples sem espaços
+      console.log(`🏗️ JOIN-UNIVERSAL: Tentando nome simples: "${newGroupName}"`)
 
       const createGroupPayload = {
         name: newGroupName,
@@ -129,25 +130,106 @@ export async function POST(request: NextRequest) {
 
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
 
-      const createGroupResponse = await fetch(
-        `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-Token': zApiInstance.client_token || '',
-          },
-          body: JSON.stringify(createGroupPayload),
+      let createGroupResponse
+      let createGroupResult
+      let success = false
+
+      // Tentativa 1: Nome simples
+      try {
+        console.log(`🔄 JOIN-UNIVERSAL: Tentativa 1 - Nome simples: "${newGroupName}"`)
+        createGroupResponse = await fetch(
+          `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Client-Token': zApiInstance.client_token || '',
+            },
+            body: JSON.stringify(createGroupPayload),
+          }
+        )
+
+        createGroupResult = await createGroupResponse.json()
+        console.log('🚀 Tentativa 1 - Resultado:', createGroupResult)
+
+        if (createGroupResponse.ok && createGroupResult.groupId) {
+          success = true
         }
-      )
+      } catch (error) {
+        console.error('❌ Tentativa 1 falhou:', error)
+      }
 
-      const createGroupResult = await createGroupResponse.json()
-      console.log('🚀 Resultado da criação do grupo:', createGroupResult)
+      // Tentativa 2: Nome ainda mais simples
+      if (!success) {
+        try {
+          newGroupName = `Group${newGroupNumber}`
+          const simplePayload = {
+            name: newGroupName,
+            participants: [adminPhoneNumber]
+          }
+          
+          console.log(`🔄 JOIN-UNIVERSAL: Tentativa 2 - Nome em inglês: "${newGroupName}"`)
+          createGroupResponse = await fetch(
+            `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Client-Token': zApiInstance.client_token || '',
+              },
+              body: JSON.stringify(simplePayload),
+            }
+          )
 
-      if (!createGroupResponse.ok || !createGroupResult.groupId) {
-        console.error('❌ Erro ao criar grupo:', createGroupResult)
+          createGroupResult = await createGroupResponse.json()
+          console.log('🚀 Tentativa 2 - Resultado:', createGroupResult)
+
+          if (createGroupResponse.ok && createGroupResult.groupId) {
+            success = true
+          }
+        } catch (error) {
+          console.error('❌ Tentativa 2 falhou:', error)
+        }
+      }
+
+      // Tentativa 3: Nome com timestamp
+      if (!success) {
+        try {
+          const timestamp = Date.now().toString().slice(-4)
+          newGroupName = `Group${timestamp}`
+          const timestampPayload = {
+            name: newGroupName,
+            participants: [adminPhoneNumber]
+          }
+          
+          console.log(`🔄 JOIN-UNIVERSAL: Tentativa 3 - Nome com timestamp: "${newGroupName}"`)
+          createGroupResponse = await fetch(
+            `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Client-Token': zApiInstance.client_token || '',
+              },
+              body: JSON.stringify(timestampPayload),
+            }
+          )
+
+          createGroupResult = await createGroupResponse.json()
+          console.log('🚀 Tentativa 3 - Resultado:', createGroupResult)
+
+          if (createGroupResponse.ok && createGroupResult.groupId) {
+            success = true
+          }
+        } catch (error) {
+          console.error('❌ Tentativa 3 falhou:', error)
+        }
+      }
+
+      if (!success) {
+        console.error('❌ Todas as tentativas falharam:', createGroupResult)
         return NextResponse.json(
-          { error: 'Erro ao criar novo grupo', details: createGroupResult.error || 'Erro desconhecido' },
+          { error: 'Erro ao criar novo grupo - Z-API rejeitou todos os formatos de nome', details: createGroupResult?.error || 'Erro desconhecido' },
           { status: 500 }
         )
       }
