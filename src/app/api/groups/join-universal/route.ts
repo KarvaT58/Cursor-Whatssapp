@@ -148,8 +148,26 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      // Tentar usar o nome mais simples primeiro
-      const cleanGroupName = simpleName.trim().replace(/[^\w\s-]/g, '') // Remover caracteres especiais
+      // Tentar diferentes nomes para contornar validação da Z-API
+      let cleanGroupName = simpleName.trim().replace(/[^\w\s-]/g, '') // Remover caracteres especiais
+      
+      // Se o nome for muito genérico, usar alternativa
+      if (cleanGroupName === 'Grupo' || cleanGroupName.length < 3) {
+        cleanGroupName = `${familyName} ${newGroupNumber}`.trim().replace(/[^\w\s-]/g, '')
+        console.log(`🔄 JOIN-UNIVERSAL: Nome muito genérico, usando alternativa: "${cleanGroupName}"`)
+      }
+      
+      // Se ainda for muito curto, usar nome completo
+      if (cleanGroupName.length < 3) {
+        cleanGroupName = `Grupo ${familyName} ${newGroupNumber}`.trim().replace(/[^\w\s-]/g, '')
+        console.log(`🔄 JOIN-UNIVERSAL: Nome ainda muito curto, usando nome completo: "${cleanGroupName}"`)
+      }
+      
+      // Garantir que o nome não esteja vazio
+      if (!cleanGroupName || cleanGroupName.trim() === '') {
+        cleanGroupName = `Grupo ${familyName} ${newGroupNumber}`
+        console.log(`🆘 JOIN-UNIVERSAL: Nome vazio, usando fallback: "${cleanGroupName}"`)
+      }
       
       const createGroupPayload = {
         name: cleanGroupName,
