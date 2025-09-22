@@ -27,34 +27,24 @@ export async function addGroupParticipant(
   try {
     const supabase = await createClient()
     
-    // Primeiro, verificar se o participante já existe ATIVO
-    const { data: existingActiveParticipant, error: checkActiveError } = await supabase
+    // Primeiro, verificar se o participante já existe (ativo ou inativo)
+    const { data: existingParticipant, error: checkError } = await supabase
       .from('group_participants')
       .select('id, is_active')
       .eq('group_id', groupId)
       .eq('participant_phone', participantPhone)
-      .eq('is_active', true)
-      .single()
-
-    // Se já existe ativo, retornar sucesso
-    if (existingActiveParticipant && !checkActiveError) {
-      console.log(`⚠️ Participante ${participantPhone} já está ativo no grupo ${groupId}`)
-      return { success: true } // Considerar sucesso se já está ativo
-    }
-
-    // Verificar se existe inativo para reativar
-    const { data: existingInactiveParticipant, error: checkInactiveError } = await supabase
-      .from('group_participants')
-      .select('id, is_active')
-      .eq('group_id', groupId)
-      .eq('participant_phone', participantPhone)
-      .eq('is_active', false)
       .order('updated_at', { ascending: false })
       .limit(1)
       .single()
 
-    // Se existe participante inativo, reativar o mais recente
-    if (existingInactiveParticipant && !checkInactiveError) {
+    // Se já existe participante ativo, retornar sucesso
+    if (existingParticipant && existingParticipant.is_active) {
+      console.log(`⚠️ Participante ${participantPhone} já está ativo no grupo ${groupId}`)
+      return { success: true }
+    }
+
+    // Se existe participante inativo, reativar
+    if (existingParticipant && !existingParticipant.is_active) {
       console.log(`🔄 Reativando participante ${participantPhone} no grupo ${groupId}`)
       const { error: updateError } = await supabase
         .from('group_participants')
@@ -64,9 +54,10 @@ export async function addGroupParticipant(
           is_admin: isAdmin,
           is_super_admin: isSuperAdmin,
           joined_at: new Date().toISOString(),
-          left_at: null
+          left_at: null,
+          updated_at: new Date().toISOString()
         })
-        .eq('id', existingInactiveParticipant.id)
+        .eq('id', existingParticipant.id)
 
       if (updateError) {
         console.error('❌ Erro ao reativar participante:', updateError)
@@ -87,7 +78,9 @@ export async function addGroupParticipant(
         is_admin: isAdmin,
         is_super_admin: isSuperAdmin,
         is_active: true,
-        joined_at: new Date().toISOString()
+        joined_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
 
     if (error) {

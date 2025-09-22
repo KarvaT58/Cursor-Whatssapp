@@ -189,14 +189,14 @@ export async function POST(request: NextRequest) {
           const currentParticipants = group.participant_count || 0
           console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (contador): ${currentParticipants}/${MAX_PARTICIPANTS}`)
 
-          if (currentParticipants < MAX_PARTICIPANTS) {
-            availableGroup = group
-            console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
+      if (currentParticipants < MAX_PARTICIPANTS) {
+        availableGroup = group
+        console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
             console.log(`🎯 JOIN-UNIVERSAL: SELECIONANDO GRUPO: "${group.name}" com ${currentParticipants} participantes`)
             console.log(`🛑 JOIN-UNIVERSAL: PARANDO VERIFICAÇÃO CATCH - Grupo selecionado!`)
-            break
-          } else {
-            console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${currentParticipants}/${MAX_PARTICIPANTS})`)
+        break
+      } else {
+        console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${currentParticipants}/${MAX_PARTICIPANTS})`)
             console.log(`➡️ JOIN-UNIVERSAL: Continuando para próximo grupo no catch...`)
           }
         }
@@ -227,79 +227,20 @@ export async function POST(request: NextRequest) {
         client_token: zApiInstance.client_token ? 'Presente' : 'Ausente'
       })
 
-      // PROBLEMA IDENTIFICADO: Z-API pode estar validando se o número pertence à instância
-      console.log(`🔍 JOIN-UNIVERSAL: Investigando problema do número de telefone...`)
-      console.log(`📱 JOIN-UNIVERSAL: phone_number da instância: "${zApiInstance.phone_number}"`)
-      console.log(`📱 JOIN-UNIVERSAL: instance_id: "${zApiInstance.instance_id}"`)
-      console.log(`📱 JOIN-UNIVERSAL: instance_token: "${zApiInstance.instance_token}"`)
+      // Usar participantes fixos para criação de grupos automáticos
       
-      // CORREÇÃO: A tabela z_api_instances NÃO TEM phone_number!
-      // Vamos usar o primeiro participante do grupo original como admin
-      let adminPhoneNumber = firstGroup.participants && firstGroup.participants.length > 0 
-        ? firstGroup.participants[0] 
-        : '554599854508' // Fallback para o número que sabemos que funciona
+      // CORREÇÃO: Usar apenas 2 participantes fixos
+      // 1. Super Admin (número da Z-API)
+      // 2. Número Fixo do Sistema (configurado pelo usuário)
+      const superAdminPhone = '554599854508' // Número da Z-API (Super Admin)
+      const systemPhone = firstGroup.system_phone || '5545984154115' // Número do sistema configurado
       
-      // Normalizar número de telefone para formato Z-API (DDI DDD NUMBER)
-      const normalizePhoneForZApi = (phone: string): string => {
-        // Remover todos os caracteres não numéricos
-        const cleaned = phone.replace(/\D/g, '')
-        
-        // Se não começar com 55, adicionar código do Brasil
-        if (!cleaned.startsWith('55')) {
-          return `55${cleaned}`
-        }
-        
-        return cleaned
-      }
+      const participants = [superAdminPhone, systemPhone]
+      console.log(`✅ JOIN-UNIVERSAL: Usando participantes fixos para criação de grupo:`)
+      console.log(`👑 Super Admin: ${superAdminPhone}`)
+      console.log(`🔧 Sistema: ${systemPhone}`)
+      console.log(`📱 Total de participantes: ${participants.length}`)
       
-      // Normalizar todos os números do grupo original
-      const normalizedParticipants = firstGroup.participants.map(phone => normalizePhoneForZApi(phone))
-      console.log(`📱 JOIN-UNIVERSAL: Participantes normalizados:`, normalizedParticipants)
-      
-      // Verificar quais números existem no WhatsApp
-      const validParticipants: string[] = []
-      
-      for (const phone of normalizedParticipants) {
-        try {
-          console.log(`🔍 JOIN-UNIVERSAL: Verificando se o número ${phone} existe no WhatsApp...`)
-          
-          const phoneExistsResponse = await fetch(
-            `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/phone-exists/${phone}`,
-            {
-              method: 'GET',
-              headers: {
-                'Content-Type': 'application/json',
-                'Client-Token': zApiInstance.client_token || '',
-              }
-            }
-          )
-          
-          const phoneExistsResult = await phoneExistsResponse.json()
-          console.log(`📱 JOIN-UNIVERSAL: Resultado para ${phone}:`, phoneExistsResult)
-          
-          if (phoneExistsResult.exists) {
-            validParticipants.push(phone)
-            console.log(`✅ JOIN-UNIVERSAL: Número ${phone} existe no WhatsApp`)
-          } else {
-            console.warn(`⚠️ JOIN-UNIVERSAL: Número ${phone} não existe no WhatsApp`)
-          }
-        } catch (phoneCheckError) {
-          console.error(`❌ JOIN-UNIVERSAL: Erro ao verificar ${phone}:`, phoneCheckError)
-        }
-      }
-      
-      // Se não temos participantes válidos, usar números de fallback
-      let participants: string[] = []
-      if (validParticipants.length > 0) {
-        participants = validParticipants.slice(0, 2) // Usar até 2 participantes válidos
-        console.log(`✅ JOIN-UNIVERSAL: Usando ${participants.length} participantes válidos:`, participants)
-      } else {
-        // Fallback para números que sabemos que funcionam
-        participants = ['554599854508', '5545984154115']
-        console.log(`🔄 JOIN-UNIVERSAL: Usando números de fallback:`, participants)
-      }
-      
-      console.log(`📱 JOIN-UNIVERSAL: Participantes do grupo original:`, firstGroup.participants)
       console.log(`📱 JOIN-UNIVERSAL: Participantes finais para criação:`, participants)
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
@@ -403,6 +344,47 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${createGroupResult.data.phone})`)
       console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${inviteLinkResult.data.invitationLink}`)
+
+      // Adicionar participantes à tabela group_participants
+      console.log(`👥 JOIN-UNIVERSAL: Adicionando participantes à tabela group_participants...`)
+      try {
+        const { addGroupParticipant } = await import('@/lib/group-participants')
+        
+        // Adicionar Super Admin (primeiro participante)
+        const superAdminResult = await addGroupParticipant(
+          newGroup.id,
+          superAdminPhone,
+          'Super Admin',
+          true, // isAdmin
+          true  // isSuperAdmin
+        )
+        
+        if (superAdminResult.success) {
+          console.log(`✅ JOIN-UNIVERSAL: Super Admin adicionado ao grupo`)
+        } else {
+          console.error(`❌ JOIN-UNIVERSAL: Erro ao adicionar Super Admin:`, superAdminResult.error)
+        }
+        
+        // Adicionar Número do Sistema (segundo participante)
+        const systemResult = await addGroupParticipant(
+          newGroup.id,
+          systemPhone,
+          'Sistema',
+          false, // isAdmin
+          false  // isSuperAdmin
+        )
+        
+        if (systemResult.success) {
+          console.log(`✅ JOIN-UNIVERSAL: Número do Sistema adicionado ao grupo`)
+        } else {
+          console.error(`❌ JOIN-UNIVERSAL: Erro ao adicionar Número do Sistema:`, systemResult.error)
+        }
+        
+        console.log(`✅ JOIN-UNIVERSAL: Participantes adicionados à tabela group_participants`)
+      } catch (participantError) {
+        console.error(`❌ JOIN-UNIVERSAL: Erro ao adicionar participantes:`, participantError)
+        // Não falhar a operação se houver erro ao adicionar participantes
+      }
 
       // Disparar notificação em tempo real para criação de grupo
       try {
