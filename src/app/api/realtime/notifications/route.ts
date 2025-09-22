@@ -1,16 +1,18 @@
 import { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createSafeClient, safeGetUser } from '@/lib/supabase/safe-client'
 import { headers } from 'next/headers'
 
 export async function GET(request: NextRequest) {
-  const headersList = headers()
-  const supabase = createClient()
+  try {
+    const headersList = headers()
+    const supabase = await createSafeClient()
 
-  // Verificar autenticação
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) {
-    return new Response('Unauthorized', { status: 401 })
-  }
+    // Verificar autenticação de forma segura
+    const { user, error: authError } = await safeGetUser(supabase)
+    if (authError || !user) {
+      console.error('❌ Erro de autenticação no endpoint de notificações:', authError)
+      return new Response('Unauthorized', { status: 401 })
+    }
 
   // Configurar SSE
   const stream = new ReadableStream({
@@ -89,13 +91,17 @@ export async function GET(request: NextRequest) {
     }
   })
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Cache-Control'
-    }
-  })
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+      }
+    })
+  } catch (error) {
+    console.error('❌ Erro no endpoint de notificações em tempo real:', error)
+    return new Response('Internal Server Error', { status: 500 })
+  }
 }
