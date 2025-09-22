@@ -544,8 +544,14 @@ class MessageMonitor {
 
       // 5. Criar notificação
       console.log('🔍 MESSAGE MONITOR: Passo 5 - Criando notificação...')
-      await this.createBanNotification(data, reason)
-      console.log('✅ MESSAGE MONITOR: Passo 5 - Notificação criada')
+      // Criar notificação de forma assíncrona para não bloquear
+      this.createBanNotification(data, reason)
+        .then(() => {
+          console.log('✅ MESSAGE MONITOR: Passo 5 - Notificação criada')
+        })
+        .catch((error) => {
+          console.error('❌ MESSAGE MONITOR: Erro ao criar notificação:', error)
+        })
 
       console.log(`✅ MESSAGE MONITOR: Usuário banido com sucesso por ${reason}`)
 
@@ -798,15 +804,21 @@ class MessageMonitor {
           }
         })
 
-      // Atualizar a blacklist com a mensagem original
+      // Atualizar a blacklist com a mensagem original (assíncrono, não bloquear)
       if (!notificationError) {
-        await this.supabase
+        this.supabase
           .from('blacklist')
           .update({ original_message: data.message })
           .eq('user_id', data.userId)
           .eq('phone', data.participantPhone)
           .eq('reason', reason)
           .eq('auto_added', true)
+          .then(() => {
+            console.log('✅ MESSAGE MONITOR: Blacklist atualizada com mensagem original')
+          })
+          .catch((error) => {
+            console.error('❌ MESSAGE MONITOR: Erro ao atualizar blacklist:', error)
+          })
       }
 
       if (notificationError) {

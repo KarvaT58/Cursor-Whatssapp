@@ -543,9 +543,23 @@ async function handleParticipantAdded(
 
       // Criar notificação de bloqueio
       try {
+        // Buscar o grupo para obter o group_id
+        const { data: group, error: groupError } = await supabase
+          .from('whatsapp_groups')
+          .select('id')
+          .eq('whatsapp_id', data.phone)
+          .eq('user_id', userId)
+          .single()
+
+        if (groupError || !group) {
+          console.error('❌ Erro ao buscar grupo para notificação:', groupError)
+          return
+        }
+
         const { error: notificationError } = await supabase
           .from('group_notifications')
           .insert({
+            group_id: group.id,
             user_id: userId,
             type: 'security_alert',
             title: 'Número banido detectado',
