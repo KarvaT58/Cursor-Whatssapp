@@ -43,6 +43,8 @@ export function MediaUpload({ value, onChange, mediaType, className }: MediaUplo
     const file = event.target.files?.[0];
     if (!file) return;
 
+    console.log('📁 Arquivo selecionado:', { name: file.name, type: file.type, size: file.size, mediaType });
+    
     setIsUploading(true);
     setUploadedFile(file);
 
@@ -52,22 +54,28 @@ export function MediaUpload({ value, onChange, mediaType, className }: MediaUplo
       formData.append('file', file);
       formData.append('type', mediaType);
 
+      console.log('📤 Iniciando upload para:', '/api/upload/media');
+
       // Fazer upload do arquivo
       const response = await fetch('/api/upload/media', {
         method: 'POST',
         body: formData,
       });
 
+      console.log('📤 Resposta do upload:', { status: response.status, ok: response.ok });
+
       if (response.ok) {
         const data = await response.json();
+        console.log('✅ Upload bem-sucedido:', data);
         onChange(data.url, file.name);
       } else {
-        console.error('Erro no upload:', response.statusText);
-        alert('Erro ao fazer upload do arquivo');
+        const errorData = await response.json();
+        console.error('❌ Erro no upload:', { status: response.status, error: errorData });
+        alert(`Erro ao fazer upload do arquivo: ${errorData.error || response.statusText}`);
       }
     } catch (error) {
-      console.error('Erro no upload:', error);
-      alert('Erro ao fazer upload do arquivo');
+      console.error('❌ Erro no upload:', error);
+      alert(`Erro ao fazer upload do arquivo: ${error}`);
     } finally {
       setIsUploading(false);
     }
