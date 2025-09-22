@@ -34,12 +34,28 @@ export async function POST(request: NextRequest) {
 
     // 1. Buscar todos os grupos da família (usando nova estrutura unificada)
     console.log('🔍 JOIN-UNIVERSAL: Executando query no Supabase...')
-    const { data: groups, error: groupsError } = await supabase
+    
+    // Primeiro tentar buscar por ID do grupo (familyId é um UUID)
+    let { data: groups, error: groupsError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('group_type', 'universal')
-      .eq('family_name', familyName)
+      .eq('id', familyId)
       .order('created_at', { ascending: true })
+
+    // Se não encontrar por ID, tentar buscar por family_name
+    if ((!groups || groups.length === 0) && familyName) {
+      console.log('🔍 JOIN-UNIVERSAL: Não encontrado por ID, tentando buscar por family_name...')
+      const { data: groupsByName, error: groupsErrorByName } = await supabase
+        .from('whatsapp_groups')
+        .select('*')
+        .eq('group_type', 'universal')
+        .eq('family_name', familyName)
+        .order('created_at', { ascending: true })
+      
+      groups = groupsByName
+      groupsError = groupsErrorByName
+    }
 
     console.log('📊 JOIN-UNIVERSAL: Resultado da query:', { groups, groupsError })
 
