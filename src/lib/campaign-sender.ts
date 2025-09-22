@@ -24,12 +24,6 @@ interface CampaignMessage {
   is_active: boolean;
 }
 
-interface CampaignMessageMedia {
-  id: string;
-  campaign_message_id: string;
-  media_order: number;
-}
-
 interface CampaignMedia {
   id: string;
   media_type: 'image' | 'video' | 'audio' | 'document';
@@ -39,7 +33,6 @@ interface CampaignMedia {
   media_mime_type?: string;
   media_order: number;
   is_active: boolean;
-  campaign_message_media?: CampaignMessageMedia[];
 }
 
 interface WhatsAppGroup {
@@ -219,33 +212,11 @@ export class CampaignSender {
               errors.push(`Grupo ${group.name} - Mensagem ${variantMessage.message_order}: ${messageResult.error}`);
             }
 
-            // Enviar mídias da variante específica usando a nova tabela de relacionamento
-            const variantMedia = media.filter(m => {
-              if (!m.is_active) return false;
-              
-              // Verificar se a mídia está associada a esta variante de mensagem
-              return m.campaign_message_media?.some(rel => 
-                rel.campaign_message_id === variantMessage.id
-              );
-            }).sort((a, b) => {
-              // Ordenar pela ordem definida na tabela de relacionamento
-              const aOrder = a.campaign_message_media?.find(rel => 
-                rel.campaign_message_id === variantMessage.id
-              )?.media_order || 999;
-              
-              const bOrder = b.campaign_message_media?.find(rel => 
-                rel.campaign_message_id === variantMessage.id
-              )?.media_order || 999;
-              
-              return aOrder - bOrder;
-            });
+            // Enviar mídias da variante específica
+            const variantMedia = media.filter(m => m.is_active && m.media_order === variantMessage.message_order);
             
             console.log(`📎 Mídias encontradas para variante ${variantMessage.message_order}:`, variantMedia.length);
-            console.log(`📎 Mídias da variante:`, variantMedia.map(m => ({ 
-              name: m.media_name, 
-              type: m.media_type,
-              order: m.campaign_message_media?.find(rel => rel.campaign_message_id === variantMessage.id)?.media_order
-            })));
+            console.log(`📎 Todas as mídias disponíveis:`, media.map(m => ({ order: m.media_order, name: m.media_name, active: m.is_active })));
             
             for (const mediaItem of variantMedia) {
               const mediaResult = await this.sendMedia(
@@ -366,17 +337,10 @@ export class CampaignSender {
         return null;
       }
 
-      // Buscar mídias com relacionamentos
+      // Buscar mídias
       const { data: media, error: mediaError } = await this.supabase
         .from('campaign_media')
-        .select(`
-          *,
-          campaign_message_media (
-            id,
-            campaign_message_id,
-            media_order
-          )
-        `)
+        .select('*')
         .eq('campaign_id', campaignId)
         .eq('is_active', true)
         .order('media_order');

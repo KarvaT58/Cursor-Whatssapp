@@ -37,15 +37,9 @@ export default function CampaignsPage() {
   const fetchCampaigns = async () => {
     try {
       const response = await fetch('/api/campaigns');
-      
       if (response.ok) {
         const data = await response.json();
         setCampaigns(Array.isArray(data) ? data : []);
-      } else if (response.status === 401) {
-        console.error('Usuário não autenticado, redirecionando para login...');
-        // Redirecionar para login se não autenticado
-        window.location.href = '/login';
-        return;
       } else {
         console.error('Erro na resposta da API de campanhas:', response.status);
         setCampaigns([]);
