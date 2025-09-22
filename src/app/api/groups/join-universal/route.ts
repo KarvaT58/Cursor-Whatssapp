@@ -62,23 +62,31 @@ export async function POST(request: NextRequest) {
 
     // 2. Verificar se há vagas nos grupos existentes
     let availableGroup = null
+    const MAX_PARTICIPANTS = 3 // Limite para teste (mudar para 1024 em produção)
+    
+    console.log(`🔍 JOIN-UNIVERSAL: Verificando vagas com limite de ${MAX_PARTICIPANTS} participantes...`)
+    
     for (const group of groups) {
       const currentParticipants = group.participants?.length || 0
-      const maxParticipants = group.max_participants || 256 // Limite padrão do WhatsApp
       
-      if (currentParticipants < maxParticipants) {
+      console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes: ${currentParticipants}/${MAX_PARTICIPANTS}`)
+      
+      if (currentParticipants < MAX_PARTICIPANTS) {
         availableGroup = group
-        console.log(`✅ Grupo ${group.name} tem vaga: ${currentParticipants}/${maxParticipants}`)
+        console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
         break
+      } else {
+        console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${currentParticipants}/${MAX_PARTICIPANTS})`)
       }
     }
 
     // 3. Se não há vagas, criar novo grupo
     if (!availableGroup) {
-      console.log('🚀 Nenhuma vaga disponível, criando novo grupo...')
+      console.log('🚀 JOIN-UNIVERSAL: Nenhuma vaga disponível, criando novo grupo...')
       
       // Buscar dados do primeiro grupo para copiar configurações
       const firstGroup = groups[0]
+      console.log(`📋 JOIN-UNIVERSAL: Copiando configurações do grupo "${firstGroup.name}"`)
       
       // Buscar instância Z-API ativa
       const { data: zApiInstance, error: instanceError } = await supabase
@@ -96,9 +104,11 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Criar novo grupo via Z-API
+      // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
-      const newGroupName = `${familyName} ${newGroupNumber}`
+      const newGroupName = `${firstGroup.name} ${newGroupNumber}`
+      
+      console.log(`🏗️ JOIN-UNIVERSAL: Criando grupo "${newGroupName}" com configurações do grupo original`)
       
       const createGroupResponse = await fetch(
         `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`,
@@ -154,7 +164,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Salvar novo grupo no banco de dados
+      // Salvar novo grupo no banco de dados com todas as configurações do grupo original
       const { data: newGroup, error: saveError } = await supabase
         .from('whatsapp_groups')
         .insert({
@@ -163,7 +173,7 @@ export async function POST(request: NextRequest) {
           invite_link: inviteLinkResult.link,
           description: firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`,
           participants: [zApiInstance.phone_number],
-          max_participants: firstGroup.max_participants || 256,
+          max_participants: MAX_PARTICIPANTS, // Usar o limite configurado
           group_family: familyId,
           user_id: firstGroup.user_id,
           created_at: new Date().toISOString(),
@@ -180,7 +190,8 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      console.log(`✅ Novo grupo criado: ${newGroupName} (${createGroupResult.groupId})`)
+      console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${createGroupResult.groupId})`)
+      console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${inviteLinkResult.link}`)
       
       return NextResponse.json({
         success: true,
@@ -188,12 +199,13 @@ export async function POST(request: NextRequest) {
         groupName: newGroupName,
         inviteLink: inviteLinkResult.link,
         isNewGroup: true,
-        message: 'Novo grupo criado com sucesso!'
+        message: `Novo grupo "${newGroupName}" criado com sucesso!`
       })
     }
 
     // 4. Se há vaga, usar grupo existente
-    console.log(`✅ Usando grupo existente: ${availableGroup.name}`)
+    console.log(`✅ JOIN-UNIVERSAL: Usando grupo existente: "${availableGroup.name}"`)
+    console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${availableGroup.invite_link}`)
     
     return NextResponse.json({
       success: true,
@@ -201,7 +213,7 @@ export async function POST(request: NextRequest) {
       groupName: availableGroup.name,
       inviteLink: availableGroup.invite_link,
       isNewGroup: false,
-      message: 'Vaga encontrada em grupo existente!'
+      message: `Vaga encontrada no grupo "${availableGroup.name}"!`
     })
 
   } catch (error) {
