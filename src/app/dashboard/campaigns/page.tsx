@@ -36,18 +36,37 @@ export default function CampaignsPage() {
 
   const fetchCampaigns = async () => {
     try {
+      console.log('🔍 [FRONTEND-CAMPAIGNS] Iniciando busca de campanhas...');
       const response = await fetch('/api/campaigns');
+      
+      console.log('🔍 [FRONTEND-CAMPAIGNS] Resposta recebida:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('🔍 [FRONTEND-CAMPAIGNS] Dados recebidos:', data);
         setCampaigns(Array.isArray(data) ? data : []);
       } else {
-        console.error('Erro na resposta da API de campanhas:', response.status);
+        console.error('🔍 [FRONTEND-CAMPAIGNS] Erro na resposta da API de campanhas:', response.status);
+        
+        // Se for 401, redirecionar para login
+        if (response.status === 401) {
+          console.log('🔍 [FRONTEND-CAMPAIGNS] Usuário não autenticado, redirecionando para login...');
+          router.push('/login');
+          return;
+        }
+        
         setCampaigns([]);
       }
     } catch (error) {
-      console.error('Erro ao buscar campanhas:', error);
+      console.error('🔍 [FRONTEND-CAMPAIGNS] Erro ao buscar campanhas:', error);
       setCampaigns([]);
     } finally {
+      console.log('🔍 [FRONTEND-CAMPAIGNS] Finalizando carregamento...');
       setLoading(false);
     }
   };

@@ -4,12 +4,28 @@ import { createClient } from '@/lib/supabase/server'
 // GET /api/blacklist - Listar blacklist
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 [API-BLACKLIST] Iniciando busca de blacklist...');
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    
+    // Verificar autenticação
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    
+    console.log('🔍 [API-BLACKLIST] Usuário autenticado:', user ? `${user.email} (${user.id})` : 'NENHUM');
+    
+    if (authError) {
+      console.error('🔍 [API-BLACKLIST] Erro de autenticação:', authError);
+      return NextResponse.json({ error: 'Erro de autenticação' }, { status: 401 });
+    }
 
     if (!user) {
+      console.log('🔍 [API-BLACKLIST] Usuário não encontrado, retornando 401');
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
+
+    console.log('🔍 [API-BLACKLIST] Buscando blacklist no banco...');
 
     const { data: blacklist, error } = await supabase
       .from('blacklist')
@@ -18,10 +34,12 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Erro ao buscar blacklist:', error)
+      console.error('🔍 [API-BLACKLIST] Erro ao buscar blacklist:', error)
       return NextResponse.json({ error: 'Erro ao buscar blacklist' }, { status: 500 })
     }
 
+    console.log('🔍 [API-BLACKLIST] Blacklist encontrada:', blacklist?.length || 0);
+    console.log('🔍 [API-BLACKLIST] Retornando dados:', { success: true, data: blacklist });
     return NextResponse.json({ success: true, data: blacklist })
 
   } catch (error) {

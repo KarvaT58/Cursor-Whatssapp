@@ -3,7 +3,28 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('🔍 [API-CAMPAIGNS] Iniciando busca de campanhas...');
     const supabase = await createClient();
+    
+    // Verificar autenticação
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    
+    console.log('🔍 [API-CAMPAIGNS] Usuário autenticado:', user ? `${user.email} (${user.id})` : 'NENHUM');
+    
+    if (authError) {
+      console.error('🔍 [API-CAMPAIGNS] Erro de autenticação:', authError);
+      return NextResponse.json({ error: 'Erro de autenticação' }, { status: 401 });
+    }
+    
+    if (!user) {
+      console.log('🔍 [API-CAMPAIGNS] Usuário não encontrado, retornando 401');
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+    
+    console.log('🔍 [API-CAMPAIGNS] Buscando campanhas no banco...');
     
     // Buscar campanhas com estatísticas
     const { data: campaigns, error } = await supabase
@@ -18,9 +39,11 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Erro ao buscar campanhas:', error);
+      console.error('🔍 [API-CAMPAIGNS] Erro ao buscar campanhas:', error);
       return NextResponse.json({ error: 'Erro ao buscar campanhas' }, { status: 500 });
     }
+
+    console.log('🔍 [API-CAMPAIGNS] Campanhas encontradas:', campaigns?.length || 0);
 
     // Calcular estatísticas para cada campanha
     const campaignsWithStats = campaigns?.map(campaign => {
@@ -40,6 +63,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    console.log('🔍 [API-CAMPAIGNS] Retornando campanhas com estatísticas:', campaignsWithStats?.length || 0);
     return NextResponse.json(campaignsWithStats);
   } catch (error) {
     console.error('Erro no servidor:', error);
