@@ -361,6 +361,10 @@ export async function POST(request: NextRequest) {
         inviteLink: inviteLinkResult.data.invitationLink,
         isNewGroup: true,
         message: `Novo grupo "${newGroupName}" criado com sucesso!`
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+        }
       })
     }
 
@@ -375,6 +379,10 @@ export async function POST(request: NextRequest) {
       inviteLink: availableGroup.invite_link,
       isNewGroup: false,
       message: `Vaga encontrada no grupo "${availableGroup.name}"!`
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
     })
 
   } catch (error) {
@@ -385,7 +393,12 @@ export async function POST(request: NextRequest) {
         error: 'Erro interno do servidor',
         details: error instanceof Error ? error.message : 'Erro desconhecido'
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     )
   }
 }

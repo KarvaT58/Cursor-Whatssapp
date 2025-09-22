@@ -55,13 +55,22 @@ export async function GET(
       name: familyGroup.family_name,
       description: familyGroup.description,
       created_at: familyGroup.created_at
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
     })
 
   } catch (error) {
     console.error('Erro na API de família:', error)
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     )
   }
 }

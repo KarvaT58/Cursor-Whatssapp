@@ -15,9 +15,19 @@ export default function JoinGroupPage() {
     const fetchFamilyName = async () => {
       try {
         const response = await fetch(`/api/groups/family/${familyId}`)
+        
         if (response.ok) {
-          const data = await response.json()
-          setFamilyName(data.name || 'Grupo')
+          const contentType = response.headers.get('content-type')
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json()
+            setFamilyName(data.name || 'Grupo')
+          } else {
+            console.error('Resposta não é JSON válido:', await response.text())
+            setFamilyName('Grupo')
+          }
+        } else {
+          console.error('Erro HTTP:', response.status, response.statusText)
+          setFamilyName('Grupo')
         }
       } catch (error) {
         console.error('Erro ao buscar nome da família:', error)
@@ -46,13 +56,22 @@ export default function JoinGroupPage() {
         }),
       })
 
-      const data = await response.json()
+      const contentType = response.headers.get('content-type')
+      
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json()
 
-      if (response.ok && data.inviteLink) {
-        // Redirecionar para o link de convite do WhatsApp
-        window.location.href = data.inviteLink
+        if (response.ok && data.inviteLink) {
+          // Redirecionar para o link de convite do WhatsApp
+          window.location.href = data.inviteLink
+        } else {
+          setError(data.error || 'Erro ao processar solicitação')
+        }
       } else {
-        setError(data.error || 'Erro ao processar solicitação')
+        // Se não for JSON, mostrar o texto da resposta
+        const textResponse = await response.text()
+        console.error('Resposta não é JSON válido:', textResponse)
+        setError('Erro no servidor. Tente novamente.')
       }
     } catch (error) {
       console.error('Erro ao participar do grupo:', error)
