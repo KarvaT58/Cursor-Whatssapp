@@ -43,9 +43,15 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/auth') &&
     !request.nextUrl.pathname.startsWith('/join/') && // 🔓 Permitir acesso público às páginas de entrada em grupos
     !request.nextUrl.pathname.startsWith('/api/groups/family/') && // 🔓 Permitir acesso público à API de família
-    !request.nextUrl.pathname.startsWith('/api/groups/join-universal') // 🔓 Permitir acesso público à API de join universal
+    !request.nextUrl.pathname.startsWith('/api/groups/join-universal') && // 🔓 Permitir acesso público à API de join universal
+    !request.nextUrl.pathname.startsWith('/api/cron') // 🔓 Permitir acesso público às rotas de cron
   ) {
-    // no user, potentially respond by redirecting the user to the login page
+    // Para rotas de API, retornar 401 em vez de redirecionar
+    if (request.nextUrl.pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+    
+    // Para páginas, redirecionar para login
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
