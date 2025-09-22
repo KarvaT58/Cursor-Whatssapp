@@ -127,32 +127,11 @@ export async function POST(request: NextRequest) {
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
       
-      // LIMPAR E SANITIZAR O NOME PARA EVITAR PROBLEMAS COM Z-API
-      let baseName = firstGroup.name || familyName || 'Grupo'
+      // USAR NOME SUPER SIMPLES PARA TESTAR
+      const newGroupName = `Grupo ${newGroupNumber}`
       
-      // Remover caracteres especiais e espaços extras
-      baseName = baseName.replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim()
-      
-      // Se o nome base estiver vazio, usar fallback
-      if (!baseName || baseName.length === 0) {
-        baseName = 'Grupo'
-      }
-      
-      const newGroupName = `${baseName} ${newGroupNumber}`
-      
-      console.log(`🏗️ JOIN-UNIVERSAL: Nome original: "${firstGroup.name}"`)
-      console.log(`🏗️ JOIN-UNIVERSAL: Nome limpo: "${baseName}"`)
-      console.log(`🏗️ JOIN-UNIVERSAL: Nome final: "${newGroupName}"`)
+      console.log(`🧪 JOIN-UNIVERSAL: TESTE - Usando nome super simples: "${newGroupName}"`)
       console.log(`🏗️ JOIN-UNIVERSAL: Tamanho do nome: ${newGroupName.length} caracteres`)
-
-      // VALIDAR SE O NOME NÃO ESTÁ VAZIO
-      if (!newGroupName || newGroupName.trim().length === 0) {
-        console.error('❌ JOIN-UNIVERSAL: Nome do grupo está vazio após limpeza!')
-        return NextResponse.json(
-          { error: 'Erro: Nome do grupo inválido' },
-          { status: 500 }
-        )
-      }
 
       const createGroupPayload = {
         name: newGroupName.trim(),
@@ -177,14 +156,21 @@ export async function POST(request: NextRequest) {
       })
       console.log(`📋 JOIN-UNIVERSAL: Body:`, JSON.stringify(createGroupPayload, null, 2))
 
+      // TENTAR COM HEADERS EXTRAS E DIFERENTES ENCODINGS
+      const headers = {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Accept': 'application/json',
+        'User-Agent': 'WhatsApp-Professional/1.0',
+        'Client-Token': zApiInstance.client_token || '',
+      }
+      
+      console.log(`🔧 JOIN-UNIVERSAL: Headers finais:`, headers)
+      
       const createGroupResponse = await fetch(
         `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Client-Token': zApiInstance.client_token || '',
-          },
+          headers: headers,
           body: JSON.stringify(createGroupPayload),
         }
       )
