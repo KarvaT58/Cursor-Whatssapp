@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       for (const group of groups) {
         try {
           // Buscar informações atualizadas do grupo via Z-API
-          const groupInfoUrl = `${process.env.Z_API_BASE_URL}/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/group-metadata/${group.whatsapp_id}`
+          const groupInfoUrl = `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/group-metadata/${group.whatsapp_id}`
           
           console.log(`🔍 JOIN-UNIVERSAL: Verificando grupo "${group.name}" (${group.whatsapp_id}) via Z-API...`)
           
@@ -264,10 +264,19 @@ export async function POST(request: NextRequest) {
       console.log(`📱 JOIN-UNIVERSAL: Participantes finais para criação:`, participants)
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
-      const newGroupNumber = groups.length + 1
+      // Encontrar o próximo número disponível baseado nos nomes dos grupos existentes
+      const existingNumbers = groups.map(group => {
+        const match = group.name.match(/\s(\d+)$/)
+        return match ? parseInt(match[1]) : 0
+      }).filter(num => num > 0)
+      
+      const newGroupNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 2
       
       // Nome do novo grupo baseado na família
       const newGroupName = `${familyName} ${newGroupNumber}`
+      
+      console.log(`🔢 JOIN-UNIVERSAL: Números existentes: [${existingNumbers.join(', ')}]`)
+      console.log(`🔢 JOIN-UNIVERSAL: Próximo número: ${newGroupNumber}`)
       
       console.log(`🏗️ JOIN-UNIVERSAL: Nome do novo grupo: "${newGroupName}"`)
       console.log(`🏗️ JOIN-UNIVERSAL: Tamanho do nome: ${newGroupName.length} caracteres`)
@@ -363,10 +372,14 @@ export async function POST(request: NextRequest) {
           .insert({
             user_id: firstGroup.user_id,
             type: 'group_created',
-            group_name: newGroupName,
+            title: newGroupName,
             message: `Grupo "${newGroupName}" criado automaticamente para a família "${familyName}".`,
-            is_group: true,
             group_id: newGroup.id,
+            data: {
+              group_name: newGroupName,
+              family_name: familyName,
+              is_group: true
+            },
             created_at: new Date().toISOString()
           })
 

@@ -904,12 +904,15 @@ async function triggerRealtimeNotification(
       .insert({
         user_id: userId,
         type: notificationData.type,
-        group_name: notificationData.group_name,
-        sender_name: notificationData.sender_name,
+        title: notificationData.group_name || 'Notificação',
         message: notificationData.message,
-        is_group: notificationData.is_group || false,
         group_id: notificationData.group_id,
-        participant_phone: notificationData.participant_phone,
+        data: {
+          group_name: notificationData.group_name,
+          sender_name: notificationData.sender_name,
+          is_group: notificationData.is_group || false,
+          participant_phone: notificationData.participant_phone
+        },
         created_at: new Date().toISOString()
       })
 
