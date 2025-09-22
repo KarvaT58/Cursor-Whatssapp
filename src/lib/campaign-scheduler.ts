@@ -22,7 +22,11 @@ export class CampaignScheduler {
   private campaignSender: CampaignSender;
 
   constructor() {
-    this.supabase = createClient();
+    // Usar service role key para ter acesso completo aos dados
+    this.supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
     this.campaignSender = new CampaignSender();
   }
 
@@ -33,13 +37,17 @@ export class CampaignScheduler {
     try {
       console.log('🕐 Verificando campanhas agendadas...');
 
+      // Usar timezone do Brasil para verificação
+      const { getCurrentBrazilTimeString, getCurrentBrazilDateString, logBrazilTime } = await import('@/lib/timezone');
+      
+      const currentTime = getCurrentBrazilTimeString(); // HH:MM no timezone do Brasil
+      const currentDate = getCurrentBrazilDateString(); // YYYY-MM-DD no timezone do Brasil
       const now = new Date();
-      const currentTime = now.toTimeString().slice(0, 5); // HH:MM
       const currentDay = now.getDay() === 0 ? 7 : now.getDay(); // Domingo = 7, Segunda = 1, etc.
 
-      console.log(`📅 Data atual: ${now.toLocaleDateString()}`);
-      console.log(`⏰ Hora atual: ${currentTime}`);
-      console.log(`📆 Dia da semana: ${currentDay}`);
+      logBrazilTime(`📅 Data atual: ${currentDate}`);
+      logBrazilTime(`⏰ Hora atual: ${currentTime}`);
+      logBrazilTime(`📆 Dia da semana: ${currentDay}`);
 
       // Buscar campanhas ativas com agendamentos
       const { data: campaigns, error } = await this.supabase
@@ -96,7 +104,7 @@ export class CampaignScheduler {
       console.log(`📅 ${activeSchedules.length} agendamentos ativos encontrados`);
 
       for (const schedule of activeSchedules) {
-        if (this.shouldExecuteSchedule(schedule, currentTime, currentDay)) {
+        if (await this.shouldExecuteSchedule(schedule, currentTime, currentDay)) {
           console.log(`✅ Agendamento "${schedule.schedule_name}" deve ser executado agora!`);
           
           // Verificar se já foi executado hoje
@@ -130,7 +138,7 @@ export class CampaignScheduler {
   /**
    * Verificar se um agendamento deve ser executado
    */
-  private shouldExecuteSchedule(schedule: CampaignSchedule, currentTime: string, currentDay: number): boolean {
+  private async shouldExecuteSchedule(schedule: CampaignSchedule, currentTime: string, currentDay: number): Promise<boolean> {
     try {
       // Verificar dia da semana
       const allowedDays = schedule.days_of_week.split(',').map(d => parseInt(d.trim()));
@@ -138,23 +146,24 @@ export class CampaignScheduler {
         return false;
       }
 
-      // Verificar horário
-      const startTime = schedule.start_time;
-      const endTime = schedule.end_time;
-
-      // Converter para minutos para facilitar comparação
-      const currentMinutes = this.timeToMinutes(currentTime);
-      const startMinutes = this.timeToMinutes(startTime);
-      const endMinutes = this.timeToMinutes(endTime);
-
-      // Verificar se está no intervalo de tempo
-      if (startMinutes <= endMinutes) {
-        // Horário normal (ex: 08:00 - 18:00)
-        return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
-      } else {
-        // Horário que cruza meia-noite (ex: 22:00 - 06:00)
-        return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+      // Verificar horário usando timezone do Brasil
+      const { isTimeToExecute, logBrazilTime } = await import('@/lib/timezone');
+      
+      const startTime = schedule.start_time.slice(0, 5); // Remove segundos se existirem
+      
+      logBrazilTime(`🔍 Verificando agendamento: ${schedule.schedule_name || 'Sem nome'}`);
+      logBrazilTime(`⏰ Horário agendado: ${startTime}`);
+      logBrazilTime(`⏰ Horário atual do Brasil: ${currentTime}`);
+      logBrazilTime(`📅 Dias válidos: ${schedule.days_of_week}`);
+      
+      // Verificar se é o horário correto usando timezone do Brasil
+      if (!isTimeToExecute(startTime, 1)) { // Tolerância de 1 minuto
+        logBrazilTime(`⏭️ Horário não confere (${startTime} vs ${currentTime}), pulando...`);
+        return false;
       }
+
+      logBrazilTime(`✅ Horário confere! Deve executar agora.`);
+      return true;
 
     } catch (error) {
       console.error('Erro ao verificar agendamento:', error);

@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/sync-groups",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/campaigns",
+      "schedule": "* * * * *"
     }
   ]
 }
