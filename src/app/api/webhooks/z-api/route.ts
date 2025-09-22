@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
 import { simpleBlacklistChecker } from '@/lib/monitoring/simple-blacklist-checker'
 import { messageMonitor } from '@/lib/monitoring/message-monitor'
+import { addGroupParticipant, removeGroupParticipant, syncGroupParticipantsFromZApi } from '@/lib/group-participants'
 
 // Interface para os dados do webhook da Z-API
 interface ZApiWebhookData {
@@ -255,24 +256,12 @@ async function handleParticipantLeft(
       }
     }
 
-    // Atualizar lista de participantes no banco (remover o participante)
-    const currentParticipants = group.participants || []
-    if (currentParticipants.includes(data.participantPhone)) {
-      const updatedParticipants = currentParticipants.filter(p => p !== data.participantPhone)
-      
-      const { error: updateError } = await supabase
-        .from('whatsapp_groups')
-        .update({
-          participants: updatedParticipants,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', group.id)
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar participantes:', updateError)
-      } else {
-        console.log('✅ Participante removido do banco:', data.participantPhone)
-      }
+    // Remover participante da nova tabela group_participants
+    const removeResult = await removeGroupParticipant(group.id, data.participantPhone)
+    if (removeResult.success) {
+      console.log('✅ Participante removido da tabela group_participants:', data.participantPhone)
+    } else {
+      console.error('❌ Erro ao remover participante da tabela group_participants:', removeResult.error)
     }
 
     // Criar notificação de participante removido
@@ -510,24 +499,19 @@ async function handleParticipantAdded(
 
     console.log('✅ Participante não está na blacklist - permitindo entrada')
 
-    // Atualizar lista de participantes no banco
-    const currentParticipants = group.participants || []
-    if (!currentParticipants.includes(participantPhone)) {
-      const updatedParticipants = [...currentParticipants, participantPhone]
-      
-      const { error: updateError } = await supabase
-        .from('whatsapp_groups')
-        .update({
-          participants: updatedParticipants,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', group.id)
-
-      if (updateError) {
-        console.error('❌ Erro ao atualizar participantes:', updateError)
-      } else {
-        console.log('✅ Participante adicionado ao banco:', participantPhone)
-      }
+    // Adicionar participante à nova tabela group_participants
+    const addResult = await addGroupParticipant(
+      group.id, 
+      participantPhone, 
+      data.senderName || null, 
+      false, // isAdmin
+      false  // isSuperAdmin
+    )
+    
+    if (addResult.success) {
+      console.log('✅ Participante adicionado à tabela group_participants:', participantPhone)
+    } else {
+      console.error('❌ Erro ao adicionar participante à tabela group_participants:', addResult.error)
     }
 
     // Criar notificação de participante adicionado

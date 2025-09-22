@@ -112,6 +112,7 @@ export interface Database {
           user_id: string
           created_at: string
           updated_at: string
+          participant_count: number
         }
         Insert: {
           id?: string
@@ -127,6 +128,7 @@ export interface Database {
           user_id: string
           created_at?: string
           updated_at?: string
+          participant_count?: number
         }
         Update: {
           id?: string
@@ -140,6 +142,48 @@ export interface Database {
           require_admin_approval?: boolean
           admin_only_add_member?: boolean
           user_id?: string
+          created_at?: string
+          updated_at?: string
+          participant_count?: number
+        }
+      }
+      group_participants: {
+        Row: {
+          id: string
+          group_id: string
+          participant_phone: string
+          participant_name: string | null
+          is_admin: boolean
+          is_super_admin: boolean
+          joined_at: string
+          left_at: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          participant_phone: string
+          participant_name?: string | null
+          is_admin?: boolean
+          is_super_admin?: boolean
+          joined_at?: string
+          left_at?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          participant_phone?: string
+          participant_name?: string | null
+          is_admin?: boolean
+          is_super_admin?: boolean
+          joined_at?: string
+          left_at?: string | null
+          is_active?: boolean
           created_at?: string
           updated_at?: string
         }

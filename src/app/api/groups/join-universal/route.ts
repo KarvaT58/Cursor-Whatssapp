@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     const MAX_PARTICIPANTS = firstGroup.max_participants_per_group || 256 // Usar limite do grupo ou padrão 256
 
     console.log(`🔍 JOIN-UNIVERSAL: Verificando vagas com limite de ${MAX_PARTICIPANTS} participantes...`)
-    console.log(`📋 JOIN-UNIVERSAL: Grupos encontrados para verificação:`, groups.map(g => ({ name: g.name, participants: g.participants?.length || 0 })))
+    console.log(`📋 JOIN-UNIVERSAL: Grupos encontrados para verificação:`, groups.map(g => ({ name: g.name, participant_count: g.participant_count || 0 })))
 
     // Buscar instância Z-API para verificação em tempo real
     const { data: zApiInstance, error: instanceError } = await supabase
@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
       // Fallback para verificação local se Z-API não estiver disponível
       console.log('📊 JOIN-UNIVERSAL: Usando verificação local (Z-API não disponível)')
       for (const group of groups) {
-        const currentParticipants = group.participants?.length || 0
-        console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (local): ${currentParticipants}/${MAX_PARTICIPANTS}`)
+        const currentParticipants = group.participant_count || 0
+        console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (contador): ${currentParticipants}/${MAX_PARTICIPANTS}`)
         
         if (currentParticipants < MAX_PARTICIPANTS) {
           availableGroup = group
@@ -148,26 +148,32 @@ export async function POST(request: NextRequest) {
               console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${realParticipantsCount}/${MAX_PARTICIPANTS})`)
             }
           } else {
-            console.warn(`⚠️ JOIN-UNIVERSAL: Erro ao verificar grupo "${group.name}" via Z-API, usando dados locais`)
-            const currentParticipants = group.participants?.length || 0
-            console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (local): ${currentParticipants}/${MAX_PARTICIPANTS}`)
+            console.warn(`⚠️ JOIN-UNIVERSAL: Erro ao verificar grupo "${group.name}" via Z-API, usando contador local`)
+            const currentParticipants = group.participant_count || 0
+            console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (contador): ${currentParticipants}/${MAX_PARTICIPANTS}`)
             
             if (currentParticipants < MAX_PARTICIPANTS) {
               availableGroup = group
               console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
+              console.log(`🎯 JOIN-UNIVERSAL: SELECIONANDO GRUPO: "${group.name}" com ${currentParticipants} participantes`)
               break
+            } else {
+              console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${currentParticipants}/${MAX_PARTICIPANTS})`)
             }
           }
         } catch (error) {
           console.warn(`⚠️ JOIN-UNIVERSAL: Erro ao verificar grupo "${group.name}" via Z-API:`, error)
-          // Fallback para dados locais
-          const currentParticipants = group.participants?.length || 0
-          console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (local): ${currentParticipants}/${MAX_PARTICIPANTS}`)
+          // Fallback para contador local
+          const currentParticipants = group.participant_count || 0
+          console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (contador): ${currentParticipants}/${MAX_PARTICIPANTS}`)
 
-      if (currentParticipants < MAX_PARTICIPANTS) {
-        availableGroup = group
-        console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
-        break
+          if (currentParticipants < MAX_PARTICIPANTS) {
+            availableGroup = group
+            console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
+            console.log(`🎯 JOIN-UNIVERSAL: SELECIONANDO GRUPO: "${group.name}" com ${currentParticipants} participantes`)
+            break
+          } else {
+            console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${currentParticipants}/${MAX_PARTICIPANTS})`)
           }
         }
       }
@@ -480,7 +486,7 @@ export async function POST(request: NextRequest) {
       id: availableGroup.id,
       name: availableGroup.name,
       whatsapp_id: availableGroup.whatsapp_id,
-      participants: availableGroup.participants?.length || 0,
+      participant_count: availableGroup.participant_count || 0,
       invite_link: availableGroup.invite_link
     })
 
