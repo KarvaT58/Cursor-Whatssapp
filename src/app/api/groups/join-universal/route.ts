@@ -97,9 +97,24 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (instanceError || !zApiInstance) {
-        console.error('❌ Instância Z-API não encontrada:', instanceError)
+        console.error('❌ JOIN-UNIVERSAL: Instância Z-API não encontrada:', instanceError)
         return NextResponse.json(
           { error: 'Instância Z-API não encontrada' },
+          { status: 500 }
+        )
+      }
+
+      console.log('📱 JOIN-UNIVERSAL: Instância Z-API encontrada:', {
+        instance_id: zApiInstance.instance_id,
+        phone_number: zApiInstance.phone_number,
+        client_token: zApiInstance.client_token ? 'Presente' : 'Ausente'
+      })
+
+      // Verificar se o número do telefone está disponível
+      if (!zApiInstance.phone_number) {
+        console.error('❌ JOIN-UNIVERSAL: Número do telefone não encontrado na instância Z-API')
+        return NextResponse.json(
+          { error: 'Número do telefone não configurado na instância Z-API' },
           { status: 500 }
         )
       }
@@ -128,12 +143,17 @@ export async function POST(request: NextRequest) {
         )
       }
       
+      // Usar número do telefone da instância ou fallback
+      const adminPhoneNumber = zApiInstance.phone_number || '554584154115' // Número padrão do sistema
+      
       const createGroupPayload = {
         name: newGroupName,
         description: firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`,
         // Adicionar o dono do grupo como primeiro participante
-        participants: [zApiInstance.phone_number]
+        participants: [adminPhoneNumber]
       }
+      
+      console.log(`📱 JOIN-UNIVERSAL: Usando número do telefone: ${adminPhoneNumber}`)
       
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
       console.log(`🔗 JOIN-UNIVERSAL: URL: https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`)
@@ -195,7 +215,7 @@ export async function POST(request: NextRequest) {
           whatsapp_id: createGroupResult.groupId,
           invite_link: inviteLinkResult.link,
           description: firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`,
-          participants: [zApiInstance.phone_number],
+          participants: [adminPhoneNumber],
           max_participants: MAX_PARTICIPANTS, // Usar o limite configurado
           group_family: familyId,
           user_id: firstGroup.user_id,
