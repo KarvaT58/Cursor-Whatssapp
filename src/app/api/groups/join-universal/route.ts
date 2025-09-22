@@ -232,7 +232,7 @@ export async function POST(request: NextRequest) {
       // CORREÇÃO: Usar apenas 2 participantes fixos
       // 1. Super Admin (número da Z-API)
       // 2. Número Fixo do Sistema (configurado pelo usuário)
-      const superAdminPhone = '554599854508' // Número da Z-API (Super Admin)
+      const superAdminPhone = '554598228660' // Número correto da Z-API baseado nos logs
       const systemPhone = firstGroup.system_phone || '5545984154115' // Número do sistema configurado
       
       const participants = [superAdminPhone, systemPhone]
