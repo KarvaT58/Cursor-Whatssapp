@@ -262,8 +262,23 @@ export class SyncService {
     try {
       const stats = { created: 0, updated: 0, deleted: 0, errors: 0 }
 
-      // Obter participantes do WhatsApp via Z-API
-      const participantsResponse = await this.zApiClient.getGroupParticipants(groupId)
+      // Obter grupo do banco de dados primeiro para pegar o whatsapp_id
+      const { data: { user } } = await this.supabase.auth.getUser()
+      if (!user) throw new Error('Usuário não autenticado')
+
+      const { data: group } = await this.supabase
+        .from('whatsapp_groups')
+        .select('whatsapp_id')
+        .eq('id', groupId)
+        .eq('user_id', user.id)
+        .single()
+
+      if (!group || !group.whatsapp_id) {
+        throw new Error('Grupo não encontrado ou sem whatsapp_id')
+      }
+
+      // Obter participantes do WhatsApp via Z-API usando o whatsapp_id
+      const participantsResponse = await this.zApiClient.getGroupParticipants(group.whatsapp_id)
       
       if (!participantsResponse.success) {
         throw new Error(participantsResponse.error || 'Erro ao obter participantes do grupo')
@@ -271,18 +286,15 @@ export class SyncService {
 
       const whatsappParticipants = participantsResponse.data?.participants as ZApiGroupParticipant[] || []
 
-      // Obter grupo do banco de dados
-      const { data: { user } } = await this.supabase.auth.getUser()
-      if (!user) throw new Error('Usuário não autenticado')
-
-      const { data: group } = await this.supabase
+      // Buscar dados completos do grupo (já temos o whatsapp_id da busca anterior)
+      const { data: fullGroup } = await this.supabase
         .from('whatsapp_groups')
         .select('*')
         .eq('id', groupId)
         .eq('user_id', user.id)
         .single()
 
-      if (!group) {
+      if (!fullGroup) {
         throw new Error('Grupo não encontrado')
       }
 
@@ -295,7 +307,7 @@ export class SyncService {
           participants: participantPhones,
           updated_at: new Date().toISOString()
         })
-        .eq('id', groupId)
+        .eq('id', fullGroup.id)
 
       if (updateError) {
         throw new Error('Erro ao atualizar participantes no banco de dados')

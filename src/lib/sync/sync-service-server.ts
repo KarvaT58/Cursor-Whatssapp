@@ -209,8 +209,21 @@ export class SyncServiceServer {
     try {
       const stats = { created: 0, updated: 0, deleted: 0, errors: 0 }
 
-      // Obter participantes do WhatsApp via Z-API
-      const participantsResponse = await this.zApiClient.getGroupParticipants(groupId)
+      // Obter grupo do banco de dados primeiro para pegar o whatsapp_id
+      const supabase = await this.getSupabase()
+      const { data: group } = await supabase
+        .from('whatsapp_groups')
+        .select('whatsapp_id')
+        .eq('id', groupId)
+        .eq('user_id', this.userId)
+        .single()
+
+      if (!group || !group.whatsapp_id) {
+        throw new Error('Grupo não encontrado ou sem whatsapp_id')
+      }
+
+      // Obter participantes do WhatsApp via Z-API usando o whatsapp_id
+      const participantsResponse = await this.zApiClient.getGroupParticipants(group.whatsapp_id)
       
       if (!participantsResponse.success) {
         throw new Error(participantsResponse.error || 'Erro ao obter participantes do grupo')
@@ -218,16 +231,15 @@ export class SyncServiceServer {
 
       const whatsappParticipants = participantsResponse.data?.participants as ZApiGroupParticipant[] || []
 
-      // Obter grupo do banco de dados
-      const supabase = await this.getSupabase()
-      const { data: group } = await supabase
+      // Buscar dados completos do grupo
+      const { data: fullGroup } = await supabase
         .from('whatsapp_groups')
         .select('*')
         .eq('id', groupId)
         .eq('user_id', this.userId)
         .single()
 
-      if (!group) {
+      if (!fullGroup) {
         throw new Error('Grupo não encontrado')
       }
 
