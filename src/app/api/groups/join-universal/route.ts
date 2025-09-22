@@ -116,16 +116,13 @@ export async function POST(request: NextRequest) {
       console.log(`📱 JOIN-UNIVERSAL: instance_id: "${zApiInstance.instance_id}"`)
       console.log(`📱 JOIN-UNIVERSAL: instance_token: "${zApiInstance.instance_token}"`)
       
-      // Se não tem phone_number configurado, vamos tentar sem participantes primeiro
-      let adminPhoneNumber = zApiInstance.phone_number
-      let participants = []
+      // CORRIGIR NÚMERO: Adicionar o 9 que estava faltando
+      let adminPhoneNumber = zApiInstance.phone_number || '5545984154115' // Número correto com 9
+      let participants = [adminPhoneNumber]
       
-      if (adminPhoneNumber) {
-        participants = [adminPhoneNumber]
-        console.log(`✅ JOIN-UNIVERSAL: Usando número da instância: ${adminPhoneNumber}`)
-      } else {
-        console.log(`⚠️ JOIN-UNIVERSAL: Instância não tem phone_number configurado, tentando sem participantes`)
-      }
+      console.log(`✅ JOIN-UNIVERSAL: Usando número correto: ${adminPhoneNumber}`)
+      console.log(`📱 JOIN-UNIVERSAL: Número da instância: "${zApiInstance.phone_number}"`)
+      console.log(`📱 JOIN-UNIVERSAL: Número final usado: "${adminPhoneNumber}"`)
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
