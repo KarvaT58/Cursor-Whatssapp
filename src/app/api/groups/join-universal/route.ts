@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
     const MAX_PARTICIPANTS = firstGroup.max_participants_per_group || 256 // Usar limite do grupo ou padrão 256
 
     console.log(`🔍 JOIN-UNIVERSAL: Verificando vagas com limite de ${MAX_PARTICIPANTS} participantes...`)
+    console.log(`📋 JOIN-UNIVERSAL: Grupos encontrados para verificação:`, groups.map(g => ({ name: g.name, participants: g.participants?.length || 0 })))
 
     // Buscar instância Z-API para verificação em tempo real
     const { data: zApiInstance, error: instanceError } = await supabase
@@ -99,14 +100,18 @@ export async function POST(request: NextRequest) {
     if (instanceError || !zApiInstance) {
       console.error('❌ JOIN-UNIVERSAL: Instância Z-API não encontrada para verificação:', instanceError)
       // Fallback para verificação local se Z-API não estiver disponível
-    for (const group of groups) {
-      const currentParticipants = group.participants?.length || 0
+      console.log('📊 JOIN-UNIVERSAL: Usando verificação local (Z-API não disponível)')
+      for (const group of groups) {
+        const currentParticipants = group.participants?.length || 0
         console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (local): ${currentParticipants}/${MAX_PARTICIPANTS}`)
         
         if (currentParticipants < MAX_PARTICIPANTS) {
           availableGroup = group
           console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
+          console.log(`🎯 JOIN-UNIVERSAL: SELECIONANDO GRUPO: "${group.name}" com ${currentParticipants} participantes`)
           break
+        } else {
+          console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${currentParticipants}/${MAX_PARTICIPANTS})`)
         }
       }
     } else {
@@ -137,7 +142,7 @@ export async function POST(request: NextRequest) {
             if (realParticipantsCount < MAX_PARTICIPANTS) {
               availableGroup = group
               console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${realParticipantsCount}/${MAX_PARTICIPANTS})`)
-              console.log(`🎯 JOIN-UNIVERSAL: Usando grupo existente com vaga disponível!`)
+              console.log(`🎯 JOIN-UNIVERSAL: SELECIONANDO GRUPO: "${group.name}" com ${realParticipantsCount} participantes`)
               break
             } else {
               console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${realParticipantsCount}/${MAX_PARTICIPANTS})`)
@@ -471,6 +476,13 @@ export async function POST(request: NextRequest) {
     // 4. Se há vaga, usar grupo existente
     console.log(`✅ JOIN-UNIVERSAL: Usando grupo existente: "${availableGroup.name}"`)
     console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${availableGroup.invite_link}`)
+    console.log(`📊 JOIN-UNIVERSAL: DADOS DO GRUPO SELECIONADO:`, {
+      id: availableGroup.id,
+      name: availableGroup.name,
+      whatsapp_id: availableGroup.whatsapp_id,
+      participants: availableGroup.participants?.length || 0,
+      invite_link: availableGroup.invite_link
+    })
 
     return NextResponse.json({
       success: true,
