@@ -4,10 +4,10 @@ import { createClient } from '@/lib/supabase/server'
 export async function POST(request: NextRequest) {
   try {
     console.log('🚀 JOIN-UNIVERSAL: Iniciando requisição...')
-    
+
     const body = await request.json()
     console.log('📥 JOIN-UNIVERSAL: Dados recebidos:', body)
-    
+
     const { familyId, familyName } = body
 
     if (!familyId) {
@@ -63,14 +63,14 @@ export async function POST(request: NextRequest) {
     // 2. Verificar se há vagas nos grupos existentes
     let availableGroup = null
     const MAX_PARTICIPANTS = 3 // Limite para teste (mudar para 1024 em produção)
-    
+
     console.log(`🔍 JOIN-UNIVERSAL: Verificando vagas com limite de ${MAX_PARTICIPANTS} participantes...`)
-    
+
     for (const group of groups) {
       const currentParticipants = group.participants?.length || 0
-      
+
       console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes: ${currentParticipants}/${MAX_PARTICIPANTS}`)
-      
+
       if (currentParticipants < MAX_PARTICIPANTS) {
         availableGroup = group
         console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
@@ -83,11 +83,11 @@ export async function POST(request: NextRequest) {
     // 3. Se não há vagas, criar novo grupo
     if (!availableGroup) {
       console.log('🚀 JOIN-UNIVERSAL: Nenhuma vaga disponível, criando novo grupo...')
-      
+
       // Buscar dados do primeiro grupo para copiar configurações
       const firstGroup = groups[0]
       console.log(`📋 JOIN-UNIVERSAL: Copiando configurações do grupo "${firstGroup.name}"`)
-      
+
       // Buscar instância Z-API ativa
       const { data: zApiInstance, error: instanceError } = await supabase
         .from('z_api_instances')
@@ -112,94 +112,23 @@ export async function POST(request: NextRequest) {
 
       // Usar número do telefone da instância ou fallback para número padrão
       const adminPhoneNumber = zApiInstance.phone_number || '554584154115' // Número padrão do sistema
-      
+
       console.log(`📱 JOIN-UNIVERSAL: Usando número do telefone: ${adminPhoneNumber}`)
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
-      
-      // Usar nome do grupo original ou fallback para nome da família
-      const baseGroupName = firstGroup.name && firstGroup.name.trim() !== '' 
-        ? firstGroup.name 
-        : familyName || 'Grupo Universal'
-      
-      // Tentar diferentes formatos de nome
-      const newGroupName = `${baseGroupName} ${newGroupNumber}`
-      const alternativeName = `${familyName} ${newGroupNumber}`
-      const simpleName = `${familyName}`
-      
-      console.log(`📝 JOIN-UNIVERSAL: Opções de nome:`, {
-        original: newGroupName,
-        alternative: alternativeName,
-        simple: simpleName
-      })
-      
-      console.log(`🏗️ JOIN-UNIVERSAL: Criando grupo "${newGroupName}" com configurações do grupo original`)
-      console.log(`📋 JOIN-UNIVERSAL: Nome do grupo original: "${firstGroup.name}"`)
-      console.log(`📋 JOIN-UNIVERSAL: Nome base usado: "${baseGroupName}"`)
-      console.log(`📋 JOIN-UNIVERSAL: Nome do novo grupo: "${newGroupName}"`)
-      
-      // Verificar se o nome não está vazio
-      if (!newGroupName || newGroupName.trim() === '') {
-        console.error('❌ JOIN-UNIVERSAL: Nome do grupo está vazio!')
-        return NextResponse.json(
-          { error: 'Nome do grupo não pode estar vazio' },
-          { status: 400 }
-        )
-      }
-      
-      // Tentar diferentes estratégias de nome para contornar validação da Z-API
-      let cleanGroupName = ''
-      
-      // Estratégia 1: Nome da família + número
-      cleanGroupName = `${familyName} ${newGroupNumber}`.trim().replace(/[^\w\s-]/g, '')
-      console.log(`🎯 JOIN-UNIVERSAL: Estratégia 1 - Nome da família: "${cleanGroupName}"`)
-      
-      // Estratégia 2: Se muito curto, usar nome completo
-      if (cleanGroupName.length < 5) {
-        cleanGroupName = `Grupo ${familyName} ${newGroupNumber}`.trim().replace(/[^\w\s-]/g, '')
-        console.log(`🎯 JOIN-UNIVERSAL: Estratégia 2 - Nome completo: "${cleanGroupName}"`)
-      }
-      
-      // Estratégia 3: Se ainda problemático, usar nome simples
-      if (cleanGroupName.length < 3 || cleanGroupName === 'Grupo') {
-        cleanGroupName = `Grupo${newGroupNumber}`.trim()
-        console.log(`🎯 JOIN-UNIVERSAL: Estratégia 3 - Nome simples: "${cleanGroupName}"`)
-      }
-      
-      // Estratégia 4: Fallback final garantido
-      if (!cleanGroupName || cleanGroupName.trim() === '') {
-        cleanGroupName = `Grupo${newGroupNumber}`
-        console.log(`🆘 JOIN-UNIVERSAL: Estratégia 4 - Fallback final: "${cleanGroupName}"`)
-      }
-      
-      // Garantir que o nome seja válido
-      cleanGroupName = cleanGroupName.trim()
-      console.log(`✅ JOIN-UNIVERSAL: Nome final escolhido: "${cleanGroupName}"`)
-      
+      const newGroupName = `${firstGroup.name} ${newGroupNumber}`
+
+      console.log(`🏗️ JOIN-UNIVERSAL: Criando grupo "${newGroupName}"`)
+
       const createGroupPayload = {
-        name: cleanGroupName,
-        description: (firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`).trim(),
-        // Adicionar o dono do grupo como primeiro participante
+        name: newGroupName,
+        description: firstGroup.description || `Grupo ${familyName}`,
         participants: [adminPhoneNumber]
       }
-      
-      // Validação final do nome
-      if (!cleanGroupName || cleanGroupName.trim() === '' || cleanGroupName.length < 2) {
-        console.error(`❌ JOIN-UNIVERSAL: Nome inválido após todas as estratégias: "${cleanGroupName}"`)
-        return NextResponse.json(
-          { error: 'Não foi possível gerar um nome válido para o grupo' },
-          { status: 400 }
-        )
-      }
-      
-      console.log(`🧹 JOIN-UNIVERSAL: Nome limpo: "${cleanGroupName}"`)
-      console.log(`📝 JOIN-UNIVERSAL: Descrição: "${createGroupPayload.description}"`)
-      console.log(`🔍 JOIN-UNIVERSAL: Tamanho do nome: ${cleanGroupName.length} caracteres`)
-      
+
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
-      console.log(`🔗 JOIN-UNIVERSAL: URL: https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`)
-      
+
       const createGroupResponse = await fetch(
         `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`,
         {
@@ -218,7 +147,7 @@ export async function POST(request: NextRequest) {
       if (!createGroupResponse.ok || !createGroupResult.groupId) {
         console.error('❌ Erro ao criar grupo:', createGroupResult)
         return NextResponse.json(
-          { error: 'Erro ao criar novo grupo' },
+          { error: 'Erro ao criar novo grupo', details: createGroupResult.error || 'Erro desconhecido' },
           { status: 500 }
         )
       }
@@ -244,21 +173,21 @@ export async function POST(request: NextRequest) {
       if (!inviteLinkResponse.ok || !inviteLinkResult.link) {
         console.error('❌ Erro ao obter link de convite:', inviteLinkResult)
         return NextResponse.json(
-          { error: 'Erro ao obter link de convite' },
+          { error: 'Erro ao obter link de convite', details: inviteLinkResult.error || 'Erro desconhecido' },
           { status: 500 }
         )
       }
 
-      // Salvar novo grupo no banco de dados com todas as configurações do grupo original
+      // Salvar novo grupo no banco de dados
       const { data: newGroup, error: saveError } = await supabase
         .from('whatsapp_groups')
         .insert({
           name: newGroupName,
           whatsapp_id: createGroupResult.groupId,
           invite_link: inviteLinkResult.link,
-          description: firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`,
+          description: firstGroup.description || `Grupo ${familyName}`,
           participants: [adminPhoneNumber],
-          max_participants: MAX_PARTICIPANTS, // Usar o limite configurado
+          max_participants: MAX_PARTICIPANTS,
           group_family: familyId,
           user_id: firstGroup.user_id,
           created_at: new Date().toISOString(),
@@ -270,14 +199,14 @@ export async function POST(request: NextRequest) {
       if (saveError) {
         console.error('❌ Erro ao salvar novo grupo:', saveError)
         return NextResponse.json(
-          { error: 'Erro ao salvar novo grupo' },
+          { error: 'Erro ao salvar novo grupo', details: saveError.message },
           { status: 500 }
         )
       }
 
       console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${createGroupResult.groupId})`)
       console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${inviteLinkResult.link}`)
-      
+
       return NextResponse.json({
         success: true,
         groupId: createGroupResult.groupId,
@@ -291,7 +220,7 @@ export async function POST(request: NextRequest) {
     // 4. Se há vaga, usar grupo existente
     console.log(`✅ JOIN-UNIVERSAL: Usando grupo existente: "${availableGroup.name}"`)
     console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${availableGroup.invite_link}`)
-    
+
     return NextResponse.json({
       success: true,
       groupId: availableGroup.whatsapp_id,
@@ -305,7 +234,7 @@ export async function POST(request: NextRequest) {
     console.error('❌ JOIN-UNIVERSAL: Erro interno:', error)
     console.error('❌ JOIN-UNIVERSAL: Stack trace:', error instanceof Error ? error.stack : 'No stack trace')
     return NextResponse.json(
-      { 
+      {
         error: 'Erro interno do servidor',
         details: error instanceof Error ? error.message : 'Erro desconhecido'
       },
