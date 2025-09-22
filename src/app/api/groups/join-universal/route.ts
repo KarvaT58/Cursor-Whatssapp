@@ -83,17 +83,82 @@ export async function POST(request: NextRequest) {
 
     console.log(`🔍 JOIN-UNIVERSAL: Verificando vagas com limite de ${MAX_PARTICIPANTS} participantes...`)
 
-    for (const group of groups) {
-      const currentParticipants = group.participants?.length || 0
+    // Buscar instância Z-API para verificação em tempo real
+    const firstGroup = groups[0]
+    const { data: zApiInstance, error: instanceError } = await supabase
+      .from('z_api_instances')
+      .select('*')
+      .eq('user_id', firstGroup.user_id)
+      .eq('is_active', true)
+      .single()
 
-      console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes: ${currentParticipants}/${MAX_PARTICIPANTS}`)
+    if (instanceError || !zApiInstance) {
+      console.error('❌ JOIN-UNIVERSAL: Instância Z-API não encontrada para verificação:', instanceError)
+      // Fallback para verificação local se Z-API não estiver disponível
+      for (const group of groups) {
+        const currentParticipants = group.participants?.length || 0
+        console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (local): ${currentParticipants}/${MAX_PARTICIPANTS}`)
+        
+        if (currentParticipants < MAX_PARTICIPANTS) {
+          availableGroup = group
+          console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
+          break
+        }
+      }
+    } else {
+      // Verificação em tempo real usando Z-API
+      console.log('📱 JOIN-UNIVERSAL: Verificando vagas em tempo real via Z-API...')
+      
+      for (const group of groups) {
+        try {
+          // Buscar informações atualizadas do grupo via Z-API
+          const groupInfoUrl = `${process.env.Z_API_BASE_URL}/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/group-metadata/${group.whatsapp_id}`
+          
+          console.log(`🔍 JOIN-UNIVERSAL: Verificando grupo "${group.name}" (${group.whatsapp_id}) via Z-API...`)
+          
+          const groupInfoResponse = await fetch(groupInfoUrl, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          })
 
-      if (currentParticipants < MAX_PARTICIPANTS) {
-        availableGroup = group
-        console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
-        break
-      } else {
-        console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${currentParticipants}/${MAX_PARTICIPANTS})`)
+          if (groupInfoResponse.ok) {
+            const groupInfo = await groupInfoResponse.json()
+            const realParticipantsCount = groupInfo.participants?.length || 0
+            
+            console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (real): ${realParticipantsCount}/${MAX_PARTICIPANTS}`)
+            
+            if (realParticipantsCount < MAX_PARTICIPANTS) {
+              availableGroup = group
+              console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${realParticipantsCount}/${MAX_PARTICIPANTS})`)
+              break
+            } else {
+              console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${realParticipantsCount}/${MAX_PARTICIPANTS})`)
+            }
+          } else {
+            console.warn(`⚠️ JOIN-UNIVERSAL: Erro ao verificar grupo "${group.name}" via Z-API, usando dados locais`)
+            const currentParticipants = group.participants?.length || 0
+            console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (local): ${currentParticipants}/${MAX_PARTICIPANTS}`)
+            
+            if (currentParticipants < MAX_PARTICIPANTS) {
+              availableGroup = group
+              console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
+              break
+            }
+          }
+        } catch (error) {
+          console.warn(`⚠️ JOIN-UNIVERSAL: Erro ao verificar grupo "${group.name}" via Z-API:`, error)
+          // Fallback para dados locais
+          const currentParticipants = group.participants?.length || 0
+          console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (local): ${currentParticipants}/${MAX_PARTICIPANTS}`)
+          
+          if (currentParticipants < MAX_PARTICIPANTS) {
+            availableGroup = group
+            console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
+            break
+          }
+        }
       }
     }
 
@@ -106,29 +171,20 @@ export async function POST(request: NextRequest) {
       console.log(`📋 JOIN-UNIVERSAL: Copiando configurações do grupo "${firstGroup.name}"`)
       console.log(`🔍 JOIN-UNIVERSAL: DADOS COMPLETOS DO PRIMEIRO GRUPO:`, JSON.stringify(firstGroup, null, 2))
 
-      // Buscar instância Z-API ativa
-      console.log(`🔍 JOIN-UNIVERSAL: Buscando instância Z-API para user_id: ${firstGroup.user_id}`)
-      const { data: zApiInstance, error: instanceError } = await supabase
-        .from('z_api_instances')
-        .select('*')
-        .eq('user_id', firstGroup.user_id)
-        .eq('is_active', true)
-        .single()
-
-      if (instanceError || !zApiInstance) {
-        console.error('❌ JOIN-UNIVERSAL: Instância Z-API não encontrada:', instanceError)
+      // A instância Z-API já foi buscada acima, reutilizar
+      if (!zApiInstance) {
+        console.error('❌ JOIN-UNIVERSAL: Instância Z-API não encontrada para criação de grupo')
         return NextResponse.json(
           { error: 'Instância Z-API não encontrada' },
           { status: 500 }
         )
       }
 
-      console.log('📱 JOIN-UNIVERSAL: Instância Z-API encontrada:', {
+      console.log('📱 JOIN-UNIVERSAL: Usando instância Z-API para criação de grupo:', {
         instance_id: zApiInstance.instance_id,
         phone_number: zApiInstance.phone_number || 'Não configurado',
         client_token: zApiInstance.client_token ? 'Presente' : 'Ausente'
       })
-      console.log(`🔍 JOIN-UNIVERSAL: DADOS COMPLETOS DA INSTÂNCIA Z-API:`, JSON.stringify(zApiInstance, null, 2))
 
       // PROBLEMA IDENTIFICADO: Z-API pode estar validando se o número pertence à instância
       console.log(`🔍 JOIN-UNIVERSAL: Investigando problema do número de telefone...`)
