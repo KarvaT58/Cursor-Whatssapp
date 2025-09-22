@@ -128,10 +128,12 @@ export async function POST(request: NextRequest) {
             const realParticipantsCount = groupInfo.participants?.length || 0
             
             console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (real): ${realParticipantsCount}/${MAX_PARTICIPANTS}`)
+            console.log(`🔍 JOIN-UNIVERSAL: Dados completos do grupo via Z-API:`, JSON.stringify(groupInfo, null, 2))
             
             if (realParticipantsCount < MAX_PARTICIPANTS) {
               availableGroup = group
               console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${realParticipantsCount}/${MAX_PARTICIPANTS})`)
+              console.log(`🎯 JOIN-UNIVERSAL: Usando grupo existente com vaga disponível!`)
               break
             } else {
               console.log(`❌ JOIN-UNIVERSAL: Grupo "${group.name}" está cheio (${realParticipantsCount}/${MAX_PARTICIPANTS})`)
@@ -334,6 +336,7 @@ export async function POST(request: NextRequest) {
           family_base_name: firstGroup.family_base_name,
           max_participants_per_group: firstGroup.max_participants_per_group,
           system_phone: firstGroup.system_phone,
+          universal_link: firstGroup.universal_link, // 🔗 CORRIGIDO: Usar o mesmo link universal da família
           group_family: familyId, // Manter para compatibilidade
           user_id: firstGroup.user_id,
           created_at: new Date().toISOString(),
