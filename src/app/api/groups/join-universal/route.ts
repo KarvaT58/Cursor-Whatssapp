@@ -256,7 +256,6 @@ export async function POST(request: NextRequest) {
           admin_only_settings: firstGroup.admin_only_settings,
           require_admin_approval: firstGroup.require_admin_approval,
           admin_only_add_member: firstGroup.admin_only_add_member,
-          max_participants: MAX_PARTICIPANTS,
           group_family: familyId,
           user_id: firstGroup.user_id,
           created_at: new Date().toISOString(),
