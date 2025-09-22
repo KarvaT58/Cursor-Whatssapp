@@ -1,9 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable prefer-const */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { headers } from 'next/headers'
 import { simpleBlacklistChecker } from '@/lib/monitoring/simple-blacklist-checker'
 import { messageMonitor } from '@/lib/monitoring/message-monitor'
-import { addGroupParticipant, removeGroupParticipant, syncGroupParticipantsFromZApi } from '@/lib/group-participants'
+import { addGroupParticipant, removeGroupParticipant } from '@/lib/group-participants'
 
 // Interface para os dados do webhook da Z-API
 interface ZApiWebhookData {
@@ -18,7 +20,7 @@ interface ZApiWebhookData {
     participants?: string[]
     message?: string
     timestamp?: number
-    [key: string]: any
+    [key: string]: unknown
   }
   
   // Para mensagens recebidas (estrutura real da Z-API)
@@ -48,10 +50,14 @@ interface ZApiWebhookData {
   text?: {
     message?: string
   }
+  
+  // Propriedades para webhooks de grupo
+  notification?: string
+  notificationParameters?: string[]
 }
 
 // GET /api/webhooks/z-api - Teste de webhook
-export async function GET(request: NextRequest) {
+export async function GET() {
   return NextResponse.json({
     success: true,
     message: 'Webhook endpoint funcionando',
@@ -62,7 +68,7 @@ export async function GET(request: NextRequest) {
 // POST /api/webhooks/z-api - Webhook da Z-API
 export async function POST(request: NextRequest) {
   try {
-    const headersList = headers()
+    const headersList = await headers()
     const contentType = headersList.get('content-type')
     
     if (!contentType || !contentType.includes('application/json')) {
@@ -127,27 +133,39 @@ export async function POST(request: NextRequest) {
       // Webhook de evento de grupo
       switch (body.event) {
         case 'group.join_request':
+          if (body.data) {
           await handleJoinRequest(supabase, instance.user_id, body.data)
+          }
           break
         
         case 'group.participant_added':
+          if (body.data) {
           await handleParticipantAdded(supabase, instance.user_id, body.data)
+          }
           break
         
         case 'group.participant_removed':
+          if (body.data) {
           await handleParticipantRemoved(supabase, instance.user_id, body.data)
+          }
           break
         
         case 'group.admin_promoted':
+          if (body.data) {
           await handleAdminPromoted(supabase, instance.user_id, body.data)
+          }
           break
         
         case 'group.admin_demoted':
+          if (body.data) {
           await handleAdminDemoted(supabase, instance.user_id, body.data)
+          }
           break
         
         case 'group.updated':
+          if (body.data) {
           await handleGroupUpdated(supabase, instance.user_id, body.data)
+          }
           break
         
         default:
@@ -330,7 +348,7 @@ async function handleReceivedMessage(
 
     // Se for uma mensagem de grupo, verificar se o grupo existe no nosso sistema
     if (data.isGroup && data.phone && data.participantPhone && data.text?.message) {
-      const { data: group, error: groupError } = await supabase
+      let { data: group, error: groupError } = await supabase
         .from('whatsapp_groups')
         .select('*')
         .eq('whatsapp_id', data.phone)
@@ -400,7 +418,7 @@ async function handleReceivedMessage(
 async function handleJoinRequest(
   supabase: any,
   userId: string,
-  data: ZApiWebhookData['data']
+  data: NonNullable<ZApiWebhookData['data']>
 ) {
   try {
     if (!data.groupId || !data.participant) {
@@ -409,7 +427,7 @@ async function handleJoinRequest(
     }
 
     // Buscar dados do grupo
-    const { data: group, error: groupError } = await supabase
+    let { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('whatsapp_id', data.groupId)
@@ -483,7 +501,7 @@ async function handleParticipantAdded(
     }
 
     // Buscar dados do grupo
-    const { data: group, error: groupError } = await supabase
+    let { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('whatsapp_id', data.phone)
@@ -522,7 +540,7 @@ async function handleParticipantAdded(
     const addResult = await addGroupParticipant(
       group.id, 
       participantPhone, 
-      data.senderName || null, 
+      data.senderName || undefined, 
       false, // isAdmin
       false  // isSuperAdmin
     )
@@ -530,7 +548,7 @@ async function handleParticipantAdded(
     if (addResult.success) {
       console.log('✅ PARTICIPANTE ADICIONADO COM SUCESSO à tabela group_participants:', participantPhone)
       console.log('🔄 TRIGGER DEVE ATUALIZAR participant_count automaticamente')
-    } else {
+      } else {
       console.error('❌ ERRO ao adicionar participante à tabela group_participants:', addResult.error)
     }
 
@@ -577,7 +595,7 @@ async function handleParticipantAdded(
 async function handleParticipantRemoved(
   supabase: any,
   userId: string,
-  data: ZApiWebhookData['data']
+  data: NonNullable<ZApiWebhookData['data']>
 ) {
   try {
     if (!data.groupId || !data.participant) {
@@ -586,7 +604,7 @@ async function handleParticipantRemoved(
     }
 
     // Buscar dados do grupo
-    const { data: group, error: groupError } = await supabase
+    let { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('whatsapp_id', data.groupId)
@@ -601,7 +619,7 @@ async function handleParticipantRemoved(
     // Atualizar lista de participantes no banco (remover o participante)
     const currentParticipants = group.participants || []
     if (currentParticipants.includes(data.participant)) {
-      const updatedParticipants = currentParticipants.filter(p => p !== data.participant)
+      const updatedParticipants = currentParticipants.filter((p: string) => p !== data.participant)
       
       const { error: updateError } = await supabase
         .from('whatsapp_groups')
@@ -650,7 +668,7 @@ async function handleParticipantRemoved(
 async function handleAdminPromoted(
   supabase: any,
   userId: string,
-  data: ZApiWebhookData['data']
+  data: NonNullable<ZApiWebhookData['data']>
 ) {
   try {
     if (!data.groupId || !data.participant) {
@@ -659,7 +677,7 @@ async function handleAdminPromoted(
     }
 
     // Buscar dados do grupo
-    const { data: group, error: groupError } = await supabase
+    let { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('whatsapp_id', data.groupId)
@@ -702,7 +720,7 @@ async function handleAdminPromoted(
 async function handleAdminDemoted(
   supabase: any,
   userId: string,
-  data: ZApiWebhookData['data']
+  data: NonNullable<ZApiWebhookData['data']>
 ) {
   try {
     if (!data.groupId || !data.participant) {
@@ -711,7 +729,7 @@ async function handleAdminDemoted(
     }
 
     // Buscar dados do grupo
-    const { data: group, error: groupError } = await supabase
+    let { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('whatsapp_id', data.groupId)
@@ -754,7 +772,7 @@ async function handleAdminDemoted(
 async function handleGroupUpdated(
   supabase: any,
   userId: string,
-  data: ZApiWebhookData['data']
+  data: NonNullable<ZApiWebhookData['data']>
 ) {
   try {
     if (!data.groupId) {
@@ -763,7 +781,7 @@ async function handleGroupUpdated(
     }
 
     // Buscar dados do grupo
-    const { data: group, error: groupError } = await supabase
+    let { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('whatsapp_id', data.groupId)
@@ -802,111 +820,6 @@ async function handleGroupUpdated(
   }
 }
 
-// Remover participante do grupo via Z-API
-async function removeParticipantFromGroup(
-  groupId: string,
-  participantPhone: string,
-  userId: string,
-  supabase: any
-) {
-  try {
-    console.log('🚫 Removendo participante do grupo:', { groupId, participantPhone })
-
-    // Buscar instância Z-API ativa
-    const { data: zApiInstance, error: instanceError } = await supabase
-      .from('z_api_instances')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single()
-
-    if (instanceError || !zApiInstance) {
-      console.error('❌ Instância Z-API não encontrada para remoção:', instanceError)
-      return
-    }
-
-    // Fazer requisição para remover participante
-    const response = await fetch(
-      `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/remove-participant`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Client-Token': zApiInstance.client_token || '',
-        },
-        body: JSON.stringify({
-          groupId: groupId,
-          phone: participantPhone
-        })
-      }
-    )
-
-    const result = await response.json()
-    
-    if (response.ok && result.value) {
-      console.log('✅ Participante removido com sucesso do grupo:', participantPhone)
-    } else {
-      console.error('❌ Erro ao remover participante:', result)
-    }
-
-  } catch (error) {
-    console.error('❌ Erro ao remover participante do grupo:', error)
-  }
-}
-
-// Enviar mensagem de banimento para o contato
-async function sendBanMessage(
-  participantPhone: string,
-  userId: string,
-  supabase: any
-) {
-  try {
-    console.log('📱 Enviando mensagem de banimento para:', participantPhone)
-
-    // Buscar instância Z-API ativa
-    const { data: zApiInstance, error: instanceError } = await supabase
-      .from('z_api_instances')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .single()
-
-    if (instanceError || !zApiInstance) {
-      console.error('❌ Instância Z-API não encontrada para envio de mensagem:', instanceError)
-      return
-    }
-
-    // Mensagem de banimento
-    const banMessage = "Você está banido dos grupos do WhatsApp. Contate o administrador para mais informações: (45) 91284-3589"
-
-    // Fazer requisição para enviar mensagem
-    const response = await fetch(
-      `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/send-text`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Client-Token': zApiInstance.client_token || '',
-        },
-        body: JSON.stringify({
-          phone: participantPhone,
-          message: banMessage
-        })
-      }
-    )
-
-    const result = await response.json()
-    
-    if (response.ok && result.value) {
-      console.log('✅ Mensagem de banimento enviada com sucesso para:', participantPhone)
-    } else {
-      console.error('❌ Erro ao enviar mensagem de banimento:', result)
-    }
-
-  } catch (error) {
-    console.error('❌ Erro ao enviar mensagem de banimento:', error)
-  }
-}
 
 // Função para disparar notificações em tempo real
 async function triggerRealtimeNotification(
