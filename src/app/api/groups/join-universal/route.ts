@@ -148,26 +148,34 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      // Tentar diferentes nomes para contornar validação da Z-API
-      let cleanGroupName = simpleName.trim().replace(/[^\w\s-]/g, '') // Remover caracteres especiais
+      // Tentar diferentes estratégias de nome para contornar validação da Z-API
+      let cleanGroupName = ''
       
-      // Se o nome for muito genérico, usar alternativa
-      if (cleanGroupName === 'Grupo' || cleanGroupName.length < 3) {
-        cleanGroupName = `${familyName} ${newGroupNumber}`.trim().replace(/[^\w\s-]/g, '')
-        console.log(`🔄 JOIN-UNIVERSAL: Nome muito genérico, usando alternativa: "${cleanGroupName}"`)
-      }
+      // Estratégia 1: Nome da família + número
+      cleanGroupName = `${familyName} ${newGroupNumber}`.trim().replace(/[^\w\s-]/g, '')
+      console.log(`🎯 JOIN-UNIVERSAL: Estratégia 1 - Nome da família: "${cleanGroupName}"`)
       
-      // Se ainda for muito curto, usar nome completo
-      if (cleanGroupName.length < 3) {
+      // Estratégia 2: Se muito curto, usar nome completo
+      if (cleanGroupName.length < 5) {
         cleanGroupName = `Grupo ${familyName} ${newGroupNumber}`.trim().replace(/[^\w\s-]/g, '')
-        console.log(`🔄 JOIN-UNIVERSAL: Nome ainda muito curto, usando nome completo: "${cleanGroupName}"`)
+        console.log(`🎯 JOIN-UNIVERSAL: Estratégia 2 - Nome completo: "${cleanGroupName}"`)
       }
       
-      // Garantir que o nome não esteja vazio
-      if (!cleanGroupName || cleanGroupName.trim() === '') {
-        cleanGroupName = `Grupo ${familyName} ${newGroupNumber}`
-        console.log(`🆘 JOIN-UNIVERSAL: Nome vazio, usando fallback: "${cleanGroupName}"`)
+      // Estratégia 3: Se ainda problemático, usar nome simples
+      if (cleanGroupName.length < 3 || cleanGroupName === 'Grupo') {
+        cleanGroupName = `Grupo${newGroupNumber}`.trim()
+        console.log(`🎯 JOIN-UNIVERSAL: Estratégia 3 - Nome simples: "${cleanGroupName}"`)
       }
+      
+      // Estratégia 4: Fallback final garantido
+      if (!cleanGroupName || cleanGroupName.trim() === '') {
+        cleanGroupName = `Grupo${newGroupNumber}`
+        console.log(`🆘 JOIN-UNIVERSAL: Estratégia 4 - Fallback final: "${cleanGroupName}"`)
+      }
+      
+      // Garantir que o nome seja válido
+      cleanGroupName = cleanGroupName.trim()
+      console.log(`✅ JOIN-UNIVERSAL: Nome final escolhido: "${cleanGroupName}"`)
       
       const createGroupPayload = {
         name: cleanGroupName,
@@ -176,8 +184,18 @@ export async function POST(request: NextRequest) {
         participants: [adminPhoneNumber]
       }
       
+      // Validação final do nome
+      if (!cleanGroupName || cleanGroupName.trim() === '' || cleanGroupName.length < 2) {
+        console.error(`❌ JOIN-UNIVERSAL: Nome inválido após todas as estratégias: "${cleanGroupName}"`)
+        return NextResponse.json(
+          { error: 'Não foi possível gerar um nome válido para o grupo' },
+          { status: 400 }
+        )
+      }
+      
       console.log(`🧹 JOIN-UNIVERSAL: Nome limpo: "${cleanGroupName}"`)
       console.log(`📝 JOIN-UNIVERSAL: Descrição: "${createGroupPayload.description}"`)
+      console.log(`🔍 JOIN-UNIVERSAL: Tamanho do nome: ${cleanGroupName.length} caracteres`)
       
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
       console.log(`🔗 JOIN-UNIVERSAL: URL: https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`)
