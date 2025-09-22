@@ -138,49 +138,55 @@ export async function POST(request: NextRequest) {
         return cleaned
       }
       
-      const normalizedAdminPhone = normalizePhoneForZApi(adminPhoneNumber)
+      // Normalizar todos os números do grupo original
+      const normalizedParticipants = firstGroup.participants.map(phone => normalizePhoneForZApi(phone))
+      console.log(`📱 JOIN-UNIVERSAL: Participantes normalizados:`, normalizedParticipants)
       
-      // Declarar variável participants no escopo correto
-      let participants: string[] = []
+      // Verificar quais números existem no WhatsApp
+      const validParticipants: string[] = []
       
-      // Verificar se o número existe no WhatsApp antes de criar o grupo
-      console.log(`🔍 JOIN-UNIVERSAL: Verificando se o número ${normalizedAdminPhone} existe no WhatsApp...`)
-      
-      try {
-        const phoneExistsResponse = await fetch(
-          `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/phone-exists/${normalizedAdminPhone}`,
-          {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Client-Token': zApiInstance.client_token || '',
+      for (const phone of normalizedParticipants) {
+        try {
+          console.log(`🔍 JOIN-UNIVERSAL: Verificando se o número ${phone} existe no WhatsApp...`)
+          
+          const phoneExistsResponse = await fetch(
+            `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/phone-exists/${phone}`,
+            {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Client-Token': zApiInstance.client_token || '',
+              }
             }
+          )
+          
+          const phoneExistsResult = await phoneExistsResponse.json()
+          console.log(`📱 JOIN-UNIVERSAL: Resultado para ${phone}:`, phoneExistsResult)
+          
+          if (phoneExistsResult.exists) {
+            validParticipants.push(phone)
+            console.log(`✅ JOIN-UNIVERSAL: Número ${phone} existe no WhatsApp`)
+          } else {
+            console.warn(`⚠️ JOIN-UNIVERSAL: Número ${phone} não existe no WhatsApp`)
           }
-        )
-        
-        const phoneExistsResult = await phoneExistsResponse.json()
-        console.log(`📱 JOIN-UNIVERSAL: Resultado da verificação de existência:`, phoneExistsResult)
-        
-        if (!phoneExistsResult.exists) {
-          console.warn(`⚠️ JOIN-UNIVERSAL: Número ${normalizedAdminPhone} não existe no WhatsApp`)
-          // Usar um número de fallback que sabemos que funciona
-          const fallbackPhone = '554599854508'
-          console.log(`🔄 JOIN-UNIVERSAL: Usando número de fallback: ${fallbackPhone}`)
-          participants = [fallbackPhone]
-        } else {
-          console.log(`✅ JOIN-UNIVERSAL: Número ${normalizedAdminPhone} existe no WhatsApp`)
-          participants = [normalizedAdminPhone]
+        } catch (phoneCheckError) {
+          console.error(`❌ JOIN-UNIVERSAL: Erro ao verificar ${phone}:`, phoneCheckError)
         }
-      } catch (phoneCheckError) {
-        console.error(`❌ JOIN-UNIVERSAL: Erro ao verificar existência do número:`, phoneCheckError)
-        // Em caso de erro, usar o número normalizado mesmo assim
-        participants = [normalizedAdminPhone]
       }
       
-      console.log(`✅ JOIN-UNIVERSAL: Usando primeiro participante do grupo como admin: ${adminPhoneNumber}`)
-      console.log(`📱 JOIN-UNIVERSAL: Número normalizado para Z-API: ${normalizedAdminPhone}`)
+      // Se não temos participantes válidos, usar números de fallback
+      let participants: string[] = []
+      if (validParticipants.length > 0) {
+        participants = validParticipants.slice(0, 2) // Usar até 2 participantes válidos
+        console.log(`✅ JOIN-UNIVERSAL: Usando ${participants.length} participantes válidos:`, participants)
+      } else {
+        // Fallback para números que sabemos que funcionam
+        participants = ['554599854508', '5545984154115']
+        console.log(`🔄 JOIN-UNIVERSAL: Usando números de fallback:`, participants)
+      }
+      
       console.log(`📱 JOIN-UNIVERSAL: Participantes do grupo original:`, firstGroup.participants)
-      console.log(`📱 JOIN-UNIVERSAL: Participantes finais:`, participants)
+      console.log(`📱 JOIN-UNIVERSAL: Participantes finais para criação:`, participants)
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
