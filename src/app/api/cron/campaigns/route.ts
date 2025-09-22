@@ -3,10 +3,13 @@ import { CampaignScheduler } from '@/lib/campaign-scheduler';
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('🕐 Iniciando verificação de campanhas agendadas...');
+    console.log('🕐 [CRON] Iniciando verificação de campanhas agendadas...');
+    console.log('🕐 [CRON] Timestamp:', new Date().toISOString());
 
     const scheduler = new CampaignScheduler();
     await scheduler.checkAndExecuteScheduledCampaigns();
+
+    console.log('✅ [CRON] Verificação de campanhas concluída');
 
     return NextResponse.json({
       success: true,
@@ -15,7 +18,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('❌ Erro no cron job de campanhas:', error);
+    console.error('❌ [CRON] Erro no cron job de campanhas:', error);
     return NextResponse.json({
       success: false,
       error: 'Erro interno do servidor',

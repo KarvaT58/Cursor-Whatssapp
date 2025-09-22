@@ -35,7 +35,7 @@ export class CampaignScheduler {
    */
   async checkAndExecuteScheduledCampaigns(): Promise<void> {
     try {
-      console.log('🕐 Verificando campanhas agendadas...');
+      console.log('🕐 [SCHEDULER] Verificando campanhas agendadas...');
 
       // Usar timezone do Brasil para verificação
       const { getCurrentBrazilTimeString, getCurrentBrazilDateString, logBrazilTime } = await import('@/lib/timezone');
@@ -45,11 +45,12 @@ export class CampaignScheduler {
       const now = new Date();
       const currentDay = now.getDay() === 0 ? 7 : now.getDay(); // Domingo = 7, Segunda = 1, etc.
 
-      logBrazilTime(`📅 Data atual: ${currentDate}`);
-      logBrazilTime(`⏰ Hora atual: ${currentTime}`);
-      logBrazilTime(`📆 Dia da semana: ${currentDay}`);
+      logBrazilTime(`📅 [SCHEDULER] Data atual: ${currentDate}`);
+      logBrazilTime(`⏰ [SCHEDULER] Hora atual: ${currentTime}`);
+      logBrazilTime(`📆 [SCHEDULER] Dia da semana: ${currentDay}`);
 
       // Buscar campanhas ativas com agendamentos
+      console.log('🔍 [SCHEDULER] Buscando campanhas ativas...');
       const { data: campaigns, error } = await this.supabase
         .from('campaigns')
         .select(`
@@ -66,23 +67,30 @@ export class CampaignScheduler {
         .eq('status', 'active');
 
       if (error) {
-        console.error('❌ Erro ao buscar campanhas:', error);
+        console.error('❌ [SCHEDULER] Erro ao buscar campanhas:', error);
         return;
       }
 
       if (!campaigns || campaigns.length === 0) {
-        console.log('ℹ️ Nenhuma campanha ativa encontrada');
+        console.log('ℹ️ [SCHEDULER] Nenhuma campanha ativa encontrada');
         return;
       }
 
-      console.log(`📊 Encontradas ${campaigns.length} campanhas ativas`);
+      console.log(`📊 [SCHEDULER] Encontradas ${campaigns.length} campanhas ativas`);
+      
+      // Log detalhado de cada campanha
+      for (const campaign of campaigns) {
+        console.log(`📋 [SCHEDULER] Campanha: ${campaign.name} (${campaign.id})`);
+        console.log(`📋 [SCHEDULER] Status: ${campaign.status}`);
+        console.log(`📋 [SCHEDULER] Agendamentos: ${campaign.campaign_schedules?.length || 0}`);
+      }
 
       for (const campaign of campaigns) {
         await this.processCampaign(campaign, currentTime, currentDay);
       }
 
     } catch (error) {
-      console.error('❌ Erro no scheduler:', error);
+      console.error('❌ [SCHEDULER] Erro no scheduler:', error);
     }
   }
 
