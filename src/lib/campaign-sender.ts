@@ -347,6 +347,7 @@ export class CampaignSender {
       })) || [];
 
       // Buscar mensagens variáveis
+      console.log(`🔍 Buscando mensagens para campanha ${campaignId}...`);
       const { data: messages, error: messagesError } = await this.supabase
         .from('campaign_messages')
         .select('*')
@@ -355,11 +356,22 @@ export class CampaignSender {
         .order('message_order');
 
       if (messagesError) {
-        console.error('Erro ao buscar mensagens:', messagesError);
+        console.error('❌ Erro ao buscar mensagens:', messagesError);
         return null;
       }
 
+      console.log(`📝 Mensagens encontradas: ${messages?.length || 0}`);
+      if (messages && messages.length > 0) {
+        console.log(`📝 Detalhes das mensagens:`, messages.map(m => ({
+          id: m.id,
+          order: m.message_order,
+          text: m.message_text,
+          active: m.is_active
+        })));
+      }
+
       // Buscar mídias
+      console.log(`🔍 Buscando mídias para campanha ${campaignId}...`);
       const { data: media, error: mediaError } = await this.supabase
         .from('campaign_media')
         .select('*')
@@ -368,8 +380,20 @@ export class CampaignSender {
         .order('media_order');
 
       if (mediaError) {
-        console.error('Erro ao buscar mídias:', mediaError);
+        console.error('❌ Erro ao buscar mídias:', mediaError);
         return null;
+      }
+
+      console.log(`📎 Mídias encontradas: ${media?.length || 0}`);
+      if (media && media.length > 0) {
+        console.log(`📎 Detalhes das mídias:`, media.map(m => ({
+          id: m.id,
+          type: m.media_type,
+          name: m.media_name,
+          order: m.media_order,
+          active: m.is_active,
+          url: m.media_url
+        })));
       }
 
       return {
