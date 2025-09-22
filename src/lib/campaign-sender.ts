@@ -167,25 +167,6 @@ export class CampaignSender {
             }
           }
 
-          // Enviar mensagem principal se existir
-          if (campaign.message) {
-            const messageResult = await this.sendMessage(
-              instance,
-              group.whatsapp_id,
-              campaign.message,
-              'text'
-            );
-
-            if (messageResult.success) {
-              await this.logSend(campaignId, group.id, null, null, 'sent', messageResult.messageId);
-              totalSent++;
-            } else {
-              await this.logSend(campaignId, group.id, null, null, 'failed', null, messageResult.error);
-              totalFailed++;
-              errors.push(`Grupo ${group.name}: ${messageResult.error}`);
-            }
-          }
-
           // Determinar qual variante enviar para este grupo (distribuição cíclica)
           const activeMessages = messages.filter(m => m.is_active);
           
@@ -195,21 +176,36 @@ export class CampaignSender {
             
             console.log(`🔄 Grupo ${i + 1}/${groups.length} (${group.name}) → Variante ${variantIndex + 1} (Mensagem ${variantMessage.message_order})`);
 
-            // Enviar mensagem da variante específica
-            const messageResult = await this.sendMessage(
-              instance,
-              group.whatsapp_id,
-              variantMessage.message_text,
-              'text'
-            );
+            // Combinar mensagem principal com mensagem variável
+            let combinedMessage = '';
+            if (campaign.message) {
+              combinedMessage += campaign.message;
+            }
+            if (variantMessage.message_text) {
+              if (combinedMessage) {
+                combinedMessage += '\n\n' + variantMessage.message_text;
+              } else {
+                combinedMessage = variantMessage.message_text;
+              }
+            }
 
-            if (messageResult.success) {
-              await this.logSend(campaignId, group.id, variantMessage.id, null, 'sent', messageResult.messageId);
-              totalSent++;
-            } else {
-              await this.logSend(campaignId, group.id, variantMessage.id, null, 'failed', null, messageResult.error);
-              totalFailed++;
-              errors.push(`Grupo ${group.name} - Mensagem ${variantMessage.message_order}: ${messageResult.error}`);
+            // Enviar mensagem combinada se houver texto
+            if (combinedMessage.trim()) {
+              const messageResult = await this.sendMessage(
+                instance,
+                group.whatsapp_id,
+                combinedMessage,
+                'text'
+              );
+
+              if (messageResult.success) {
+                await this.logSend(campaignId, group.id, variantMessage.id, null, 'sent', messageResult.messageId);
+                totalSent++;
+              } else {
+                await this.logSend(campaignId, group.id, variantMessage.id, null, 'failed', null, messageResult.error);
+                totalFailed++;
+                errors.push(`Grupo ${group.name} - Mensagem ${variantMessage.message_order}: ${messageResult.error}`);
+              }
             }
 
             // Enviar mídias da variante específica
@@ -234,8 +230,25 @@ export class CampaignSender {
                 errors.push(`Grupo ${group.name} - Mídia ${mediaItem.media_name}: ${mediaResult.error}`);
               }
             }
+          } else if (campaign.message) {
+            // Se não há mensagens variáveis, enviar apenas a mensagem principal
+            const messageResult = await this.sendMessage(
+              instance,
+              group.whatsapp_id,
+              campaign.message,
+              'text'
+            );
+
+            if (messageResult.success) {
+              await this.logSend(campaignId, group.id, null, null, 'sent', messageResult.messageId);
+              totalSent++;
+            } else {
+              await this.logSend(campaignId, group.id, null, null, 'failed', null, messageResult.error);
+              totalFailed++;
+              errors.push(`Grupo ${group.name}: ${messageResult.error}`);
+            }
           } else {
-            console.log(`⚠️ Nenhuma mensagem variável ativa encontrada para o grupo ${group.name}`);
+            console.log(`⚠️ Nenhuma mensagem ativa encontrada para o grupo ${group.name}`);
           }
 
         } catch (error) {
@@ -450,18 +463,25 @@ export class CampaignSender {
       // Determinar método baseado no tipo de mídia
       switch (media.media_type) {
         case 'image':
+          console.log(`📎 Enviando imagem: ${fullMediaUrl}`);
           result = await zApiClient.sendImageMessage(groupId, '', fullMediaUrl);
           break;
         case 'video':
+          console.log(`📎 Enviando vídeo: ${fullMediaUrl}`);
           result = await zApiClient.sendVideoMessage(groupId, fullMediaUrl);
           break;
         case 'audio':
-          result = await zApiClient.sendAudioMessage(groupId, fullMediaUrl);
+          console.log(`📎 Enviando áudio: ${fullMediaUrl}`);
+          console.log(`📎 Nome do arquivo: ${media.media_name}`);
+          console.log(`📎 MIME type: ${media.media_mime_type}`);
+          result = await zApiClient.sendAudioMessage(groupId, fullMediaUrl, media.media_name);
           break;
         case 'document':
+          console.log(`📎 Enviando documento: ${fullMediaUrl}`);
           result = await zApiClient.sendDocumentMessage(groupId, '', fullMediaUrl, media.media_name);
           break;
         default:
+          console.log(`📎 Tipo de mídia não suportado: ${media.media_type}`);
           return { success: false, error: 'Tipo de mídia não suportado' };
       }
       

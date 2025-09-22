@@ -126,6 +126,11 @@ export async function POST(request: NextRequest) {
         console.log('🎯 WEBHOOK: Participante adicionado ao grupo - Notification:', body.notification)
         console.log('📊 WEBHOOK: Dados completos do webhook:', JSON.stringify(body, null, 2))
         await handleParticipantAdded(supabase, instance.user_id, body)
+      } else if (body.fromMe === true) {
+        // CORRIGIDO: Ignorar webhooks de mensagens enviadas por nós mesmos
+        console.log('📤 WEBHOOK: Mensagem enviada por nós mesmos - ignorando')
+        console.log('📤 Status:', body.status, 'MessageId:', body.messageId)
+        // Não processar mensagens que enviamos
       } else {
         console.log('💬 WEBHOOK: Mensagem recebida normal')
         // Webhook de mensagem recebida normal
