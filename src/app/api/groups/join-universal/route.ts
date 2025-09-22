@@ -110,10 +110,22 @@ export async function POST(request: NextRequest) {
         client_token: zApiInstance.client_token ? 'Presente' : 'Ausente'
       })
 
-      // Usar número do telefone da instância ou fallback para número padrão
-      const adminPhoneNumber = zApiInstance.phone_number || '554584154115' // Número padrão do sistema
-
-      console.log(`📱 JOIN-UNIVERSAL: Usando número do telefone: ${adminPhoneNumber}`)
+      // PROBLEMA IDENTIFICADO: Z-API pode estar validando se o número pertence à instância
+      console.log(`🔍 JOIN-UNIVERSAL: Investigando problema do número de telefone...`)
+      console.log(`📱 JOIN-UNIVERSAL: phone_number da instância: "${zApiInstance.phone_number}"`)
+      console.log(`📱 JOIN-UNIVERSAL: instance_id: "${zApiInstance.instance_id}"`)
+      console.log(`📱 JOIN-UNIVERSAL: instance_token: "${zApiInstance.instance_token}"`)
+      
+      // Se não tem phone_number configurado, vamos tentar sem participantes primeiro
+      let adminPhoneNumber = zApiInstance.phone_number
+      let participants = []
+      
+      if (adminPhoneNumber) {
+        participants = [adminPhoneNumber]
+        console.log(`✅ JOIN-UNIVERSAL: Usando número da instância: ${adminPhoneNumber}`)
+      } else {
+        console.log(`⚠️ JOIN-UNIVERSAL: Instância não tem phone_number configurado, tentando sem participantes`)
+      }
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
@@ -125,7 +137,7 @@ export async function POST(request: NextRequest) {
       const createGroupPayload = {
         name: newGroupName,
         description: firstGroup.description || `Grupo ${familyName}`,
-        participants: [adminPhoneNumber]
+        participants: participants
       }
 
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
@@ -198,7 +210,7 @@ export async function POST(request: NextRequest) {
           whatsapp_id: createGroupResult.groupId,
           invite_link: inviteLinkResult.link,
           description: firstGroup.description || `Grupo ${familyName}`,
-          participants: [adminPhoneNumber],
+          participants: participants,
           max_participants: MAX_PARTICIPANTS,
           group_family: familyId,
           user_id: firstGroup.user_id,
