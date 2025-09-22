@@ -38,7 +38,6 @@ export async function POST(request: NextRequest) {
       .from('whatsapp_groups')
       .select('*')
       .eq('group_family', familyId)
-      .eq('is_active', true)
       .order('created_at', { ascending: true })
 
     console.log('📊 JOIN-UNIVERSAL: Resultado da query:', { groups, groupsError })
@@ -165,7 +164,6 @@ export async function POST(request: NextRequest) {
           description: firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`,
           participants: [zApiInstance.phone_number],
           max_participants: firstGroup.max_participants || 256,
-          is_active: true,
           group_family: familyId,
           user_id: firstGroup.user_id,
           created_at: new Date().toISOString(),
