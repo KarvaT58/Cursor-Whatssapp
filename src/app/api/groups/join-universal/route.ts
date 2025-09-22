@@ -106,18 +106,14 @@ export async function POST(request: NextRequest) {
 
       console.log('📱 JOIN-UNIVERSAL: Instância Z-API encontrada:', {
         instance_id: zApiInstance.instance_id,
-        phone_number: zApiInstance.phone_number,
+        phone_number: zApiInstance.phone_number || 'Não configurado',
         client_token: zApiInstance.client_token ? 'Presente' : 'Ausente'
       })
 
-      // Verificar se o número do telefone está disponível
-      if (!zApiInstance.phone_number) {
-        console.error('❌ JOIN-UNIVERSAL: Número do telefone não encontrado na instância Z-API')
-        return NextResponse.json(
-          { error: 'Número do telefone não configurado na instância Z-API' },
-          { status: 500 }
-        )
-      }
+      // Usar número do telefone da instância ou fallback para número padrão
+      const adminPhoneNumber = zApiInstance.phone_number || '554584154115' // Número padrão do sistema
+      
+      console.log(`📱 JOIN-UNIVERSAL: Usando número do telefone: ${adminPhoneNumber}`)
 
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
@@ -143,17 +139,12 @@ export async function POST(request: NextRequest) {
         )
       }
       
-      // Usar número do telefone da instância ou fallback
-      const adminPhoneNumber = zApiInstance.phone_number || '554584154115' // Número padrão do sistema
-      
       const createGroupPayload = {
         name: newGroupName,
         description: firstGroup.description || `Grupo ${familyName} - Conecte-se com pessoas incríveis!`,
         // Adicionar o dono do grupo como primeiro participante
         participants: [adminPhoneNumber]
       }
-      
-      console.log(`📱 JOIN-UNIVERSAL: Usando número do telefone: ${adminPhoneNumber}`)
       
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
       console.log(`🔗 JOIN-UNIVERSAL: URL: https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/create-group`)
