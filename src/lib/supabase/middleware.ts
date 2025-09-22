@@ -41,7 +41,9 @@ export async function updateSession(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/auth') &&
-    !request.nextUrl.pathname.startsWith('/join/') // 🔓 Permitir acesso público às páginas de entrada em grupos
+    !request.nextUrl.pathname.startsWith('/join/') && // 🔓 Permitir acesso público às páginas de entrada em grupos
+    !request.nextUrl.pathname.startsWith('/api/groups/family/') && // 🔓 Permitir acesso público à API de família
+    !request.nextUrl.pathname.startsWith('/api/groups/join-universal') // 🔓 Permitir acesso público à API de join universal
   ) {
     // no user, potentially respond by redirecting the user to the login page
     const url = request.nextUrl.clone()
