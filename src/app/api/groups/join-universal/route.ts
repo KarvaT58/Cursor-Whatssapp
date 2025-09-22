@@ -250,6 +250,7 @@ export async function POST(request: NextRequest) {
         return match ? parseInt(match[1]) : 0
       }).filter(num => num > 0)
       
+      // Se não há números nos nomes, começar do 2 (primeiro grupo não tem número)
       const newGroupNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 2
       
       // Nome do novo grupo baseado na família
@@ -257,6 +258,8 @@ export async function POST(request: NextRequest) {
       
       console.log(`🔢 JOIN-UNIVERSAL: Números existentes: [${existingNumbers.join(', ')}]`)
       console.log(`🔢 JOIN-UNIVERSAL: Próximo número: ${newGroupNumber}`)
+      console.log(`🔍 JOIN-UNIVERSAL: familyName recebido: "${familyName}"`)
+      console.log(`🔍 JOIN-UNIVERSAL: firstGroup.family_name: "${firstGroup.family_name}"`)
       
       console.log(`🏗️ JOIN-UNIVERSAL: Nome do novo grupo: "${newGroupName}"`)
       console.log(`🏗️ JOIN-UNIVERSAL: Tamanho do nome: ${newGroupName.length} caracteres`)
