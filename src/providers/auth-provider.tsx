@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, []) // Empty dependency array to run only once
 
   // Prevent hydration mismatch by not rendering until mounted
   if (!mounted) {

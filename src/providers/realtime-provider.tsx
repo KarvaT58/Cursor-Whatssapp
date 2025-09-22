@@ -70,9 +70,37 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const delay = reconnectDelay * Math.pow(2, reconnectAttempts)
 
     reconnectTimeoutRef.current = setTimeout(() => {
-      checkConnection()
+      // Call checkConnection directly to avoid circular dependency
+      const checkConnectionDirect = async () => {
+        try {
+          setConnectionStatus('connecting')
+          const { error } = await supabase
+            .from('whatsapp_messages')
+            .select('id')
+            .limit(1)
+
+          if (!error) {
+            setIsConnected(true)
+            setConnectionStatus('connected')
+            setLastConnectedAt(new Date())
+            setReconnectAttempts(0)
+            console.log('Realtime conectado com sucesso')
+          } else {
+            throw new Error(error.message)
+          }
+        } catch (error) {
+          console.error('Erro ao verificar conexão Realtime:', error)
+          setIsConnected(false)
+          setConnectionStatus('disconnected')
+          // Recursive call for retry
+          if (reconnectAttempts < maxReconnectAttempts) {
+            reconnect()
+          }
+        }
+      }
+      checkConnectionDirect()
     }, delay)
-  }, [reconnectAttempts])
+  }, [reconnectAttempts, supabase])
 
   const checkConnection = useCallback(async () => {
     try {
@@ -95,9 +123,10 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       console.error('Erro ao verificar conexão Realtime:', error)
       setIsConnected(false)
       setConnectionStatus('disconnected')
-      reconnect()
+      // Don't call reconnect here to avoid circular dependency
+      // The reconnect will be handled by the useEffect
     }
-  }, [reconnect])
+  }, [supabase])
 
   useEffect(() => {
     setMounted(true)
@@ -151,7 +180,7 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
       // Limpar todos os canais ao desmontar
       channels.forEach((channel) => channel.unsubscribe())
     }
-  }, [supabase.auth]) // Remove problematic dependencies
+  }, []) // Empty dependency array to run only once
 
   const subscribe = (
     table: string,

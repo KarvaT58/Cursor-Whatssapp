@@ -2,7 +2,6 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  console.log('🔍 [MIDDLEWARE] Iniciando middleware para:', request.nextUrl.pathname)
   
   let supabaseResponse = NextResponse.next({
     request,
@@ -39,7 +38,6 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
   
-  console.log('🔍 [MIDDLEWARE] Usuário encontrado:', user ? `${user.email} (${user.id})` : 'NENHUM')
 
   if (
     !user &&
@@ -50,22 +48,18 @@ export async function updateSession(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/api/groups/join-universal') && // 🔓 Permitir acesso público à API de join universal
     !request.nextUrl.pathname.startsWith('/api/cron') // 🔓 Permitir acesso público às rotas de cron
   ) {
-    console.log('🔍 [MIDDLEWARE] Usuário não autenticado, verificando tipo de rota:', request.nextUrl.pathname)
     
     // Para rotas de API, retornar 401 em vez de redirecionar
     if (request.nextUrl.pathname.startsWith('/api/')) {
-      console.log('🔍 [MIDDLEWARE] Retornando 401 para API:', request.nextUrl.pathname)
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
     
     // Para páginas, redirecionar para login
-    console.log('🔍 [MIDDLEWARE] Redirecionando para login:', request.nextUrl.pathname)
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
   
-  console.log('🔍 [MIDDLEWARE] Permitindo acesso para:', request.nextUrl.pathname)
 
   // IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
   // creating a new response object with NextResponse.next() make sure to:
