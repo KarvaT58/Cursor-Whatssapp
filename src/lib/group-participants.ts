@@ -27,46 +27,54 @@ export async function addGroupParticipant(
   try {
     const supabase = await createClient()
     
-    // Primeiro, verificar se o participante já existe (ativo ou inativo)
-    const { data: existingParticipant, error: checkError } = await supabase
+    // Primeiro, verificar se o participante já existe ATIVO
+    const { data: existingActiveParticipant, error: checkActiveError } = await supabase
       .from('group_participants')
       .select('id, is_active')
       .eq('group_id', groupId)
       .eq('participant_phone', participantPhone)
+      .eq('is_active', true)
       .single()
 
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error('❌ Erro ao verificar participante existente:', checkError)
-      return { success: false, error: checkError.message }
+    // Se já existe ativo, retornar sucesso
+    if (existingActiveParticipant && !checkActiveError) {
+      console.log(`⚠️ Participante ${participantPhone} já está ativo no grupo ${groupId}`)
+      return { success: true } // Considerar sucesso se já está ativo
     }
 
-    if (existingParticipant) {
-      if (existingParticipant.is_active) {
-        console.log(`⚠️ Participante ${participantPhone} já está ativo no grupo ${groupId}`)
-        return { success: true } // Considerar sucesso se já está ativo
-      } else {
-        // Participante existe mas está inativo, reativar
-        console.log(`🔄 Reativando participante ${participantPhone} no grupo ${groupId}`)
-        const { error: updateError } = await supabase
-          .from('group_participants')
-          .update({
-            is_active: true,
-            participant_name: participantName,
-            is_admin: isAdmin,
-            is_super_admin: isSuperAdmin,
-            joined_at: new Date().toISOString(),
-            left_at: null
-          })
-          .eq('id', existingParticipant.id)
+    // Verificar se existe inativo para reativar
+    const { data: existingInactiveParticipant, error: checkInactiveError } = await supabase
+      .from('group_participants')
+      .select('id, is_active')
+      .eq('group_id', groupId)
+      .eq('participant_phone', participantPhone)
+      .eq('is_active', false)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .single()
 
-        if (updateError) {
-          console.error('❌ Erro ao reativar participante:', updateError)
-          return { success: false, error: updateError.message }
-        }
+    // Se existe participante inativo, reativar o mais recente
+    if (existingInactiveParticipant && !checkInactiveError) {
+      console.log(`🔄 Reativando participante ${participantPhone} no grupo ${groupId}`)
+      const { error: updateError } = await supabase
+        .from('group_participants')
+        .update({
+          is_active: true,
+          participant_name: participantName,
+          is_admin: isAdmin,
+          is_super_admin: isSuperAdmin,
+          joined_at: new Date().toISOString(),
+          left_at: null
+        })
+        .eq('id', existingInactiveParticipant.id)
 
-        console.log(`✅ Participante ${participantPhone} reativado no grupo ${groupId}`)
-        return { success: true }
+      if (updateError) {
+        console.error('❌ Erro ao reativar participante:', updateError)
+        return { success: false, error: updateError.message }
       }
+
+      console.log(`✅ Participante ${participantPhone} reativado no grupo ${groupId}`)
+      return { success: true }
     }
 
     // Participante não existe, adicionar novo
