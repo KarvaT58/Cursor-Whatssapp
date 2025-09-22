@@ -35,27 +35,31 @@ export async function POST(request: NextRequest) {
     // 1. Buscar todos os grupos da família (usando nova estrutura unificada)
     console.log('🔍 JOIN-UNIVERSAL: Executando query no Supabase...')
     
-    // Primeiro tentar buscar por ID do grupo (familyId é um UUID)
+    // Buscar TODOS os grupos da família
+    // Primeiro tentar buscar por ID do grupo pai para obter o family_name correto
+    let { data: parentGroup, error: parentError } = await supabase
+      .from('whatsapp_groups')
+      .select('family_name')
+      .eq('id', familyId)
+      .eq('group_type', 'universal')
+      .single()
+
+    let actualFamilyName = familyName
+
+    if (parentGroup && parentGroup.family_name) {
+      actualFamilyName = parentGroup.family_name
+      console.log(`🔍 JOIN-UNIVERSAL: Grupo pai encontrado, family_name real: "${actualFamilyName}"`)
+    } else {
+      console.log(`🔍 JOIN-UNIVERSAL: Grupo pai não encontrado por ID, usando familyName fornecido: "${familyName}"`)
+    }
+
+    // Buscar TODOS os grupos da família usando o family_name correto
     let { data: groups, error: groupsError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('group_type', 'universal')
-      .eq('id', familyId)
+      .eq('family_name', actualFamilyName)
       .order('created_at', { ascending: true })
-
-    // Se não encontrar por ID, tentar buscar por family_name
-    if ((!groups || groups.length === 0) && familyName) {
-      console.log('🔍 JOIN-UNIVERSAL: Não encontrado por ID, tentando buscar por family_name...')
-      const { data: groupsByName, error: groupsErrorByName } = await supabase
-        .from('whatsapp_groups')
-        .select('*')
-        .eq('group_type', 'universal')
-        .eq('family_name', familyName)
-        .order('created_at', { ascending: true })
-      
-      groups = groupsByName
-      groupsError = groupsErrorByName
-    }
 
     console.log('📊 JOIN-UNIVERSAL: Resultado da query:', { groups, groupsError })
 
@@ -79,12 +83,12 @@ export async function POST(request: NextRequest) {
 
     // 2. Verificar se há vagas nos grupos existentes
     let availableGroup = null
-    const MAX_PARTICIPANTS = 3 // Limite para teste (mudar para 1024 em produção)
+    const firstGroup = groups[0]
+    const MAX_PARTICIPANTS = firstGroup.max_participants_per_group || 256 // Usar limite do grupo ou padrão 256
 
     console.log(`🔍 JOIN-UNIVERSAL: Verificando vagas com limite de ${MAX_PARTICIPANTS} participantes...`)
 
     // Buscar instância Z-API para verificação em tempo real
-    const firstGroup = groups[0]
     const { data: zApiInstance, error: instanceError } = await supabase
       .from('z_api_instances')
       .select('*')
