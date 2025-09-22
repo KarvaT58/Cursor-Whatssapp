@@ -430,53 +430,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Sistema de links universais - criar família de grupos
+    // Sistema de links universais - atualizar grupo com dados da família
     if (validatedData.enable_universal_link) {
-      console.log('🔗 Criando sistema de links universais para o grupo...')
+      console.log('🔗 Configurando grupo como universal...')
       try {
-        // 1. Criar família de grupos
-        const { data: family, error: familyError } = await supabase
-          .from('group_families')
-          .insert({
-            name: validatedData.name,
-            base_name: validatedData.name.toLowerCase().replace(/\s+/g, '-'),
-            current_groups: [group.id],
-            max_participants_per_group: 256,
-            total_participants: validatedData.participants?.length || 0,
-            system_phone: validatedData.system_phone || '554584154115',
-            user_id: user.id
-          })
-          .select()
-          .single()
-
-        if (familyError) {
-          console.error('❌ Erro ao criar família de grupos:', familyError)
-          throw familyError
-        }
-
-        console.log('✅ Família de grupos criada:', family.id)
-
-        // 2. Associar o grupo à família
+        // Atualizar o grupo com os dados da família diretamente
         const { error: updateError } = await supabase
           .from('whatsapp_groups')
-          .update({ group_family: family.id })
+          .update({ 
+            group_type: 'universal',
+            family_name: validatedData.name,
+            family_base_name: validatedData.name.toLowerCase().replace(/\s+/g, '-'),
+            max_participants_per_group: 256,
+            system_phone: validatedData.system_phone || '554584154115'
+          })
           .eq('id', group.id)
 
         if (updateError) {
-          console.error('❌ Erro ao associar grupo à família:', updateError)
+          console.error('❌ Erro ao configurar grupo como universal:', updateError)
           throw updateError
         }
 
-        console.log('✅ Grupo associado à família:', family.id)
-        console.log('🔗 Link universal disponível em: /join/' + family.id)
+        console.log('✅ Grupo configurado como universal')
+        console.log('🔗 Link universal disponível em: /join/' + group.id)
 
       } catch (linkError) {
-        console.error('❌ Erro ao criar sistema de links universais:', linkError)
+        console.error('❌ Erro ao configurar sistema de links universais:', linkError)
         // Não falhar a criação do grupo por causa do link universal
         console.warn('⚠️ Grupo criado mas sistema de links universais falhou')
       }
     } else {
-      console.log('ℹ️ Sistema de links universais não foi solicitado para este grupo')
+      console.log('ℹ️ Grupo criado como normal (não universal)')
     }
 
     // Retornar resposta baseada no resultado

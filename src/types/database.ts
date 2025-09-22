@@ -322,6 +322,12 @@ export interface Database {
           admin_only_add_member: boolean
           universal_link: string | null
           group_family: string | null
+          invite_link: string | null
+          group_type: string
+          family_name: string | null
+          family_base_name: string | null
+          max_participants_per_group: number | null
+          system_phone: string | null
         }
         Insert: {
           id?: string
@@ -339,6 +345,12 @@ export interface Database {
           admin_only_add_member?: boolean
           universal_link?: string | null
           group_family?: string | null
+          invite_link?: string | null
+          group_type?: string
+          family_name?: string | null
+          family_base_name?: string | null
+          max_participants_per_group?: number | null
+          system_phone?: string | null
         }
         Update: {
           id?: string
@@ -356,6 +368,12 @@ export interface Database {
           admin_only_add_member?: boolean
           universal_link?: string | null
           group_family?: string | null
+          invite_link?: string | null
+          group_type?: string
+          family_name?: string | null
+          family_base_name?: string | null
+          max_participants_per_group?: number | null
+          system_phone?: string | null
         }
       }
     }

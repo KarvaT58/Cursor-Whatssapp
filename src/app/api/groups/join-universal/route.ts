@@ -32,12 +32,13 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     console.log('✅ JOIN-UNIVERSAL: Cliente Supabase criado com sucesso')
 
-    // 1. Buscar todos os grupos da família
+    // 1. Buscar todos os grupos da família (usando nova estrutura unificada)
     console.log('🔍 JOIN-UNIVERSAL: Executando query no Supabase...')
     const { data: groups, error: groupsError } = await supabase
       .from('whatsapp_groups')
       .select('*')
-      .eq('group_family', familyId)
+      .eq('group_type', 'universal')
+      .eq('family_name', familyName)
       .order('created_at', { ascending: true })
 
     console.log('📊 JOIN-UNIVERSAL: Resultado da query:', { groups, groupsError })
@@ -242,7 +243,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Salvar novo grupo no banco de dados
+      // Salvar novo grupo no banco de dados (usando nova estrutura unificada)
       const { data: newGroup, error: saveError } = await supabase
         .from('whatsapp_groups')
         .insert({
@@ -256,7 +257,12 @@ export async function POST(request: NextRequest) {
           admin_only_settings: firstGroup.admin_only_settings,
           require_admin_approval: firstGroup.require_admin_approval,
           admin_only_add_member: firstGroup.admin_only_add_member,
-          group_family: familyId,
+          group_type: 'universal',
+          family_name: firstGroup.family_name,
+          family_base_name: firstGroup.family_base_name,
+          max_participants_per_group: firstGroup.max_participants_per_group,
+          system_phone: firstGroup.system_phone,
+          group_family: familyId, // Manter para compatibilidade
           user_id: firstGroup.user_id,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
