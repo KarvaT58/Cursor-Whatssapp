@@ -6,7 +6,6 @@ interface CampaignSchedule {
   campaign_id: string;
   schedule_name: string;
   start_time: string;
-  end_time: string;
   days_of_week: string;
   is_active: boolean;
 }
@@ -74,7 +73,6 @@ export class CampaignScheduler {
             id,
             schedule_name,
             start_time,
-            end_time,
             days_of_week,
             is_active
           )
