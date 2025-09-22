@@ -24,6 +24,12 @@ export async function POST(
     }
 
     // Buscar o grupo no banco de dados
+    console.log('🔍 Buscando grupo no banco:', {
+      groupId,
+      userId: user.id,
+      userEmail: user.email
+    })
+
     const { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
       .select('*')
@@ -32,7 +38,48 @@ export async function POST(
       .single()
 
     if (groupError || !group) {
-      console.error('❌ Grupo não encontrado:', groupError)
+      console.error('❌ Grupo não encontrado:', {
+        groupId,
+        userId: user.id,
+        error: groupError,
+        errorCode: groupError?.code,
+        errorMessage: groupError?.message
+      })
+
+      // Tentar buscar sem filtro de user_id para debug
+      console.log('🔍 Tentando buscar grupo sem filtro de user_id para debug...')
+      const { data: groupDebug, error: groupDebugError } = await supabase
+        .from('whatsapp_groups')
+        .select('id, name, user_id, whatsapp_id')
+        .eq('id', groupId)
+        .single()
+
+      if (groupDebug) {
+        console.log('🔍 Grupo encontrado sem filtro de user_id:', {
+          id: groupDebug.id,
+          name: groupDebug.name,
+          user_id: groupDebug.user_id,
+          whatsapp_id: groupDebug.whatsapp_id,
+          requestedUserId: user.id
+        })
+        
+        if (groupDebug.user_id !== user.id) {
+          console.error('❌ Grupo pertence a outro usuário:', {
+            groupUserId: groupDebug.user_id,
+            requestedUserId: user.id
+          })
+          return NextResponse.json(
+            { success: false, error: 'Você não tem permissão para sair deste grupo' },
+            { status: 403 }
+          )
+        }
+      } else {
+        console.error('❌ Grupo não existe no banco de dados:', {
+          groupId,
+          debugError: groupDebugError
+        })
+      }
+
       return NextResponse.json(
         { success: false, error: 'Grupo não encontrado' },
         { status: 404 }
