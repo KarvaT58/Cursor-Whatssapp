@@ -43,14 +43,7 @@ export async function GET() {
     // Buscar grupos do usuário com informações de família de grupos
     const { data: groups, error } = await supabase
       .from('whatsapp_groups')
-      .select(`
-        *,
-        group_families (
-          id,
-          name,
-          base_name
-        )
-      `)
+      .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
 
@@ -62,26 +55,14 @@ export async function GET() {
       )
     }
 
-    // Adicionar lógica para determinar o tipo de grupo automaticamente
-    const groupsWithType = (groups || []).map(group => {
-      // Determinar se é grupo universal ou normal baseado na presença de universal_link ou group_family
-      const isUniversal = !!(group.universal_link || group.group_family || group.group_families)
-      
-      return {
-        ...group,
-        group_type: isUniversal ? 'universal' : 'normal'
-      }
-    })
-
-    console.log('Grupos com tipos determinados:', groupsWithType.map(g => ({ 
+    // Os grupos já têm o campo group_type definido na nova estrutura
+    console.log('Grupos encontrados:', groups?.map(g => ({
       name: g.name, 
       group_type: g.group_type, 
-      has_universal_link: !!g.universal_link,
-      has_group_family: !!g.group_family,
-      has_group_families: !!g.group_families
+      family_name: g.family_name
     })))
 
-    return NextResponse.json(groupsWithType)
+    return NextResponse.json(groups || [])
   } catch (error) {
     console.error('=== ERRO NA API DE GRUPOS ===')
     console.error('Tipo do erro:', typeof error)

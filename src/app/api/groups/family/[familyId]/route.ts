@@ -18,14 +18,17 @@ export async function GET(
     // Criar cliente Supabase
     const supabase = await createClient()
 
-    // Buscar dados da família
-    const { data: family, error: familyError } = await supabase
-      .from('group_families')
+    // Buscar dados da família usando a nova estrutura unificada
+    const { data: familyGroup, error: familyError } = await supabase
+      .from('whatsapp_groups')
       .select('*')
-      .eq('id', familyId)
+      .eq('group_type', 'universal')
+      .eq('family_name', familyId)
+      .order('created_at', { ascending: true })
+      .limit(1)
       .single()
 
-    if (familyError) {
+    if (familyError || !familyGroup) {
       console.error('Erro ao buscar família:', familyError)
       return NextResponse.json(
         { error: 'Família não encontrada' },
@@ -34,10 +37,10 @@ export async function GET(
     }
 
     return NextResponse.json({
-      id: family.id,
-      name: family.name,
-      description: family.description,
-      created_at: family.created_at
+      id: familyGroup.id,
+      name: familyGroup.family_name,
+      description: familyGroup.description,
+      created_at: familyGroup.created_at
     })
 
   } catch (error) {
