@@ -310,11 +310,16 @@ export async function POST(request: NextRequest) {
       }
 
       // Salvar novo grupo no banco de dados (usando nova estrutura unificada)
+      // IMPORTANTE: Usar o ID real do Z-API se disponível, senão usar temporário
+      const groupWhatsappId = createGroupResult.data.phone || `local_${Date.now()}`
+      
+      console.log(`💾 JOIN-UNIVERSAL: Salvando grupo com whatsapp_id: ${groupWhatsappId}`)
+      
       const { data: newGroup, error: saveError } = await supabase
         .from('whatsapp_groups')
         .insert({
           name: newGroupName,
-          whatsapp_id: createGroupResult.data.phone,
+          whatsapp_id: groupWhatsappId,
           invite_link: inviteLinkResult.data.invitationLink,
           description: firstGroup.description || `Grupo ${familyName}`,
           participants: participants,
@@ -345,8 +350,14 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${createGroupResult.data.phone})`)
+      console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${groupWhatsappId})`)
       console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${inviteLinkResult.data.invitationLink}`)
+      
+      // Se o grupo foi criado com ID temporário, aguardar o webhook para sincronizar o ID real
+      if (groupWhatsappId.startsWith('local_')) {
+        console.log(`⏳ JOIN-UNIVERSAL: Grupo criado com ID temporário, aguardando sincronização via webhook...`)
+        console.log(`🔍 JOIN-UNIVERSAL: O webhook irá atualizar o whatsapp_id quando o grupo for criado no WhatsApp`)
+      }
 
       // Adicionar participantes à tabela group_participants
       console.log(`👥 JOIN-UNIVERSAL: Adicionando participantes à tabela group_participants...`)
