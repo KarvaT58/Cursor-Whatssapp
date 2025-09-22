@@ -212,9 +212,16 @@ export class CampaignSender {
             const variantMedia = media.filter(m => m.is_active && m.media_order === variantMessage.message_order);
             
             console.log(`📎 Mídias encontradas para variante ${variantMessage.message_order}:`, variantMedia.length);
-            console.log(`📎 Todas as mídias disponíveis:`, media.map(m => ({ order: m.media_order, name: m.media_name, active: m.is_active })));
+            console.log(`📎 Todas as mídias disponíveis:`, media.map(m => ({ order: m.media_order, name: m.media_name, active: m.is_active, type: m.media_type })));
+            console.log(`📎 Mídias da variante específica:`, variantMedia.map(m => ({ name: m.media_name, type: m.media_type, url: m.media_url })));
+            
+            if (variantMedia.length === 0) {
+              console.log(`⚠️ Nenhuma mídia encontrada para variante ${variantMessage.message_order}`);
+            }
             
             for (const mediaItem of variantMedia) {
+              console.log(`📎 Iniciando envio de mídia: ${mediaItem.media_name} (${mediaItem.media_type})`);
+              
               const mediaResult = await this.sendMedia(
                 instance,
                 group.whatsapp_id,
@@ -222,9 +229,11 @@ export class CampaignSender {
               );
 
               if (mediaResult.success) {
+                console.log(`✅ Mídia ${mediaItem.media_name} enviada com sucesso!`);
                 await this.logSend(campaignId, group.id, null, mediaItem.id, 'sent', mediaResult.messageId);
                 totalSent++;
               } else {
+                console.error(`❌ Erro ao enviar mídia ${mediaItem.media_name}:`, mediaResult.error);
                 await this.logSend(campaignId, group.id, null, mediaItem.id, 'failed', null, mediaResult.error);
                 totalFailed++;
                 errors.push(`Grupo ${group.name} - Mídia ${mediaItem.media_name}: ${mediaResult.error}`);
@@ -478,7 +487,11 @@ export class CampaignSender {
           break;
         case 'document':
           console.log(`📎 Enviando documento: ${fullMediaUrl}`);
+          console.log(`📎 Nome do arquivo: ${media.media_name}`);
+          console.log(`📎 MIME type: ${media.media_mime_type}`);
+          console.log(`📎 Grupo ID: ${groupId}`);
           result = await zApiClient.sendDocumentMessage(groupId, '', fullMediaUrl, media.media_name);
+          console.log(`📎 Resultado do envio de documento:`, result);
           break;
         default:
           console.log(`📎 Tipo de mídia não suportado: ${media.media_type}`);
