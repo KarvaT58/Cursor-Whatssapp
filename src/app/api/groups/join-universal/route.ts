@@ -191,10 +191,10 @@ export async function POST(request: NextRequest) {
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
       
-      // TESTE EXTREMO: Nome de 1 caractere
-      const newGroupName = `A`
+      // Nome do novo grupo baseado na família
+      const newGroupName = `${familyName} ${newGroupNumber}`
       
-      console.log(`🧪 JOIN-UNIVERSAL: TESTE EXTREMO - Nome de 1 caractere: "${newGroupName}"`)
+      console.log(`🏗️ JOIN-UNIVERSAL: Nome do novo grupo: "${newGroupName}"`)
       console.log(`🏗️ JOIN-UNIVERSAL: Tamanho do nome: ${newGroupName.length} caracteres`)
 
       // USAR O ZApiClient que já funciona em vez de fetch direto
@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
       const inviteLinkResult = await zApiClient.getGroupInviteLink(createGroupResult.data.phone)
       console.log('🔗 Resultado do link de convite:', inviteLinkResult)
 
-      if (!inviteLinkResult.success || !inviteLinkResult.data?.link) {
+      if (!inviteLinkResult.success || !inviteLinkResult.data?.invitationLink) {
         console.error('❌ Erro ao obter link de convite:', inviteLinkResult)
         return NextResponse.json(
           { error: 'Erro ao obter link de convite', details: inviteLinkResult.error || 'Erro desconhecido' },
@@ -248,9 +248,14 @@ export async function POST(request: NextRequest) {
         .insert({
           name: newGroupName,
           whatsapp_id: createGroupResult.data.phone,
-          invite_link: inviteLinkResult.data.link,
+          invite_link: inviteLinkResult.data.invitationLink,
           description: firstGroup.description || `Grupo ${familyName}`,
           participants: participants,
+          image_url: firstGroup.image_url,
+          admin_only_message: firstGroup.admin_only_message,
+          admin_only_settings: firstGroup.admin_only_settings,
+          require_admin_approval: firstGroup.require_admin_approval,
+          admin_only_add_member: firstGroup.admin_only_add_member,
           max_participants: MAX_PARTICIPANTS,
           group_family: familyId,
           user_id: firstGroup.user_id,
