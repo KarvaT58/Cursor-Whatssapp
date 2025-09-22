@@ -141,9 +141,10 @@ export async function POST(request: NextRequest) {
       console.log(`🏗️ JOIN-UNIVERSAL: Tamanho do nome: ${newGroupName.length} caracteres`)
 
       const createGroupPayload = {
-        name: newGroupName.trim(),
-        description: (firstGroup.description || `Grupo ${familyName}`).trim(),
-        participants: participants
+        groupName: newGroupName.trim(),
+        phones: participants,
+        autoInvite: true,
+        ...(firstGroup.description && { description: (firstGroup.description || `Grupo ${familyName}`).trim() })
       }
 
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição para Z-API:`, createGroupPayload)
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
       const jsonPayload = JSON.stringify(createGroupPayload)
       console.log(`🔍 JOIN-UNIVERSAL: JSON serializado:`, jsonPayload)
       console.log(`🔍 JOIN-UNIVERSAL: Tamanho do JSON: ${jsonPayload.length} bytes`)
-      console.log(`🔍 JOIN-UNIVERSAL: Nome no JSON: "${JSON.parse(jsonPayload).name}"`)
+      console.log(`🔍 JOIN-UNIVERSAL: Nome no JSON: "${JSON.parse(jsonPayload).groupName}"`)
 
       // FAZER EXATAMENTE COMO A CRIAÇÃO MANUAL
       console.log(`🚀 JOIN-UNIVERSAL: Enviando requisição EXATAMENTE como criação manual`)
