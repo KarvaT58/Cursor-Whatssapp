@@ -125,9 +125,57 @@ export async function POST(request: NextRequest) {
         ? firstGroup.participants[0] 
         : '554599854508' // Fallback para o número que sabemos que funciona
       
-      let participants = [adminPhoneNumber]
+      // Normalizar número de telefone para formato Z-API (DDI DDD NUMBER)
+      const normalizePhoneForZApi = (phone: string): string => {
+        // Remover todos os caracteres não numéricos
+        const cleaned = phone.replace(/\D/g, '')
+        
+        // Se não começar com 55, adicionar código do Brasil
+        if (!cleaned.startsWith('55')) {
+          return `55${cleaned}`
+        }
+        
+        return cleaned
+      }
+      
+      const normalizedAdminPhone = normalizePhoneForZApi(adminPhoneNumber)
+      
+      // Verificar se o número existe no WhatsApp antes de criar o grupo
+      console.log(`🔍 JOIN-UNIVERSAL: Verificando se o número ${normalizedAdminPhone} existe no WhatsApp...`)
+      
+      try {
+        const phoneExistsResponse = await fetch(
+          `https://api.z-api.io/instances/${zApiInstance.instance_id}/token/${zApiInstance.instance_token}/phone-exists/${normalizedAdminPhone}`,
+          {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Client-Token': zApiInstance.client_token || '',
+            }
+          }
+        )
+        
+        const phoneExistsResult = await phoneExistsResponse.json()
+        console.log(`📱 JOIN-UNIVERSAL: Resultado da verificação de existência:`, phoneExistsResult)
+        
+        if (!phoneExistsResult.exists) {
+          console.warn(`⚠️ JOIN-UNIVERSAL: Número ${normalizedAdminPhone} não existe no WhatsApp`)
+          // Usar um número de fallback que sabemos que funciona
+          const fallbackPhone = '554599854508'
+          console.log(`🔄 JOIN-UNIVERSAL: Usando número de fallback: ${fallbackPhone}`)
+          participants = [fallbackPhone]
+        } else {
+          console.log(`✅ JOIN-UNIVERSAL: Número ${normalizedAdminPhone} existe no WhatsApp`)
+          participants = [normalizedAdminPhone]
+        }
+      } catch (phoneCheckError) {
+        console.error(`❌ JOIN-UNIVERSAL: Erro ao verificar existência do número:`, phoneCheckError)
+        // Em caso de erro, usar o número normalizado mesmo assim
+        participants = [normalizedAdminPhone]
+      }
       
       console.log(`✅ JOIN-UNIVERSAL: Usando primeiro participante do grupo como admin: ${adminPhoneNumber}`)
+      console.log(`📱 JOIN-UNIVERSAL: Número normalizado para Z-API: ${normalizedAdminPhone}`)
       console.log(`📱 JOIN-UNIVERSAL: Participantes do grupo original:`, firstGroup.participants)
       console.log(`📱 JOIN-UNIVERSAL: Participantes finais:`, participants)
 
