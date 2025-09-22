@@ -260,43 +260,20 @@ async function handleParticipantLeft(
           error: groupByNameError
         })
         
-        // Estratégia adicional: Buscar por grupos com ID local (grupos recém-criados)
-        console.log('🔍 Buscando por grupos com ID local...')
-        const { data: localGroups, error: localGroupsError } = await supabase
+        // Estratégia 2: Aguardar e tentar novamente (pode ser que o grupo ainda esteja sendo criado)
+        console.log('🔍 Estratégia 2: Aguardando e tentando novamente...')
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        const { data: groupRetry, error: groupRetryError } = await supabase
           .from('whatsapp_groups')
           .select('*')
-          .eq('name', data.chatName)
+          .eq('whatsapp_id', data.phone)
           .eq('user_id', userId)
-          .like('whatsapp_id', 'local_%')
-          .order('created_at', { ascending: false })
-          .limit(1)
-
-        if (localGroups && localGroups.length > 0 && !localGroupsError) {
-          const localGroup = localGroups[0]
-          console.log('✅ Grupo local encontrado, atualizando whatsapp_id:', {
-            old_whatsapp_id: localGroup.whatsapp_id,
-            new_whatsapp_id: data.phone,
-            group_name: localGroup.name
-          })
-          
-          // Atualizar o whatsapp_id do grupo
-          const { error: updateIdError } = await supabase
-            .from('whatsapp_groups')
-            .update({ 
-              whatsapp_id: data.phone,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', localGroup.id)
-
-          if (updateIdError) {
-            console.error('❌ Erro ao atualizar whatsapp_id do grupo local:', updateIdError)
-            return
-          }
-          
-          console.log('✅ Grupo local sincronizado com sucesso!')
-          
-          // Usar o grupo encontrado
-          group = localGroup
+          .single()
+        
+        if (groupRetry && !groupRetryError) {
+          console.log('✅ Grupo encontrado após retry!')
+          group = groupRetry
         } else {
           // Se o grupo não existe, pode ser um grupo criado recentemente que ainda não foi salvo
           // Vamos aguardar um pouco e tentar novamente
@@ -523,6 +500,61 @@ async function handleParticipantAdded(
       console.log('🎯 EXTRAINDO NÚMERO DO INVITE:', participantPhone)
     }
 
+    // 🚨 BLOQUEAR NÚMERO ANTIGO BANIDO PELO WHATSAPP
+    if (participantPhone === '554599854508') {
+      console.log('🚫 BLOQUEANDO NÚMERO ANTIGO BANIDO PELO WHATSAPP:', participantPhone)
+      console.log('🚫 Este número foi banido pelo WhatsApp e não pode ser adicionado a grupos')
+      console.log('🚫 Ignorando webhook para evitar crash do grupo')
+      
+      // Adicionar à blacklist automaticamente
+      try {
+        const { error: blacklistError } = await supabase
+          .from('blacklist')
+          .insert({
+            phone: participantPhone,
+            reason: 'Número banido pelo WhatsApp - causa crash de grupos',
+            user_id: userId,
+            created_at: new Date().toISOString()
+          })
+
+        if (blacklistError) {
+          console.log('⚠️ Número já está na blacklist ou erro ao adicionar:', blacklistError.message)
+        } else {
+          console.log('✅ Número banido adicionado à blacklist automaticamente')
+        }
+      } catch (error) {
+        console.error('❌ Erro ao adicionar à blacklist:', error)
+      }
+
+      // Criar notificação de bloqueio
+      try {
+        const { error: notificationError } = await supabase
+          .from('group_notifications')
+          .insert({
+            user_id: userId,
+            type: 'security_alert',
+            title: 'Número banido detectado',
+            message: `Tentativa de adicionar número banido ${participantPhone} foi bloqueada para proteger o grupo.`,
+            data: {
+              blocked_phone: participantPhone,
+              reason: 'whatsapp_banned_number',
+              group_name: data.chatName,
+              is_group: true
+            }
+          })
+
+        if (notificationError) {
+          console.error('❌ Erro ao criar notificação de bloqueio:', notificationError)
+        } else {
+          console.log('✅ Notificação de bloqueio criada')
+        }
+      } catch (error) {
+        console.error('❌ Erro ao criar notificação:', error)
+      }
+      
+      return // ← BLOQUEAR COMPLETAMENTE O PROCESSAMENTO
+    }
+
     console.log('👋 PROCESSANDO PARTICIPANTE ADICIONADO:', {
       groupId: data.phone,
       participantPhone: participantPhone,
@@ -584,44 +616,8 @@ async function handleParticipantAdded(
         // Usar o grupo encontrado
         group = groupByName
       } else {
-        // Estratégia 2: Buscar por grupos com ID local
-        console.log('🔍 Estratégia 2: Buscando por grupos com ID local...')
-        const { data: localGroups, error: localGroupsError } = await supabase
-          .from('whatsapp_groups')
-          .select('*')
-          .eq('name', data.chatName)
-          .eq('user_id', userId)
-          .like('whatsapp_id', 'local_%')
-          .order('created_at', { ascending: false })
-          .limit(1)
-
-        if (localGroups && localGroups.length > 0 && !localGroupsError) {
-          const localGroup = localGroups[0]
-          console.log('✅ Grupo local encontrado, atualizando whatsapp_id:', {
-            old_whatsapp_id: localGroup.whatsapp_id,
-            new_whatsapp_id: data.phone
-          })
-          
-          // Atualizar o whatsapp_id do grupo
-          const { error: updateIdError } = await supabase
-            .from('whatsapp_groups')
-            .update({ 
-              whatsapp_id: data.phone,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', localGroup.id)
-
-          if (updateIdError) {
-            console.error('❌ Erro ao atualizar whatsapp_id do grupo local:', updateIdError)
-            return
-          }
-          
-          // Usar o grupo encontrado
-          group = localGroup
-        } else {
           console.error('❌ Grupo não encontrado mesmo após todas as estratégias:', data.phone)
           return
-        }
       }
     }
 

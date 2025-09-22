@@ -309,17 +309,51 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Salvar novo grupo no banco de dados (usando nova estrutura unificada)
-      // IMPORTANTE: Usar o ID real do Z-API se disponível, senão usar temporário
-      const groupWhatsappId = createGroupResult.data.phone || `local_${Date.now()}`
+      // Aguardar o ID real do Z-API antes de salvar
+      if (!createGroupResult.data.phone) {
+        console.log('⏳ JOIN-UNIVERSAL: Z-API não retornou ID real, aguardando...')
+        
+        // Aguardar até 10 segundos pelo ID real
+        let attempts = 0
+        let realGroupId = null
+        
+        while (attempts < 10 && !realGroupId) {
+          await new Promise(resolve => setTimeout(resolve, 1000)) // Aguardar 1 segundo
+          attempts++
+          
+          console.log(`🔍 JOIN-UNIVERSAL: Tentativa ${attempts}/10 - Buscando ID real...`)
+          
+          // Tentar obter informações do grupo criado
+          try {
+            const groupInfoResult = await zApiClient.getGroupMetadata(createGroupResult.data.groupId || '')
+            if (groupInfoResult.success && groupInfoResult.data?.phone) {
+              realGroupId = groupInfoResult.data.phone
+              console.log(`✅ JOIN-UNIVERSAL: ID real obtido: ${realGroupId}`)
+              break
+            }
+          } catch (error) {
+            console.log(`⚠️ JOIN-UNIVERSAL: Erro na tentativa ${attempts}:`, error.message)
+          }
+        }
+        
+        if (!realGroupId) {
+          console.error('❌ JOIN-UNIVERSAL: Não foi possível obter ID real do grupo após 10 tentativas')
+          return NextResponse.json(
+            { error: 'Erro ao obter ID real do grupo criado' },
+            { status: 500 }
+          )
+        }
+        
+        createGroupResult.data.phone = realGroupId
+      }
       
-      console.log(`💾 JOIN-UNIVERSAL: Salvando grupo com whatsapp_id: ${groupWhatsappId}`)
+      console.log(`💾 JOIN-UNIVERSAL: Salvando grupo com whatsapp_id real: ${createGroupResult.data.phone}`)
       
       const { data: newGroup, error: saveError } = await supabase
         .from('whatsapp_groups')
         .insert({
           name: newGroupName,
-          whatsapp_id: groupWhatsappId,
+          whatsapp_id: createGroupResult.data.phone,
           invite_link: inviteLinkResult.data.invitationLink,
           description: firstGroup.description || `Grupo ${familyName}`,
           participants: participants,
