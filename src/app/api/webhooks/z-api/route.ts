@@ -175,7 +175,13 @@ async function handleParticipantLeft(
     }
 
     // Buscar dados do grupo
-    const { data: group, error: groupError } = await supabase
+    console.log('🔍 Buscando grupo no banco:', {
+      whatsapp_id: data.phone,
+      user_id: userId,
+      group_name: data.chatName
+    })
+
+    let { data: group, error: groupError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('whatsapp_id', data.phone)
@@ -183,8 +189,47 @@ async function handleParticipantLeft(
       .single()
 
     if (groupError || !group) {
-      console.error('❌ Grupo não encontrado:', data.phone)
-      return
+      console.error('❌ Grupo não encontrado:', {
+        whatsapp_id: data.phone,
+        error: groupError,
+        group_name: data.chatName
+      })
+      
+      // Tentar buscar por nome do grupo como fallback
+      console.log('🔍 Tentando buscar por nome do grupo como fallback...')
+      const { data: groupByName, error: groupByNameError } = await supabase
+        .from('whatsapp_groups')
+        .select('*')
+        .eq('name', data.chatName)
+        .eq('user_id', userId)
+        .single()
+
+      if (groupByName && !groupByNameError) {
+        console.log('✅ Grupo encontrado por nome, atualizando whatsapp_id:', {
+          old_whatsapp_id: groupByName.whatsapp_id,
+          new_whatsapp_id: data.phone
+        })
+        
+        // Atualizar o whatsapp_id do grupo
+        const { error: updateIdError } = await supabase
+          .from('whatsapp_groups')
+          .update({ whatsapp_id: data.phone })
+          .eq('id', groupByName.id)
+
+        if (updateIdError) {
+          console.error('❌ Erro ao atualizar whatsapp_id:', updateIdError)
+          return
+        }
+        
+        // Usar o grupo encontrado
+        group = groupByName
+      } else {
+        console.error('❌ Grupo também não encontrado por nome:', {
+          group_name: data.chatName,
+          error: groupByNameError
+        })
+        return
+      }
     }
 
     // Atualizar lista de participantes no banco (remover o participante)
