@@ -19,14 +19,28 @@ export async function GET(
     const supabase = await createClient()
 
     // Buscar dados da família usando a nova estrutura unificada
-    const { data: familyGroup, error: familyError } = await supabase
+    // Primeiro tentar buscar por ID do grupo
+    let { data: familyGroup, error: familyError } = await supabase
       .from('whatsapp_groups')
       .select('*')
       .eq('group_type', 'universal')
-      .eq('family_name', familyId)
-      .order('created_at', { ascending: true })
-      .limit(1)
+      .eq('id', familyId)
       .single()
+
+    // Se não encontrar por ID, tentar buscar por family_name
+    if (familyError && familyError.code === 'PGRST116') {
+      const { data: familyGroupByName, error: familyErrorByName } = await supabase
+        .from('whatsapp_groups')
+        .select('*')
+        .eq('group_type', 'universal')
+        .eq('family_name', familyId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single()
+      
+      familyGroup = familyGroupByName
+      familyError = familyErrorByName
+    }
 
     if (familyError || !familyGroup) {
       console.error('Erro ao buscar família:', familyError)
