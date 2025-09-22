@@ -626,6 +626,41 @@ export interface Database {
         updated_at?: string
       }
     }
+    campaign_execution_logs: {
+      Row: {
+        id: string
+        campaign_id: string
+        execution_date: string
+        execution_time: string
+        status: 'success' | 'error' | 'running'
+        message: string | null
+        error_message: string | null
+        created_at: string
+        updated_at: string
+      }
+      Insert: {
+        id?: string
+        campaign_id: string
+        execution_date: string
+        execution_time: string
+        status: 'success' | 'error' | 'running'
+        message?: string | null
+        error_message?: string | null
+        created_at?: string
+        updated_at?: string
+      }
+      Update: {
+        id?: string
+        campaign_id?: string
+        execution_date?: string
+        execution_time?: string
+        status?: 'success' | 'error' | 'running'
+        message?: string | null
+        error_message?: string | null
+        created_at?: string
+        updated_at?: string
+      }
+    }
     Functions: {
       [_ in never]: never
     }

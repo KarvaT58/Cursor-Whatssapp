@@ -134,6 +134,9 @@ export class CampaignScheduler {
           if (!alreadyExecuted) {
             console.log(`🚀 Executando campanha ${campaign.name}...`);
             
+            // Marcar como 'running' antes de iniciar
+            await this.logScheduleExecution(campaign.id, 'running', 'Iniciando execução da campanha');
+            
             const result = await this.campaignSender.sendCampaign(campaign.id);
             
             if (result.success) {
@@ -206,26 +209,34 @@ export class CampaignScheduler {
   private async checkIfAlreadyExecutedToday(campaignId: string): Promise<boolean> {
     try {
       const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+      const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      console.log(`🔍 Verificando se campanha ${campaignId} já foi executada hoje (${todayString})`);
 
       const { data, error } = await this.supabase
-        .from('campaign_sends')
-        .select('id')
+        .from('campaign_execution_logs')
+        .select('id, status')
         .eq('campaign_id', campaignId)
-        .gte('send_time', startOfDay.toISOString())
-        .lt('send_time', endOfDay.toISOString())
+        .eq('execution_date', todayString)
+        .in('status', ['success', 'running'])
         .limit(1);
 
       if (error) {
-        console.error('Erro ao verificar execução:', error);
+        console.error('❌ Erro ao verificar execução:', error);
         return false;
       }
 
-      return data && data.length > 0;
+      const alreadyExecuted = data && data.length > 0;
+      console.log(`📊 Resultado da verificação: ${alreadyExecuted ? 'JÁ EXECUTADA' : 'NÃO EXECUTADA'}`);
+      
+      if (alreadyExecuted) {
+        console.log(`ℹ️ Campanha já foi executada hoje com status: ${data[0].status}`);
+      }
+
+      return alreadyExecuted;
 
     } catch (error) {
-      console.error('Erro ao verificar execução:', error);
+      console.error('❌ Erro ao verificar execução:', error);
       return false;
     }
   }
@@ -235,22 +246,58 @@ export class CampaignScheduler {
    */
   private async logScheduleExecution(campaignId: string, status: 'success' | 'error', message: string): Promise<void> {
     try {
-      // Aqui você pode criar uma tabela específica para logs de agendamento
-      // Por enquanto, vamos usar a tabela campaign_sends
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (this.supabase as any)
-        .from('campaign_sends')
-        .insert({
-          campaign_id: campaignId,
-          group_id: null, // Será preenchido pelo campaign sender
-          send_status: status === 'success' ? 'sent' : 'failed',
-          send_time: new Date().toISOString(),
-          scheduled_time: new Date().toISOString(),
-          error_message: status === 'error' ? message : null
-        });
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD
+
+      console.log(`📝 Registrando execução da campanha ${campaignId} com status: ${status}`);
+
+      // Verificar se já existe um log para hoje
+      const { data: existingLog } = await this.supabase
+        .from('campaign_execution_logs')
+        .select('id')
+        .eq('campaign_id', campaignId)
+        .eq('execution_date', todayString)
+        .limit(1);
+
+      if (existingLog && existingLog.length > 0) {
+        // Atualizar log existente
+        const { error: updateError } = await this.supabase
+          .from('campaign_execution_logs')
+          .update({
+            status,
+            message,
+            error_message: status === 'error' ? message : null,
+            execution_time: new Date().toISOString()
+          })
+          .eq('id', existingLog[0].id);
+
+        if (updateError) {
+          console.error('❌ Erro ao atualizar log de execução:', updateError);
+        } else {
+          console.log('✅ Log de execução atualizado com sucesso');
+        }
+      } else {
+        // Criar novo log
+        const { error: insertError } = await this.supabase
+          .from('campaign_execution_logs')
+          .insert({
+            campaign_id: campaignId,
+            execution_date: todayString,
+            execution_time: new Date().toISOString(),
+            status,
+            message,
+            error_message: status === 'error' ? message : null
+          });
+
+        if (insertError) {
+          console.error('❌ Erro ao criar log de execução:', insertError);
+        } else {
+          console.log('✅ Log de execução criado com sucesso');
+        }
+      }
 
     } catch (error) {
-      console.error('Erro ao registrar execução:', error);
+      console.error('❌ Erro ao registrar execução:', error);
     }
   }
 
