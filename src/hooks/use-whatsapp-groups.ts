@@ -32,9 +32,9 @@ export function useWhatsAppGroups({ userId, excludeUniversal = false }: UseWhats
         .select('*')
         .eq('user_id', userId)
 
-      // Se excludeUniversal for true, filtrar apenas grupos sem group_family
+      // Se excludeUniversal for true, filtrar apenas grupos normais (não universais)
       if (excludeUniversal) {
-        query = query.is('group_family', null)
+        query = query.or('group_type.is.null,group_type.neq.universal')
       }
 
       const { data, error: fetchError } = await query.order('created_at', { ascending: false })
