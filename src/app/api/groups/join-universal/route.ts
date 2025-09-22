@@ -87,8 +87,10 @@ export async function POST(request: NextRequest) {
       // Buscar dados do primeiro grupo para copiar configurações
       const firstGroup = groups[0]
       console.log(`📋 JOIN-UNIVERSAL: Copiando configurações do grupo "${firstGroup.name}"`)
+      console.log(`🔍 JOIN-UNIVERSAL: DADOS COMPLETOS DO PRIMEIRO GRUPO:`, JSON.stringify(firstGroup, null, 2))
 
       // Buscar instância Z-API ativa
+      console.log(`🔍 JOIN-UNIVERSAL: Buscando instância Z-API para user_id: ${firstGroup.user_id}`)
       const { data: zApiInstance, error: instanceError } = await supabase
         .from('z_api_instances')
         .select('*')
@@ -109,6 +111,7 @@ export async function POST(request: NextRequest) {
         phone_number: zApiInstance.phone_number || 'Não configurado',
         client_token: zApiInstance.client_token ? 'Presente' : 'Ausente'
       })
+      console.log(`🔍 JOIN-UNIVERSAL: DADOS COMPLETOS DA INSTÂNCIA Z-API:`, JSON.stringify(zApiInstance, null, 2))
 
       // PROBLEMA IDENTIFICADO: Z-API pode estar validando se o número pertence à instância
       console.log(`🔍 JOIN-UNIVERSAL: Investigando problema do número de telefone...`)
