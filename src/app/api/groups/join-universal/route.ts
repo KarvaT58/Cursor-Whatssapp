@@ -138,10 +138,10 @@ export async function POST(request: NextRequest) {
       // Criar novo grupo via Z-API com configurações do primeiro grupo
       const newGroupNumber = groups.length + 1
       
-      // USAR NOME SUPER SIMPLES PARA TESTAR
-      const newGroupName = `Grupo ${newGroupNumber}`
+      // TESTE EXTREMO: Nome de 1 caractere
+      const newGroupName = `A`
       
-      console.log(`🧪 JOIN-UNIVERSAL: TESTE - Usando nome super simples: "${newGroupName}"`)
+      console.log(`🧪 JOIN-UNIVERSAL: TESTE EXTREMO - Nome de 1 caractere: "${newGroupName}"`)
       console.log(`🏗️ JOIN-UNIVERSAL: Tamanho do nome: ${newGroupName.length} caracteres`)
 
       const createGroupPayload = {
