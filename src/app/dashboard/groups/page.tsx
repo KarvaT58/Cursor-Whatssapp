@@ -8,6 +8,7 @@ import { useGroupNotifications } from '@/hooks/use-group-notifications'
 import { useGroupSync } from '@/hooks/use-group-sync'
 import { useToast } from '@/hooks/use-toast'
 import { usePagination } from '@/hooks/use-pagination'
+import { RealtimeStatus } from '@/components/realtime/realtime-status'
 import { GroupList } from '@/components/groups/group-list'
 import { GroupsSearch } from '@/components/groups/groups-search'
 import { GroupForm } from '@/components/groups/group-form'
@@ -607,7 +608,10 @@ export default function GroupsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Grupos WhatsApp</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold">Grupos WhatsApp</h1>
+            <RealtimeStatus />
+          </div>
           <p className="text-muted-foreground">
             Gerencie seus grupos e participantes do WhatsApp
           </p>

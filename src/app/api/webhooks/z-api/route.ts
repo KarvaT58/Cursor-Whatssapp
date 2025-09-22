@@ -276,6 +276,17 @@ async function handleParticipantLeft(
       console.log('✅ Notificação de participante removido criada para:', data.participantPhone)
     }
 
+    // Disparar notificação em tempo real
+    await triggerRealtimeNotification(supabase, userId, {
+      type: 'participant_leave',
+      group_name: group.name,
+      sender_name: data.participantPhone,
+      message: `O usuário ${data.participantPhone} saiu do grupo "${group.name}".`,
+      is_group: true,
+      group_id: group.id,
+      participant_phone: data.participantPhone
+    })
+
   } catch (error) {
     console.error('❌ Erro ao processar participante que saiu:', error)
   }
@@ -345,6 +356,18 @@ async function handleReceivedMessage(
       sender: data.senderName,
       message: data.text?.message
     })
+
+    // Disparar notificação em tempo real para mensagens de grupo
+    if (data.isGroup && data.chatName && data.text?.message) {
+      await triggerRealtimeNotification(supabase, userId, {
+        type: 'new_message',
+        group_name: data.chatName,
+        sender_name: data.senderName,
+        message: data.text.message,
+        is_group: true,
+        group_id: data.phone
+      })
+    }
 
   } catch (error) {
     console.error('❌ Erro ao processar mensagem recebida:', error)
@@ -507,6 +530,17 @@ async function handleParticipantAdded(
     } else {
       console.log('✅ Notificação de participante adicionado criada para:', participantPhone)
     }
+
+    // Disparar notificação em tempo real
+    await triggerRealtimeNotification(supabase, userId, {
+      type: 'participant_join',
+      group_name: group.name,
+      sender_name: participantPhone,
+      message: `O usuário ${participantPhone} foi adicionado ao grupo "${group.name}".`,
+      is_group: true,
+      group_id: group.id,
+      participant_phone: participantPhone
+    })
   } catch (error) {
     console.error('❌ Erro ao processar participante adicionado:', error)
   }
@@ -844,5 +878,47 @@ async function sendBanMessage(
 
   } catch (error) {
     console.error('❌ Erro ao enviar mensagem de banimento:', error)
+  }
+}
+
+// Função para disparar notificações em tempo real
+async function triggerRealtimeNotification(
+  supabase: any,
+  userId: string,
+  notificationData: {
+    type: string
+    group_name?: string
+    sender_name?: string
+    message?: string
+    is_group?: boolean
+    group_id?: string
+    participant_phone?: string
+  }
+) {
+  try {
+    console.log('🔔 Disparando notificação em tempo real:', notificationData)
+    
+    // Inserir notificação no banco para trigger do SSE
+    const { error } = await supabase
+      .from('group_notifications')
+      .insert({
+        user_id: userId,
+        type: notificationData.type,
+        group_name: notificationData.group_name,
+        sender_name: notificationData.sender_name,
+        message: notificationData.message,
+        is_group: notificationData.is_group || false,
+        group_id: notificationData.group_id,
+        participant_phone: notificationData.participant_phone,
+        created_at: new Date().toISOString()
+      })
+
+    if (error) {
+      console.error('❌ Erro ao inserir notificação:', error)
+    } else {
+      console.log('✅ Notificação em tempo real disparada com sucesso')
+    }
+  } catch (error) {
+    console.error('❌ Erro ao disparar notificação em tempo real:', error)
   }
 }

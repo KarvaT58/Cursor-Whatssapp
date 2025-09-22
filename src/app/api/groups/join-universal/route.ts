@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
     if (instanceError || !zApiInstance) {
       console.error('❌ JOIN-UNIVERSAL: Instância Z-API não encontrada para verificação:', instanceError)
       // Fallback para verificação local se Z-API não estiver disponível
-      for (const group of groups) {
-        const currentParticipants = group.participants?.length || 0
+    for (const group of groups) {
+      const currentParticipants = group.participants?.length || 0
         console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (local): ${currentParticipants}/${MAX_PARTICIPANTS}`)
         
         if (currentParticipants < MAX_PARTICIPANTS) {
@@ -154,11 +154,11 @@ export async function POST(request: NextRequest) {
           // Fallback para dados locais
           const currentParticipants = group.participants?.length || 0
           console.log(`📊 JOIN-UNIVERSAL: Grupo "${group.name}" - Participantes (local): ${currentParticipants}/${MAX_PARTICIPANTS}`)
-          
-          if (currentParticipants < MAX_PARTICIPANTS) {
-            availableGroup = group
-            console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
-            break
+
+      if (currentParticipants < MAX_PARTICIPANTS) {
+        availableGroup = group
+        console.log(`✅ JOIN-UNIVERSAL: Vaga encontrada no grupo "${group.name}" (${currentParticipants}/${MAX_PARTICIPANTS})`)
+        break
           }
         }
       }
@@ -355,6 +355,29 @@ export async function POST(request: NextRequest) {
 
       console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${createGroupResult.data.phone})`)
       console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${inviteLinkResult.data.invitationLink}`)
+
+      // Disparar notificação em tempo real para criação de grupo
+      try {
+        const { error: notificationError } = await supabase
+          .from('group_notifications')
+          .insert({
+            user_id: firstGroup.user_id,
+            type: 'group_created',
+            group_name: newGroupName,
+            message: `Grupo "${newGroupName}" criado automaticamente para a família "${familyName}".`,
+            is_group: true,
+            group_id: newGroup.id,
+            created_at: new Date().toISOString()
+          })
+
+        if (notificationError) {
+          console.error('❌ Erro ao criar notificação de grupo criado:', notificationError)
+        } else {
+          console.log('✅ Notificação em tempo real disparada para grupo criado')
+        }
+      } catch (notificationError) {
+        console.error('❌ Erro ao disparar notificação em tempo real:', notificationError)
+      }
 
       // Aplicar configurações do grupo no WhatsApp
       console.log('⚙️ JOIN-UNIVERSAL: Aplicando configurações do grupo no WhatsApp...')

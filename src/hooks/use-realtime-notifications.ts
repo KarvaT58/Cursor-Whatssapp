@@ -1,149 +1,193 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRealtime } from '@/providers/realtime-provider'
-import { RealtimeChannel } from '@supabase/supabase-js'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { toast } from 'sonner'
 
-interface Notification {
-  id: string
-  type: 'info' | 'success' | 'warning' | 'error'
-  title: string
-  message: string
+interface RealtimeEvent {
+  type: 'connected' | 'group_update' | 'notification' | 'heartbeat'
+  event?: string
+  data?: any
+  message?: string
   timestamp: string
-  read: boolean
-  action_url?: string
 }
 
-interface UseRealtimeNotificationsProps {
-  onNotificationReceived?: (notification: Notification) => void
-  onNotificationRead?: (notificationId: string) => void
-  onSystemAlert?: (alert: { type: string; message: string }) => void
+interface UseRealtimeNotificationsReturn {
+  isConnected: boolean
+  lastEvent: RealtimeEvent | null
+  connect: () => void
+  disconnect: () => void
 }
 
-export function useRealtimeNotifications({
-  onNotificationReceived,
-  onNotificationRead,
-  onSystemAlert,
-}: UseRealtimeNotificationsProps = {}) {
-  const { subscribe, unsubscribe, isConnected } = useRealtime()
-  const [channels, setChannels] = useState<RealtimeChannel[]>([])
-  const [unreadCount, setUnreadCount] = useState(0)
+export function useRealtimeNotifications(): UseRealtimeNotificationsReturn {
+  const [isConnected, setIsConnected] = useState(false)
+  const [lastEvent, setLastEvent] = useState<RealtimeEvent | null>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectAttempts = useRef(0)
+  const maxReconnectAttempts = 5
 
-  // Subscribe to notifications
-  useEffect(() => {
-    if (!isConnected) return
+  const connect = useCallback(() => {
+    if (eventSourceRef.current?.readyState === EventSource.OPEN) {
+      return // Já conectado
+    }
 
-    const notificationsChannel = subscribe('notifications', (payload) => {
-      console.log('Notification update received:', payload)
+    console.log('🔌 Conectando ao sistema de notificações em tempo real...')
+    
+    const eventSource = new EventSource('/api/realtime/notifications')
+    eventSourceRef.current = eventSource
 
-      if (payload.eventType === 'INSERT' && payload.new) {
-        const notification = payload.new as Notification
-        onNotificationReceived?.(notification)
+    eventSource.onopen = () => {
+      console.log('✅ Conectado ao sistema de notificações')
+      setIsConnected(true)
+      reconnectAttempts.current = 0
+    }
 
-        // Show toast notification
-        const toastOptions = {
-          duration: 5000,
-          action: notification.action_url
-            ? {
-                label: 'Ver',
-                onClick: () => window.open(notification.action_url, '_blank'),
-              }
-            : undefined,
-        }
+    eventSource.onmessage = (event) => {
+      try {
+        const data: RealtimeEvent = JSON.parse(event.data)
+        setLastEvent(data)
+        
+        console.log('📨 Evento recebido:', data)
 
-        switch (notification.type) {
-          case 'success':
-            toast.success(notification.title, toastOptions)
+        // Processar diferentes tipos de eventos
+        switch (data.type) {
+          case 'connected':
+            console.log('🎉 Conectado ao sistema de notificações')
             break
-          case 'error':
-            toast.error(notification.title, toastOptions)
+            
+          case 'group_update':
+            handleGroupUpdate(data)
             break
-          case 'warning':
-            toast.warning(notification.title, toastOptions)
+            
+          case 'notification':
+            handleNotification(data)
             break
+            
+          case 'heartbeat':
+            // Manter conexão viva
+            break
+            
           default:
-            toast(notification.title, toastOptions)
+            console.log('❓ Evento desconhecido:', data.type)
         }
-
-        if (!notification.read) {
-          setUnreadCount((prev) => prev + 1)
-        }
-      } else if (payload.eventType === 'UPDATE' && payload.new) {
-        const notification = payload.new as Notification
-        const oldNotification = payload.old as Notification
-        if (oldNotification?.read !== notification.read && notification.read) {
-          onNotificationRead?.(notification.id)
-          setUnreadCount((prev) => Math.max(0, prev - 1))
-        }
+      } catch (error) {
+        console.error('❌ Erro ao processar evento:', error)
       }
-    })
-
-    setChannels((prev) => [...prev, notificationsChannel])
-
-    return () => {
-      unsubscribe(notificationsChannel)
-      setChannels((prev) => prev.filter((c) => c !== notificationsChannel))
     }
-  }, [
-    isConnected,
-    onNotificationReceived,
-    onNotificationRead,
-    subscribe,
-    unsubscribe,
-  ])
 
-  // Subscribe to system alerts
-  useEffect(() => {
-    if (!isConnected) return
-
-    const systemAlertsChannel = subscribe('system_alerts', (payload) => {
-      console.log('System alert received:', payload)
-
-      if (payload.eventType === 'INSERT' && payload.new) {
-        const alert = payload.new as { alert_type?: string; message?: string }
-        onSystemAlert?.({
-          type: alert.alert_type || 'info',
-          message: alert.message || 'Alerta do sistema',
-        })
-
-        // Show system alert toast
-        switch (alert.alert_type) {
-          case 'maintenance':
-            toast.warning(`Manutenção: ${alert.message}`, { duration: 10000 })
-            break
-          case 'outage':
-            toast.error(`Indisponibilidade: ${alert.message}`, {
-              duration: 10000,
-            })
-            break
-          case 'update':
-            toast.info(`Atualização: ${alert.message}`, { duration: 8000 })
-            break
-          default:
-            toast(alert.message || 'Alerta do sistema', { duration: 6000 })
-        }
+    eventSource.onerror = (error) => {
+      console.error('❌ Erro na conexão SSE:', error)
+      setIsConnected(false)
+      
+      // Tentar reconectar
+      if (reconnectAttempts.current < maxReconnectAttempts) {
+        reconnectAttempts.current++
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000)
+        
+        console.log(`🔄 Tentando reconectar em ${delay}ms (tentativa ${reconnectAttempts.current}/${maxReconnectAttempts})`)
+        
+        reconnectTimeoutRef.current = setTimeout(() => {
+          connect()
+        }, delay)
+      } else {
+        console.error('❌ Máximo de tentativas de reconexão atingido')
+        toast.error('Conexão com notificações em tempo real perdida')
       }
-    })
-
-    setChannels((prev) => [...prev, systemAlertsChannel])
-
-    return () => {
-      unsubscribe(systemAlertsChannel)
-      setChannels((prev) => prev.filter((c) => c !== systemAlertsChannel))
     }
-  }, [isConnected, onSystemAlert, subscribe, unsubscribe])
+  }, [])
 
-  // Cleanup all channels on unmount
+  const disconnect = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+    
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
+    
+    setIsConnected(false)
+    console.log('🔌 Desconectado do sistema de notificações')
+  }, [])
+
+  const handleGroupUpdate = (event: RealtimeEvent) => {
+    const { event: eventType, data } = event
+    
+    if (!data) return
+
+    switch (eventType) {
+      case 'UPDATE':
+        if (data.participants) {
+          toast.success(`Grupo "${data.name}" atualizado - ${data.participants.length} participantes`)
+        }
+        break
+        
+      case 'INSERT':
+        toast.success(`Novo grupo "${data.name}" criado`)
+        break
+        
+      case 'DELETE':
+        toast.info(`Grupo "${data.name}" removido`)
+        break
+        
+      default:
+        console.log('📝 Grupo atualizado:', data.name)
+    }
+  }
+
+  const handleNotification = (event: RealtimeEvent) => {
+    const { data } = event
+    
+    if (!data) return
+
+    // Mostrar notificação baseada no tipo
+    switch (data.type) {
+      case 'participant_join':
+        toast.success(`${data.sender_name} entrou no grupo "${data.group_name}"`)
+        break
+        
+      case 'participant_leave':
+        toast.info(`${data.sender_name} saiu do grupo "${data.group_name}"`)
+        break
+        
+      case 'new_message':
+        if (data.is_group) {
+          toast.info(`Nova mensagem em "${data.group_name}"`)
+        }
+        break
+        
+      case 'group_created':
+        toast.success(`Grupo "${data.group_name}" criado automaticamente`)
+        break
+        
+      default:
+        toast.info(data.message || 'Nova notificação')
+    }
+  }
+
+  // Conectar automaticamente quando o hook for montado
+  useEffect(() => {
+    connect()
+    
+    return () => {
+      disconnect()
+    }
+  }, [connect, disconnect])
+
+  // Limpar timeouts quando o componente for desmontado
   useEffect(() => {
     return () => {
-      channels.forEach((channel) => unsubscribe(channel))
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+      }
     }
-  }, [channels, unsubscribe])
+  }, [])
 
   return {
     isConnected,
-    channelsCount: channels.length,
-    unreadCount,
+    lastEvent,
+    connect,
+    disconnect
   }
 }
