@@ -1,114 +1,98 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { readFile } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ filename: string }> }
+  { params }: { params: { filename: string } }
 ) {
   try {
-    const { filename } = await params
-    
-    // Validar nome do arquivo para segurança
-    if (!filename || filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
-      return NextResponse.json(
-        { error: 'Nome de arquivo inválido' },
-        { status: 400 }
-      )
+    const { filename } = params;
+
+    if (!filename) {
+      return NextResponse.json({ error: 'Nome do arquivo não fornecido' }, { status: 400 });
     }
-    
-    // Construir caminho do arquivo
-    const filePath = join(process.cwd(), 'public', 'uploads', 'media', filename)
-    
-    // Verificar se o arquivo existe
-    if (!existsSync(filePath)) {
-      console.log(`Arquivo não encontrado: ${filePath}`)
-      return NextResponse.json(
-        { error: 'Arquivo não encontrado' },
-        { status: 404 }
-      )
+
+    // Inicializar cliente Supabase
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // Tentar diferentes caminhos possíveis
+    const possiblePaths = [
+      `campaigns/media/${filename}`,
+      `media/${filename}`,
+      `uploads/media/${filename}`
+    ];
+
+    let fileData: any = null;
+    let contentType = 'application/octet-stream';
+
+    for (const path of possiblePaths) {
+      try {
+        const { data, error } = await supabase.storage
+          .from('media')
+          .download(path);
+
+        if (!error && data) {
+          fileData = data;
+          
+          // Determinar content type baseado na extensão
+          const extension = filename.split('.').pop()?.toLowerCase();
+          const contentTypes: Record<string, string> = {
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'png': 'image/png',
+            'gif': 'image/gif',
+            'webp': 'image/webp',
+            'mp4': 'video/mp4',
+            'avi': 'video/x-msvideo',
+            'mov': 'video/quicktime',
+            'wmv': 'video/x-ms-wmv',
+            'mp3': 'audio/mpeg',
+            'wav': 'audio/wav',
+            'ogg': 'audio/ogg',
+            'm4a': 'audio/mp4',
+            'pdf': 'application/pdf',
+            'doc': 'application/msword',
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'txt': 'text/plain',
+            'xls': 'application/vnd.ms-excel',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          };
+          
+          contentType = contentTypes[extension || ''] || 'application/octet-stream';
+          break;
+        }
+      } catch (error) {
+        console.log(`Tentativa de download falhou para ${path}:`, error);
+        continue;
+      }
     }
-    
-    // Ler o arquivo
-    const fileBuffer = await readFile(filePath)
-    
-    // Determinar o tipo de conteúdo baseado na extensão
-    const extension = filename.split('.').pop()?.toLowerCase()
-    let contentType = 'application/octet-stream'
-    
-    switch (extension) {
-      case 'mp3':
-        contentType = 'audio/mpeg'
-        break
-      case 'wav':
-        contentType = 'audio/wav'
-        break
-      case 'ogg':
-        contentType = 'audio/ogg'
-        break
-      case 'jpg':
-      case 'jpeg':
-        contentType = 'image/jpeg'
-        break
-      case 'png':
-        contentType = 'image/png'
-        break
-      case 'gif':
-        contentType = 'image/gif'
-        break
-      case 'webp':
-        contentType = 'image/webp'
-        break
-      case 'mp4':
-        contentType = 'video/mp4'
-        break
-      case 'avi':
-        contentType = 'video/x-msvideo'
-        break
-      case 'mov':
-        contentType = 'video/quicktime'
-        break
-      case 'pdf':
-        contentType = 'application/pdf'
-        break
-      case 'doc':
-        contentType = 'application/msword'
-        break
-      case 'docx':
-        contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        break
-      case 'xls':
-        contentType = 'application/vnd.ms-excel'
-        break
-      case 'xlsx':
-        contentType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        break
-      case 'txt':
-        contentType = 'text/plain'
-        break
+
+    if (!fileData) {
+      return NextResponse.json({ error: 'Arquivo não encontrado' }, { status: 404 });
     }
-    
-    // Retornar o arquivo com os headers corretos
-    return new NextResponse(fileBuffer, {
+
+    // Converter para buffer
+    const arrayBuffer = await fileData.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Retornar arquivo com headers apropriados
+    return new NextResponse(buffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
-        'Content-Length': fileBuffer.length.toString(),
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400', // Cache por 1 dia
+        'Content-Length': buffer.length.toString(),
+        'Cache-Control': 'public, max-age=3600',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'X-Content-Type-Options': 'nosniff',
-        'X-Frame-Options': 'DENY',
       },
-    })
-    
+    });
+
   } catch (error) {
-    console.error('Erro ao servir arquivo de mídia:', error)
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { status: 500 }
-    )
+    console.error('Erro ao servir arquivo:', error);
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor' 
+    }, { status: 500 });
   }
 }

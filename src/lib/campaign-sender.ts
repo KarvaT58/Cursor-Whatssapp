@@ -401,47 +401,41 @@ export class CampaignSender {
     try {
       console.log(`📎 Enviando ${media.media_type} para ${groupId}: ${media.media_name}`);
 
-      // Converter URL relativa para URL completa
+      // Usar URL do Supabase Storage diretamente
       let fullMediaUrl = media.media_url;
-      if (media.media_url.startsWith('/uploads/')) {
-        // Para produção no Vercel, usar a URL pública da aplicação
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : 'http://localhost:3000';
-        
+      
+      // Se for uma URL do Supabase Storage, usar diretamente
+      if (media.media_url.includes('supabase') || media.media_url.includes('storage.googleapis.com')) {
+        fullMediaUrl = media.media_url;
+        console.log(`📎 Usando URL do Supabase Storage: ${fullMediaUrl}`);
+      } else if (media.media_url.startsWith('/uploads/')) {
+        // Para URLs antigas, tentar converter para Supabase Storage
         const filename = media.media_url.split('/').pop();
-        fullMediaUrl = `${baseUrl}/api/media/${filename}`;
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const bucketName = 'media';
         
-        console.log(`📎 URL da mídia para Vercel: ${fullMediaUrl}`);
-        
-        // Verificar se estamos em produção
-        const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL;
-        
-        if (isProduction) {
-          console.log(`📎 Ambiente de produção detectado - usando URL pública`);
+        if (supabaseUrl) {
+          fullMediaUrl = `${supabaseUrl}/storage/v1/object/public/${bucketName}/campaigns/media/${filename}`;
+          console.log(`📎 Convertendo para URL do Supabase Storage: ${fullMediaUrl}`);
         } else {
-          console.log(`📎 Ambiente de desenvolvimento - usando URL local`);
+          console.log(`📎 URL do Supabase não configurada, usando URL original`);
         }
       }
       
-      console.log(`📎 URL da mídia: ${fullMediaUrl}`);
+      console.log(`📎 URL final da mídia: ${fullMediaUrl}`);
       
-      // Verificar se o arquivo existe (apenas em desenvolvimento)
-      const isDevelopment = process.env.NODE_ENV === 'development' && fullMediaUrl.startsWith('http://localhost:');
-      
-      if (isDevelopment) {
-        try {
-          const response = await fetch(fullMediaUrl, { method: 'HEAD' });
-          console.log(`📎 Arquivo acessível: ${response.ok ? '✅' : '❌'} (Status: ${response.status})`);
-          
-          if (!response.ok) {
-            console.log(`📎 Arquivo não acessível em desenvolvimento`);
-            return { success: false, error: 'Arquivo não acessível via URL local' };
-          }
-        } catch (error) {
-          console.log(`📎 Erro ao verificar arquivo: ${error}`);
-          return { success: false, error: 'Erro ao verificar arquivo' };
+      // Verificar se a URL é acessível
+      try {
+        const response = await fetch(fullMediaUrl, { method: 'HEAD' });
+        console.log(`📎 Arquivo acessível: ${response.ok ? '✅' : '❌'} (Status: ${response.status})`);
+        
+        if (!response.ok) {
+          console.log(`📎 Arquivo não acessível via URL: ${response.status}`);
+          return { success: false, error: `Arquivo não acessível via URL (Status: ${response.status})` };
         }
+      } catch (error) {
+        console.log(`📎 Erro ao verificar arquivo: ${error}`);
+        return { success: false, error: 'Erro ao verificar acessibilidade do arquivo' };
       }
 
       // Usar o cliente Z-API com client-token

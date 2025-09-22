@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
-import { existsSync } from 'fs';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,31 +35,49 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Criar diretório se não existir
-    const uploadDir = join(process.cwd(), 'public', 'uploads', 'media');
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    // Inicializar cliente Supabase
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
 
     // Gerar nome único para o arquivo
     const timestamp = Date.now();
     const fileExtension = file.name.split('.').pop();
     const fileName = `${type}_${timestamp}.${fileExtension}`;
-    const filePath = join(uploadDir, fileName);
+    const filePath = `campaigns/media/${fileName}`;
 
-    // Converter arquivo para buffer e salvar
+    // Converter arquivo para buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
 
-    // Retornar URL do arquivo
-    const fileUrl = `/uploads/media/${fileName}`;
+    // Upload para Supabase Storage
+    const { data, error } = await supabase.storage
+      .from('media')
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (error) {
+      console.error('Erro no upload para Supabase:', error);
+      return NextResponse.json({ 
+        error: 'Erro ao fazer upload do arquivo' 
+      }, { status: 500 });
+    }
+
+    // Obter URL pública do arquivo
+    const { data: urlData } = supabase.storage
+      .from('media')
+      .getPublicUrl(filePath);
 
     return NextResponse.json({ 
-      url: fileUrl,
+      url: urlData.publicUrl,
       fileName: file.name,
       size: file.size,
-      type: file.type
+      type: file.type,
+      path: filePath
     });
 
   } catch (error) {
