@@ -625,7 +625,50 @@ export class ZApiClient {
 
   // Atualizar imagem do grupo
   async updateGroupImage(groupId: string, imageUrl: string): Promise<ZApiResponse> {
-    return this.makeRequest(`/groups/${groupId}/image`, 'PUT', { image: imageUrl })
+    console.log('🖼️ Atualizando imagem do grupo:', { groupId, imageUrl })
+    
+    try {
+      const requestData = {
+        groupId,
+        groupPhoto: imageUrl
+      }
+
+      const url = `${this.baseUrl}/instances/${this.instanceId}/token/${this.instanceToken}/update-group-photo`
+      
+      console.log('📤 Enviando requisição para atualizar imagem do grupo:', {
+        url,
+        data: requestData
+      })
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(requestData)
+      })
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('❌ Erro ao atualizar imagem do grupo:', response.status, errorText)
+        return {
+          success: false,
+          error: `Erro ${response.status}: ${errorText}`
+        }
+      }
+
+      const result = await response.json()
+      console.log('✅ Imagem do grupo atualizada:', result)
+
+      return {
+        success: true,
+        data: result
+      }
+    } catch (error: any) {
+      console.error('❌ Exceção ao atualizar imagem do grupo:', error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
   }
 
   // Obter participantes do grupo

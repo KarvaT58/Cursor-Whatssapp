@@ -272,8 +272,65 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${createGroupResult.groupId})`)
+      console.log(`✅ JOIN-UNIVERSAL: Novo grupo criado: "${newGroupName}" (${createGroupResult.data.phone})`)
       console.log(`🔗 JOIN-UNIVERSAL: Link de convite: ${inviteLinkResult.data.invitationLink}`)
+
+      // Aplicar configurações do grupo no WhatsApp
+      console.log('⚙️ JOIN-UNIVERSAL: Aplicando configurações do grupo no WhatsApp...')
+      
+      try {
+        // 1. Atualizar nome do grupo (se diferente do padrão)
+        if (newGroupName !== 'A') {
+          console.log(`📝 JOIN-UNIVERSAL: Atualizando nome do grupo para: "${newGroupName}"`)
+          const nameResult = await zApiClient.updateGroupName(createGroupResult.data.phone, newGroupName)
+          if (nameResult.success) {
+            console.log('✅ JOIN-UNIVERSAL: Nome do grupo atualizado no WhatsApp')
+          } else {
+            console.error('❌ JOIN-UNIVERSAL: Erro ao atualizar nome do grupo:', nameResult.error)
+          }
+        }
+
+        // 2. Atualizar descrição do grupo (se existir)
+        if (firstGroup.description) {
+          console.log(`📝 JOIN-UNIVERSAL: Atualizando descrição do grupo: "${firstGroup.description}"`)
+          const descResult = await zApiClient.updateGroupDescription(createGroupResult.data.phone, firstGroup.description)
+          if (descResult.success) {
+            console.log('✅ JOIN-UNIVERSAL: Descrição do grupo atualizada no WhatsApp')
+          } else {
+            console.error('❌ JOIN-UNIVERSAL: Erro ao atualizar descrição do grupo:', descResult.error)
+          }
+        }
+
+        // 3. Atualizar imagem do grupo (se existir)
+        if (firstGroup.image_url) {
+          console.log(`🖼️ JOIN-UNIVERSAL: Atualizando imagem do grupo: "${firstGroup.image_url}"`)
+          const imageResult = await zApiClient.updateGroupImage(createGroupResult.data.phone, firstGroup.image_url)
+          if (imageResult.success) {
+            console.log('✅ JOIN-UNIVERSAL: Imagem do grupo atualizada no WhatsApp')
+          } else {
+            console.error('❌ JOIN-UNIVERSAL: Erro ao atualizar imagem do grupo:', imageResult.error)
+          }
+        }
+
+        // 4. Aplicar configurações do grupo
+        console.log('⚙️ JOIN-UNIVERSAL: Aplicando configurações do grupo...')
+        const settingsResult = await zApiClient.updateGroupSettings(createGroupResult.data.phone, {
+          adminOnlyMessage: firstGroup.admin_only_message,
+          adminOnlySettings: firstGroup.admin_only_settings,
+          requireAdminApproval: firstGroup.require_admin_approval,
+          adminOnlyAddMember: firstGroup.admin_only_add_member
+        })
+        
+        if (settingsResult.success) {
+          console.log('✅ JOIN-UNIVERSAL: Configurações do grupo aplicadas no WhatsApp')
+        } else {
+          console.error('❌ JOIN-UNIVERSAL: Erro ao aplicar configurações do grupo:', settingsResult.error)
+        }
+
+      } catch (configError) {
+        console.error('❌ JOIN-UNIVERSAL: Erro ao aplicar configurações do grupo:', configError)
+        // Não falhar a operação se as configurações falharem
+      }
 
       return NextResponse.json({
         success: true,
